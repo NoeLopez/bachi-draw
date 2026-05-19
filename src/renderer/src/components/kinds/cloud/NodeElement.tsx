@@ -1,5 +1,5 @@
-import type { LayoutNode } from '../core/parser/types'
-import { getIconDataUri } from '../icons/registry'
+import type { LayoutNode } from '../../../core/parser/kinds/cloud/types'
+import { getIconDataUri } from '../../../icons/registry'
 
 interface NodeElementProps {
   node: LayoutNode

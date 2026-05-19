@@ -1,15 +1,20 @@
+// Modelo de dominio para el tipo de diagrama `arch-cloud`.
+// Cada tipo de diagrama (cloud, bpmn, sequence, etc.) declara su propio
+// CloudGraph-equivalente; el pipeline de layout y render trabaja con tipos
+// específicos del kind correspondiente.
+
 export type Direction = 'LR' | 'TB'
 export type EdgeStyle = 'solid' | 'dashed'
 export type EdgeDirection = 'forward' | 'back' | 'both'
 
-export interface ArchNode {
+export interface CloudNode {
   id: string
   type: string
   label: string
   clusterId?: string
 }
 
-export interface ArchEdge {
+export interface CloudEdge {
   id: string
   from: string
   to: string
@@ -18,7 +23,7 @@ export interface ArchEdge {
   direction: EdgeDirection
 }
 
-export interface ArchCluster {
+export interface CloudCluster {
   id: string
   label: string
   nodeIds: string[]
@@ -26,12 +31,12 @@ export interface ArchCluster {
   parentClusterId?: string
 }
 
-export interface ArchGraph {
+export interface CloudGraph {
   name: string
   direction: Direction
-  nodes: ArchNode[]
-  edges: ArchEdge[]
-  clusters: ArchCluster[]
+  nodes: CloudNode[]
+  edges: CloudEdge[]
+  clusters: CloudCluster[]
 }
 
 export interface Point {

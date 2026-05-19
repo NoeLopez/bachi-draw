@@ -1,15 +1,15 @@
 import ELK from 'elkjs/lib/elk.bundled.js'
 import type { ElkEdgeSection, ElkExtendedEdge, ElkNode } from 'elkjs'
 import type {
-  ArchEdge,
-  ArchGraph,
+  CloudEdge,
+  CloudGraph,
   LayoutCluster,
   LayoutEdge,
   LayoutNode,
   LayoutResult,
   Point
-} from '../parser/types'
-import { NODE_SIZE, ROOT_ID, toElkGraph } from './elkTransformer'
+} from '../../../parser/kinds/cloud/types'
+import { NODE_SIZE, ROOT_ID, toElkGraph } from './transformer'
 
 const elk = new ELK()
 
@@ -81,7 +81,7 @@ interface EdgeContext {
 function collectEdges(
   node: ElkNode,
   ctx: EdgeContext,
-  archEdgesById: Map<string, ArchEdge>,
+  archEdgesById: Map<string, CloudEdge>,
   out: LayoutEdge[]
 ): void {
   const absX = ctx.parentX + (node.x ?? 0)
@@ -152,7 +152,7 @@ function labelMidpoint(
   return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
 }
 
-export async function runLayout(graph: ArchGraph): Promise<LayoutResult> {
+export async function runLayout(graph: CloudGraph): Promise<LayoutResult> {
   const elkGraph = toElkGraph(graph)
   const result = await elk.layout(elkGraph)
 

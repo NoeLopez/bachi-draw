@@ -1,4 +1,4 @@
-import type { LayoutEdge, Point } from '../core/parser/types'
+import type { LayoutEdge, Point } from '../../../core/parser/kinds/cloud/types'
 
 interface EdgeElementProps {
   edge: LayoutEdge

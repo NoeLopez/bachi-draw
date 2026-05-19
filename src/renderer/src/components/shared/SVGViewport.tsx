@@ -4,7 +4,7 @@ import {
   pan,
   type ViewportState,
   zoomAtPoint
-} from '../core/renderer/viewportManager'
+} from '../../core/renderer/viewportManager'
 
 interface SVGViewportProps {
   width: number

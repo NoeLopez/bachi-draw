@@ -1,4 +1,4 @@
-import type { LayoutCluster } from '../core/parser/types'
+import type { LayoutCluster } from '../../../core/parser/kinds/cloud/types'
 
 interface ClusterElementProps {
   cluster: LayoutCluster

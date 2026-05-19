@@ -1,4 +1,4 @@
-import type { LayoutResult } from '../parser/types'
+import type { LayoutResult } from '../../../parser/kinds/cloud/types'
 
 export interface ArchdCanvas {
   zoom: number

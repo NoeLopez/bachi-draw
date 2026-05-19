@@ -1,10 +1,10 @@
+import type { DiagramStat } from '../../core/diagram/kind'
+
 export type ReloadStatus = 'idle' | 'reloading' | 'ok' | 'error'
 
 interface StatusBarProps {
   filePath: string | null
-  nodeCount: number
-  edgeCount: number
-  clusterCount: number
+  stats: DiagramStat[]
   status: ReloadStatus
   message?: string
   lastReloadMs?: number
@@ -19,9 +19,7 @@ const STATUS_LABEL: Record<ReloadStatus, string> = {
 
 export default function StatusBar({
   filePath,
-  nodeCount,
-  edgeCount,
-  clusterCount,
+  stats,
   status,
   message,
   lastReloadMs
@@ -32,9 +30,11 @@ export default function StatusBar({
         {filePath ?? '— Sin archivo abierto —'}
       </div>
       <div className="diagen-status-meta">
-        <span>{nodeCount} nodos</span>
-        <span>{edgeCount} edges</span>
-        <span>{clusterCount} clusters</span>
+        {stats.map((stat) => (
+          <span key={stat.label}>
+            {stat.count} {stat.label}
+          </span>
+        ))}
         {typeof lastReloadMs === 'number' && <span>{lastReloadMs} ms</span>}
         <span className={`diagen-status-pill diagen-status-${status}`}>
           {STATUS_LABEL[status]}

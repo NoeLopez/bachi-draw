@@ -1,4 +1,4 @@
-import type { Theme } from '../core/theme/useTheme'
+import type { Theme } from '../../core/theme/useTheme'
 
 interface ToolbarProps {
   diagramName: string

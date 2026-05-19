@@ -1,11 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import DiagramCanvas from './components/DiagramCanvas'
-import StatusBar, { ReloadStatus } from './components/StatusBar'
-import Toolbar from './components/Toolbar'
-import { ArchParseError, parseArch } from './core/parser/archParser'
-import type { LayoutResult } from './core/parser/types'
-import { runLayout } from './core/layout/elkRunner'
-import { serializeArchd } from './core/state/archdSerializer'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import EmptyState from './components/shared/EmptyState'
+import StatusBar, { ReloadStatus } from './components/shared/StatusBar'
+import Toolbar from './components/shared/Toolbar'
+import type { DiagramKind, DiagramStat } from './core/diagram/kind'
+import { detectKind } from './core/diagram/dispatcher'
+import { getKindDef } from './core/diagram/registry'
 import {
   clampZoom,
   DEFAULT_VIEWPORT,
@@ -19,9 +18,17 @@ interface OpenedDoc {
   content: string
 }
 
+interface DiagramState {
+  kind: DiagramKind
+  layout: unknown
+  name: string
+  bounds: { width: number; height: number }
+  stats: DiagramStat[]
+}
+
 function App(): React.JSX.Element {
   const [doc, setDoc] = useState<OpenedDoc | null>(null)
-  const [layout, setLayout] = useState<LayoutResult | null>(null)
+  const [diagram, setDiagram] = useState<DiagramState | null>(null)
   const [status, setStatus] = useState<ReloadStatus>('idle')
   const [statusMessage, setStatusMessage] = useState<string | undefined>()
   const [lastReloadMs, setLastReloadMs] = useState<number | undefined>()
@@ -29,37 +36,39 @@ function App(): React.JSX.Element {
   const runIdRef = useRef(0)
   const { theme, toggleTheme } = useTheme()
 
-  const buildLayout = useCallback(async (content: string): Promise<void> => {
+  const buildDiagram = useCallback(async (content: string): Promise<void> => {
     const runId = ++runIdRef.current
     setStatus('reloading')
     setStatusMessage(undefined)
     const start = performance.now()
     try {
-      const graph = parseArch(content)
-      const result = await runLayout(graph)
+      const kind = detectKind(content)
+      const def = getKindDef(kind)
+      const model = def.parse(content)
+      const layout = await def.layout(model)
       if (runIdRef.current !== runId) return
-      setLayout(result)
+      setDiagram({
+        kind,
+        layout,
+        name: def.getName(layout),
+        bounds: def.getBounds(layout),
+        stats: def.getStats(layout)
+      })
       setLastReloadMs(Math.round(performance.now() - start))
       setStatus('ok')
     } catch (err) {
       if (runIdRef.current !== runId) return
-      const message =
-        err instanceof ArchParseError
-          ? err.message
-          : err instanceof Error
-            ? err.message
-            : String(err)
+      const message = err instanceof Error ? err.message : String(err)
       setStatus('error')
       setStatusMessage(message)
-      // No limpiamos el layout previo: el usuario sigue viendo el último válido.
+      // No limpiamos el diagrama previo: el usuario sigue viendo el último válido.
     }
   }, [])
 
-  // Atender cambios del file watcher del main process.
   useEffect(() => {
     const offChanged = window.diagen.onFileChanged(({ path, content }) => {
       setDoc({ path, content })
-      void buildLayout(content)
+      void buildDiagram(content)
     })
     const offError = window.diagen.onFileError(({ message }) => {
       setStatus('error')
@@ -74,25 +83,26 @@ function App(): React.JSX.Element {
       offError()
       offRemoved()
     }
-  }, [buildLayout])
+  }, [buildDiagram])
 
   const handleOpenFile = useCallback(async () => {
     const opened = await window.diagen.openFile()
     if (!opened) return
     setDoc({ path: opened.path, content: opened.content })
-    void buildLayout(opened.content)
-  }, [buildLayout])
+    void buildDiagram(opened.content)
+  }, [buildDiagram])
 
   const handleSaveArchd = useCallback(async () => {
-    if (!doc || !layout) return
+    if (!doc || !diagram) return
     try {
       const fileName = doc.path.split(/[/\\]/).pop() ?? doc.path
-      const archd = serializeArchd(fileName, layout, {
+      const def = getKindDef(diagram.kind)
+      const archd = def.serialize(fileName, diagram.layout, {
         zoom: viewport.zoom,
         offsetX: viewport.offsetX,
         offsetY: viewport.offsetY,
-        width: layout.width,
-        height: layout.height
+        width: diagram.bounds.width,
+        height: diagram.bounds.height
       })
       const result = await window.diagen.saveArchd(doc.path, archd)
       setStatus('ok')
@@ -102,7 +112,7 @@ function App(): React.JSX.Element {
       setStatus('error')
       setStatusMessage(message)
     }
-  }, [doc, layout, viewport])
+  }, [doc, diagram, viewport])
 
   const handleZoomIn = useCallback(() => {
     setViewport((v) => ({ ...v, zoom: clampZoom(v.zoom * 1.2) }))
@@ -113,27 +123,36 @@ function App(): React.JSX.Element {
   }, [])
 
   const handleResetView = useCallback(() => {
-    if (!layout) return
+    if (!diagram) return
     const container = document.querySelector<HTMLDivElement>('.diagen-canvas')
     if (!container) return
     const rect = container.getBoundingClientRect()
-    setViewport(fitToContainer(layout.width, layout.height, rect.width, rect.height))
-  }, [layout])
+    setViewport(
+      fitToContainer(diagram.bounds.width, diagram.bounds.height, rect.width, rect.height)
+    )
+  }, [diagram])
 
   const handleAutoFit = useCallback(
     (containerWidth: number, containerHeight: number) => {
-      if (!layout) return
-      setViewport(fitToContainer(layout.width, layout.height, containerWidth, containerHeight))
+      if (!diagram) return
+      setViewport(
+        fitToContainer(diagram.bounds.width, diagram.bounds.height, containerWidth, containerHeight)
+      )
     },
-    [layout]
+    [diagram]
   )
 
-  const diagramName = layout?.name ?? ''
+  // Componente Canvas del kind activo. Se resuelve dinámicamente para
+  // soportar múltiples tipos de diagrama (cloud, bpmn, sequence...).
+  const Canvas = useMemo(() => {
+    if (!diagram) return null
+    return getKindDef(diagram.kind).Canvas
+  }, [diagram])
 
   return (
     <div className="diagen-app">
       <Toolbar
-        diagramName={diagramName}
+        diagramName={diagram?.name ?? ''}
         zoom={viewport.zoom}
         theme={theme}
         onOpenFile={handleOpenFile}
@@ -142,21 +161,25 @@ function App(): React.JSX.Element {
         onResetView={handleResetView}
         onSaveArchd={handleSaveArchd}
         onToggleTheme={toggleTheme}
-        canSave={Boolean(doc && layout)}
+        canSave={Boolean(doc && diagram)}
       />
       <main className="diagen-main">
-        <DiagramCanvas
-          layout={layout}
-          viewport={viewport}
-          onViewportChange={setViewport}
-          onAutoFit={handleAutoFit}
-        />
+        {Canvas && diagram ? (
+          <Canvas
+            layout={diagram.layout}
+            viewport={viewport}
+            onViewportChange={setViewport}
+            onAutoFit={handleAutoFit}
+          />
+        ) : (
+          <div className="diagen-canvas">
+            <EmptyState />
+          </div>
+        )}
       </main>
       <StatusBar
         filePath={doc?.path ?? null}
-        nodeCount={layout?.nodes.length ?? 0}
-        edgeCount={layout?.edges.length ?? 0}
-        clusterCount={layout?.clusters.length ?? 0}
+        stats={diagram?.stats ?? []}
         status={status}
         message={statusMessage}
         lastReloadMs={lastReloadMs}

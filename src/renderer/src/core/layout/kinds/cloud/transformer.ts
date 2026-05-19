@@ -1,5 +1,10 @@
 import type { ElkExtendedEdge, ElkNode, LayoutOptions } from 'elkjs'
-import type { ArchCluster, ArchGraph, ArchNode, Direction } from '../parser/types'
+import type {
+  CloudCluster,
+  CloudGraph,
+  CloudNode,
+  Direction
+} from '../../../parser/kinds/cloud/types'
 
 const ROOT_ID = 'root'
 
@@ -37,7 +42,7 @@ function nodeLayoutOptions(): LayoutOptions {
   }
 }
 
-function buildNode(node: ArchNode): ElkNode {
+function buildNode(node: CloudNode): ElkNode {
   return {
     id: node.id,
     width: NODE_SIZE.width,
@@ -49,8 +54,8 @@ function buildNode(node: ArchNode): ElkNode {
 
 function buildClusterTree(
   clusterId: string,
-  clustersById: Map<string, ArchCluster>,
-  nodesById: Map<string, ArchNode>
+  clustersById: Map<string, CloudCluster>,
+  nodesById: Map<string, CloudNode>
 ): ElkNode {
   const cluster = clustersById.get(clusterId)!
   const children: ElkNode[] = []
@@ -109,7 +114,7 @@ function findContainer(node: ElkNode, id: string): ElkNode | null {
   return null
 }
 
-export function toElkGraph(graph: ArchGraph): ElkNode {
+export function toElkGraph(graph: CloudGraph): ElkNode {
   const nodesById = new Map(graph.nodes.map((n) => [n.id, n]))
   const clustersById = new Map(graph.clusters.map((c) => [c.id, c]))
 
