@@ -1,5 +1,7 @@
 # Software Design Document (SDD)
+
 ## Diagen — AI-Native Architecture Diagram Tool
+
 ### MVP v1.0
 
 ---
@@ -42,17 +44,18 @@
 
 Las herramientas actuales de diagramas no fueron diseñadas para ser generadas por IA:
 
-| Herramienta | Problema con IA |
-|---|---|
-| DrawIO | XML posicional frágil, coordenadas absolutas, flechas sin garantía de conexión correcta |
-| Lucidchart | SaaS propietario, sin API pública para generación programática |
+| Herramienta       | Problema con IA                                                                            |
+| ----------------- | ------------------------------------------------------------------------------------------ |
+| DrawIO            | XML posicional frágil, coordenadas absolutas, flechas sin garantía de conexión correcta    |
+| Lucidchart        | SaaS propietario, sin API pública para generación programática                             |
 | diagrams (Python) | Graphviz como motor (años 90), flechas que no conectan correctamente con clusters anidados |
-| D2 / Mermaid | Sin iconos oficiales de proveedores cloud |
-| Terrastruct | SaaS de pago, sin integración con agentes locales |
+| D2 / Mermaid      | Sin iconos oficiales de proveedores cloud                                                  |
+| Terrastruct       | SaaS de pago, sin integración con agentes locales                                          |
 
 ### 2.2 Problema específico identificado
 
 Al usar la librería `diagrams` de Python con arquitecturas que contienen:
+
 - Clusters anidados (grupos como VPC, Servicios, Workers)
 - Flechas con labels (publish, consume)
 - Flechas que cruzan entre clusters
@@ -63,6 +66,7 @@ El motor Graphviz calcula posiciones incorrectas: las flechas no terminan en el 
 ### 2.3 Gap en el mercado
 
 No existe a la fecha (Mayo 2026) una herramienta que combine:
+
 - Motor de layout moderno e inteligente
 - Iconos oficiales de proveedores
 - Formato de entrada amigable para IA
@@ -168,17 +172,17 @@ No existe a la fecha (Mayo 2026) una herramienta que combine:
 
 ## 6. Stack Tecnológico
 
-| Capa | Tecnología | Versión | Justificación |
-|---|---|---|---|
-| Shell Desktop | **Electron** | ^35.x | Cross-platform, consistencia de rendering, mismo stack que DrawIO desktop, Claude Code puede construirlo completamente |
-| Build Tool | **Vite** | ^6.x | Hot reload de desarrollo rápido, integración nativa con Electron via `electron-vite` |
-| UI Framework | **React** | ^19.x | Ecosistema maduro, Claude Code lo genera con precisión |
-| Lenguaje | **TypeScript** | ^5.x | Type safety, mejor DX, previene errores en transformaciones de datos |
-| Layout Engine | **elkjs** | ^0.11.x | Motor moderno (Universidad de Kiel), algoritmos superiores a Graphviz, soporte nativo de clusters, sincronizado con ELK Java |
-| File Watcher | **Chokidar** | ^4.x | Estándar de Node.js, usado internamente por Vite, confiable en todos los OS |
-| YAML Parser | **js-yaml** | ^4.x | Parser YAML más usado en Node.js, manejo correcto de tipos |
-| Renderizado | **SVG nativo** | — | Suficiente para MVP, editable via DOM, escalable sin pérdida de calidad |
-| Iconos | **SVG Assets** | — | Packs oficiales de AWS, GCP, Azure, K8s + OSS empaquetados en la app |
+| Capa          | Tecnología     | Versión | Justificación                                                                                                                |
+| ------------- | -------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Shell Desktop | **Electron**   | ^35.x   | Cross-platform, consistencia de rendering, mismo stack que DrawIO desktop, Claude Code puede construirlo completamente       |
+| Build Tool    | **Vite**       | ^6.x    | Hot reload de desarrollo rápido, integración nativa con Electron via `electron-vite`                                         |
+| UI Framework  | **React**      | ^19.x   | Ecosistema maduro, Claude Code lo genera con precisión                                                                       |
+| Lenguaje      | **TypeScript** | ^5.x    | Type safety, mejor DX, previene errores en transformaciones de datos                                                         |
+| Layout Engine | **elkjs**      | ^0.11.x | Motor moderno (Universidad de Kiel), algoritmos superiores a Graphviz, soporte nativo de clusters, sincronizado con ELK Java |
+| File Watcher  | **Chokidar**   | ^4.x    | Estándar de Node.js, usado internamente por Vite, confiable en todos los OS                                                  |
+| YAML Parser   | **js-yaml**    | ^4.x    | Parser YAML más usado en Node.js, manejo correcto de tipos                                                                   |
+| Renderizado   | **SVG nativo** | —       | Suficiente para MVP, editable via DOM, escalable sin pérdida de calidad                                                      |
+| Iconos        | **SVG Assets** | —       | Packs oficiales de AWS, GCP, Azure, K8s + OSS empaquetados en la app                                                         |
 
 ### Por qué Electron sobre Tauri
 
@@ -255,6 +259,7 @@ Diagen/
 ## 8. Formato de Archivo `.arch`
 
 El archivo `.arch` es YAML simple. Es el formato que Claude Code y cualquier agente de IA deben generar. Está diseñado para ser:
+
 - Escrito por IA sin conocer coordenadas
 - Legible y editable por humanos
 - Mínimo en su sintaxis
@@ -264,41 +269,41 @@ El archivo `.arch` es YAML simple. Es el formato que Claude Code y cualquier age
 
 ```yaml
 # Metadata del diagrama
-name: "Nombre del diagrama"          # Requerido
-direction: LR                        # LR (left-right) | TB (top-bottom). Default: LR
+name: 'Nombre del diagrama' # Requerido
+direction: LR # LR (left-right) | TB (top-bottom). Default: LR
 
 # Nodos individuales (sin cluster)
 nodes:
-  - id: nombre_unico                 # Requerido. Snake_case, sin espacios
-    type: aws/alb                    # Requerido. Ver sección de iconos
-    label: "Load Balancer"           # Opcional. Si omitido, usa el id
+  - id: nombre_unico # Requerido. Snake_case, sin espacios
+    type: aws/alb # Requerido. Ver sección de iconos
+    label: 'Load Balancer' # Opcional. Si omitido, usa el id
 
 # Clusters / grupos
 clusters:
-  - id: vpc                          # Requerido
-    label: "VPC"                     # Requerido. Texto del header del grupo
-    nodes:                           # Nodos dentro del cluster
+  - id: vpc # Requerido
+    label: 'VPC' # Requerido. Texto del header del grupo
+    nodes: # Nodos dentro del cluster
       - id: ecs
         type: aws/ecs
-        label: "Fargate"
+        label: 'Fargate'
       - id: rds
         type: aws/rds
-        label: "Aurora"
-    clusters:                        # Sub-clusters (anidamiento)
+        label: 'Aurora'
+    clusters: # Sub-clusters (anidamiento)
       - id: subnet_private
-        label: "Private Subnet"
+        label: 'Private Subnet'
         nodes:
           - id: lambda
             type: aws/lambda
-            label: "Lambda"
+            label: 'Lambda'
 
 # Conexiones
 edges:
-  - from: alb                        # Requerido. ID del nodo origen
-    to: ecs                          # Requerido. ID del nodo destino
-    label: "HTTPS"                   # Opcional. Label de la flecha
-    style: solid                     # solid | dashed. Default: solid
-    direction: forward               # forward | back | both. Default: forward
+  - from: alb # Requerido. ID del nodo origen
+    to: ecs # Requerido. ID del nodo destino
+    label: 'HTTPS' # Opcional. Label de la flecha
+    style: solid # solid | dashed. Default: solid
+    direction: forward # forward | back | both. Default: forward
 ```
 
 ### 8.2 Ejemplo real — Arquitectura de Microservicios
@@ -306,63 +311,63 @@ edges:
 Este es el caso de prueba benchmark derivado de la imagen de referencia:
 
 ```yaml
-name: "Arquitectura de Microservicios"
+name: 'Arquitectura de Microservicios'
 direction: LR
 
 nodes:
   - id: clientes
     type: oss/users
-    label: "clientes"
+    label: 'clientes'
   - id: api_gateway
     type: oss/nginx
-    label: "api gateway"
+    label: 'api gateway'
   - id: eventos
     type: oss/kafka
-    label: "eventos"
+    label: 'eventos'
 
 clusters:
   - id: servicios
-    label: "Servicios"
+    label: 'Servicios'
     nodes:
       - id: auth
         type: oss/server
-        label: "auth"
+        label: 'auth'
       - id: orders
         type: oss/server
-        label: "orders"
+        label: 'orders'
       - id: payments
         type: oss/server
-        label: "payments"
+        label: 'payments'
 
   - id: workers
-    label: "Workers"
+    label: 'Workers'
     nodes:
       - id: worker1
         type: oss/server
-        label: "worker1"
+        label: 'worker1'
       - id: worker2
         type: oss/server
-        label: "worker2"
+        label: 'worker2'
 
   - id: datos
-    label: "Datos"
+    label: 'Datos'
     nodes:
       - id: postgres
         type: oss/postgres
-        label: "postgres"
+        label: 'postgres'
       - id: redis
         type: oss/redis
-        label: "redis"
+        label: 'redis'
 
   - id: observabilidad
-    label: "Observabilidad"
+    label: 'Observabilidad'
     nodes:
       - id: prometheus
         type: oss/prometheus
-        label: "prometheus"
+        label: 'prometheus'
       - id: grafana
         type: oss/grafana
-        label: "grafana"
+        label: 'grafana'
 
 edges:
   - from: clientes
@@ -375,20 +380,20 @@ edges:
     to: payments
   - from: auth
     to: eventos
-    label: "publish"
+    label: 'publish'
     style: dashed
   - from: orders
     to: eventos
-    label: "publish"
+    label: 'publish'
   - from: payments
     to: eventos
-    label: "publish"
+    label: 'publish'
   - from: eventos
     to: worker1
-    label: "consume"
+    label: 'consume'
   - from: eventos
     to: worker2
-    label: "consume"
+    label: 'consume'
   - from: worker1
     to: postgres
   - from: worker2
@@ -411,72 +416,77 @@ edges:
 ### 8.3 Tipos de iconos soportados en MVP
 
 #### AWS
-| type | Descripción |
-|---|---|
-| `aws/alb` | Application Load Balancer |
-| `aws/ec2` | EC2 Instance |
-| `aws/ecs` | ECS / Fargate |
-| `aws/lambda` | Lambda Function |
-| `aws/rds` | RDS |
-| `aws/aurora` | Aurora |
-| `aws/s3` | S3 Bucket |
-| `aws/cloudfront` | CloudFront |
-| `aws/route53` | Route 53 |
-| `aws/vpc` | VPC |
-| `aws/sqs` | SQS |
-| `aws/sns` | SNS |
-| `aws/elasticache` | ElastiCache |
-| `aws/apigateway` | API Gateway |
-| `aws/cognito` | Cognito |
-| `aws/iam` | IAM |
+
+| type              | Descripción               |
+| ----------------- | ------------------------- |
+| `aws/alb`         | Application Load Balancer |
+| `aws/ec2`         | EC2 Instance              |
+| `aws/ecs`         | ECS / Fargate             |
+| `aws/lambda`      | Lambda Function           |
+| `aws/rds`         | RDS                       |
+| `aws/aurora`      | Aurora                    |
+| `aws/s3`          | S3 Bucket                 |
+| `aws/cloudfront`  | CloudFront                |
+| `aws/route53`     | Route 53                  |
+| `aws/vpc`         | VPC                       |
+| `aws/sqs`         | SQS                       |
+| `aws/sns`         | SNS                       |
+| `aws/elasticache` | ElastiCache               |
+| `aws/apigateway`  | API Gateway               |
+| `aws/cognito`     | Cognito                   |
+| `aws/iam`         | IAM                       |
 
 #### GCP
-| type | Descripción |
-|---|---|
-| `gcp/gke` | Google Kubernetes Engine |
-| `gcp/cloudsql` | Cloud SQL |
-| `gcp/gcs` | Cloud Storage |
-| `gcp/cloudrun` | Cloud Run |
-| `gcp/pubsub` | Pub/Sub |
-| `gcp/bigquery` | BigQuery |
-| `gcp/loadbalancer` | Load Balancing |
+
+| type               | Descripción              |
+| ------------------ | ------------------------ |
+| `gcp/gke`          | Google Kubernetes Engine |
+| `gcp/cloudsql`     | Cloud SQL                |
+| `gcp/gcs`          | Cloud Storage            |
+| `gcp/cloudrun`     | Cloud Run                |
+| `gcp/pubsub`       | Pub/Sub                  |
+| `gcp/bigquery`     | BigQuery                 |
+| `gcp/loadbalancer` | Load Balancing           |
 
 #### Azure
-| type | Descripción |
-|---|---|
-| `azure/aks` | Azure Kubernetes Service |
-| `azure/appservice` | App Service |
-| `azure/sql` | Azure SQL |
-| `azure/blob` | Blob Storage |
-| `azure/servicebus` | Service Bus |
-| `azure/functions` | Azure Functions |
+
+| type               | Descripción              |
+| ------------------ | ------------------------ |
+| `azure/aks`        | Azure Kubernetes Service |
+| `azure/appservice` | App Service              |
+| `azure/sql`        | Azure SQL                |
+| `azure/blob`       | Blob Storage             |
+| `azure/servicebus` | Service Bus              |
+| `azure/functions`  | Azure Functions          |
 
 #### Kubernetes
-| type | Descripción |
-|---|---|
-| `k8s/pod` | Pod |
-| `k8s/deployment` | Deployment |
-| `k8s/service` | Service |
-| `k8s/ingress` | Ingress |
-| `k8s/configmap` | ConfigMap |
-| `k8s/namespace` | Namespace |
+
+| type             | Descripción |
+| ---------------- | ----------- |
+| `k8s/pod`        | Pod         |
+| `k8s/deployment` | Deployment  |
+| `k8s/service`    | Service     |
+| `k8s/ingress`    | Ingress     |
+| `k8s/configmap`  | ConfigMap   |
+| `k8s/namespace`  | Namespace   |
 
 #### OSS (Open Source)
-| type | Descripción |
-|---|---|
-| `oss/nginx` | Nginx |
-| `oss/postgres` | PostgreSQL |
-| `oss/redis` | Redis |
-| `oss/kafka` | Apache Kafka |
-| `oss/rabbitmq` | RabbitMQ |
-| `oss/mongodb` | MongoDB |
-| `oss/prometheus` | Prometheus |
-| `oss/grafana` | Grafana |
-| `oss/elasticsearch` | Elasticsearch |
-| `oss/server` | Servidor genérico |
-| `oss/users` | Usuarios / Clientes |
-| `oss/browser` | Browser |
-| `oss/mobile` | Mobile App |
+
+| type                | Descripción         |
+| ------------------- | ------------------- |
+| `oss/nginx`         | Nginx               |
+| `oss/postgres`      | PostgreSQL          |
+| `oss/redis`         | Redis               |
+| `oss/kafka`         | Apache Kafka        |
+| `oss/rabbitmq`      | RabbitMQ            |
+| `oss/mongodb`       | MongoDB             |
+| `oss/prometheus`    | Prometheus          |
+| `oss/grafana`       | Grafana             |
+| `oss/elasticsearch` | Elasticsearch       |
+| `oss/server`        | Servidor genérico   |
+| `oss/users`         | Usuarios / Clientes |
+| `oss/browser`       | Browser             |
+| `oss/mobile`        | Mobile App          |
 
 ---
 
@@ -547,7 +557,7 @@ interface ArchNode {
   id: string
   type: string
   label: string
-  clusterId?: string        // ID del cluster padre, si aplica
+  clusterId?: string // ID del cluster padre, si aplica
 }
 
 interface ArchEdge {
@@ -592,7 +602,7 @@ function toElkGraph(graph: ArchGraph): ElkNode {
       'elk.layered.spacing.nodeNodeBetweenLayers': '80',
       'elk.spacing.nodeNode': '40',
       'elk.padding': '[top=40,left=40,bottom=40,right=40]',
-      'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
+      'elk.hierarchyHandling': 'INCLUDE_CHILDREN'
     },
     children: buildChildren(graph),
     edges: buildEdges(graph)
@@ -631,7 +641,7 @@ function buildEdgePath(points: Point[]): string {
   const [start, ...rest] = points
   const pathParts = [`M ${start.x} ${start.y}`]
 
-  rest.forEach(point => {
+  rest.forEach((point) => {
     pathParts.push(`L ${point.x} ${point.y}`)
   })
 
@@ -648,6 +658,7 @@ function buildEdgePath(points: Point[]): string {
 `elkjs` es la versión JavaScript del Eclipse Layout Kernel (ELK), un proyecto académico de la Universidad de Kiel mantenido por Eclipse Foundation. Fue creado completamente desde cero, independiente de Graphviz. La versión JS es una transpilación del código Java original usando GWT (Google Web Toolkit).
 
 **Estado actual (Mayo 2026):**
+
 - ELK Java: versión 0.11.0 (Septiembre 2025), activamente mantenido, 114 commits en últimos 12 meses
 - elkjs: sincronizado en minor version con ELK Java, mantenido por el mismo equipo (kieler/elkjs en GitHub)
 
@@ -660,13 +671,13 @@ function buildEdgePath(points: Point[]): string {
 ```typescript
 const LAYOUT_OPTIONS = {
   'elk.algorithm': 'layered',
-  'elk.direction': 'RIGHT',                              // LR por defecto
-  'elk.layered.spacing.nodeNodeBetweenLayers': '80',    // Espacio horizontal entre capas
-  'elk.spacing.nodeNode': '40',                          // Espacio entre nodos
+  'elk.direction': 'RIGHT', // LR por defecto
+  'elk.layered.spacing.nodeNodeBetweenLayers': '80', // Espacio horizontal entre capas
+  'elk.spacing.nodeNode': '40', // Espacio entre nodos
   'elk.padding': '[top=40,left=40,bottom=40,right=40]', // Padding dentro de clusters
-  'elk.hierarchyHandling': 'INCLUDE_CHILDREN',           // Crítico para clusters anidados
+  'elk.hierarchyHandling': 'INCLUDE_CHILDREN', // Crítico para clusters anidados
   'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP', // Minimiza cruces
-  'elk.edgeRouting': 'ORTHOGONAL',                       // Flechas ortogonales (90°)
+  'elk.edgeRouting': 'ORTHOGONAL' // Flechas ortogonales (90°)
 }
 ```
 
@@ -677,8 +688,8 @@ elkjs necesita conocer el tamaño de cada nodo para calcular el layout. Los nodo
 ```typescript
 const NODE_SIZE = {
   width: 80,
-  height: 80,   // ícono + label debajo
-  labelOffset: 16  // espacio extra para el label bajo el ícono
+  height: 80, // ícono + label debajo
+  labelOffset: 16 // espacio extra para el label bajo el ícono
 }
 ```
 
@@ -690,17 +701,18 @@ const NODE_SIZE = {
 
 Los iconos oficiales se obtienen de los asset packs publicados gratuitamente por cada proveedor:
 
-| Proveedor | Fuente oficial |
-|---|---|
-| AWS | AWS Architecture Icons (aws.amazon.com/architecture/icons) |
-| GCP | Google Cloud Icons (cloud.google.com/icons) |
-| Azure | Azure Architecture Icons (learn.microsoft.com/azure/architecture/icons) |
-| Kubernetes | Kubernetes Icons Set (github.com/kubernetes/community) |
-| OSS | Logos oficiales de cada proyecto |
+| Proveedor  | Fuente oficial                                                          |
+| ---------- | ----------------------------------------------------------------------- |
+| AWS        | AWS Architecture Icons (aws.amazon.com/architecture/icons)              |
+| GCP        | Google Cloud Icons (cloud.google.com/icons)                             |
+| Azure      | Azure Architecture Icons (learn.microsoft.com/azure/architecture/icons) |
+| Kubernetes | Kubernetes Icons Set (github.com/kubernetes/community)                  |
+| OSS        | Logos oficiales de cada proyecto                                        |
 
 ### 12.2 Procesamiento de iconos
 
 Los SVGs oficiales se procesan antes de ser incluidos en la app:
+
 1. Se normalizan a viewBox `0 0 64 64`
 2. Se eliminan colores de fondo si los tienen
 3. Se convierten a strings y se importan como módulos TypeScript
@@ -711,10 +723,10 @@ Los SVGs oficiales se procesan antes de ser incluidos en la app:
 ```typescript
 // registry.ts
 const iconRegistry: Record<string, string> = {
-  'aws/alb':        awsAlbSvg,
-  'aws/ecs':        awsEcsSvg,
-  'oss/nginx':      nginxSvg,
-  'oss/postgres':   postgresSvg,
+  'aws/alb': awsAlbSvg,
+  'aws/ecs': awsEcsSvg,
+  'oss/nginx': nginxSvg,
+  'oss/postgres': postgresSvg
   // ...
 }
 
@@ -791,9 +803,9 @@ import fs from 'fs/promises'
 export function watchArchFile(filePath: string, win: BrowserWindow) {
   const watcher = chokidar.watch(filePath, {
     persistent: true,
-    ignoreInitial: false,   // Emite el archivo al arrancar también
+    ignoreInitial: false, // Emite el archivo al arrancar también
     awaitWriteFinish: {
-      stabilityThreshold: 100,  // Espera 100ms sin cambios antes de emitir
+      stabilityThreshold: 100, // Espera 100ms sin cambios antes de emitir
       pollInterval: 50
     }
   })
@@ -840,11 +852,11 @@ function createWindow() {
     height: 900,
     minWidth: 800,
     minHeight: 600,
-    titleBarStyle: 'hiddenInset',  // Mac: título integrado
+    titleBarStyle: 'hiddenInset', // Mac: título integrado
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
-      nodeIntegration: false        // Seguridad: nunca true
+      nodeIntegration: false // Seguridad: nunca true
     }
   })
 
@@ -865,7 +877,6 @@ app.whenReady().then(createWindow)
 ```typescript
 // main/ipcHandlers.ts
 export function registerIpcHandlers(win: BrowserWindow) {
-
   // Abrir file picker para seleccionar .arch
   ipcMain.handle('open-file-dialog', async () => {
     const result = await dialog.showOpenDialog(win, {
@@ -965,16 +976,16 @@ function DiagramCanvas() {
 
 La imagen de referencia provista (Arquitectura de Microservicios) es el benchmark del MVP. El MVP se considera exitoso cuando reproduce correctamente:
 
-| Criterio | Descripción |
-|---|---|
-| ✅ Clusters | 4 grupos: Servicios, Workers, Datos, Observabilidad con bordes y labels |
-| ✅ Iconos correctos | Nginx, Prometheus, Grafana, Kafka, Postgres, Redis con sus iconos oficiales |
-| ✅ Flechas con labels | "publish", "consume" correctamente posicionados sobre las flechas |
-| ✅ Flechas punteadas | Las flechas hacia Observabilidad en estilo dashed |
-| ✅ Sin cruces incorrectos | Las flechas de orders/payments a postgres/redis no cruzan Workers innecesariamente |
-| ✅ Flechas terminan en nodo | Cada flecha apunta exactamente al borde del ícono destino |
-| ✅ Labels de nodos | Todos los nombres visibles y sin superposición |
-| ✅ Hot reload | Agregar un nuevo nodo o edge actualiza el diagrama en < 500ms |
+| Criterio                    | Descripción                                                                        |
+| --------------------------- | ---------------------------------------------------------------------------------- |
+| ✅ Clusters                 | 4 grupos: Servicios, Workers, Datos, Observabilidad con bordes y labels            |
+| ✅ Iconos correctos         | Nginx, Prometheus, Grafana, Kafka, Postgres, Redis con sus iconos oficiales        |
+| ✅ Flechas con labels       | "publish", "consume" correctamente posicionados sobre las flechas                  |
+| ✅ Flechas punteadas        | Las flechas hacia Observabilidad en estilo dashed                                  |
+| ✅ Sin cruces incorrectos   | Las flechas de orders/payments a postgres/redis no cruzan Workers innecesariamente |
+| ✅ Flechas terminan en nodo | Cada flecha apunta exactamente al borde del ícono destino                          |
+| ✅ Labels de nodos          | Todos los nombres visibles y sin superposición                                     |
+| ✅ Hot reload               | Agregar un nuevo nodo o edge actualiza el diagrama en < 500ms                      |
 
 ---
 
@@ -1033,27 +1044,32 @@ Los siguientes items quedan explícitamente fuera del MVP y se documentan para v
 ## 19. Evolución Futura
 
 ### v1.1 — Edición visual básica
+
 - Drag & drop de nodos
 - El `.archd` se actualiza con las nuevas posiciones
 - El `.arch` no se modifica al editar visualmente
 
 ### v1.2 — Export
+
 - Export a PNG (via Electron screenshot del SVG)
 - Export a SVG
 - Export a DrawIO XML (para compatibilidad con equipos que lo usan)
 
 ### v2.0 — Editor completo
+
 - Agregar/eliminar nodos desde la UI
 - Cambiar tipo de ícono via dropdown
 - Resize de clusters
 - Migrar canvas a Konva.js para mejor performance
 
 ### v2.1 — ELK Java como motor alternativo
+
 - ELK Java como sidecar via child_process de Electron
 - Seleccionable por el usuario para diagramas grandes
 - Mejora de performance para +500 nodos
 
 ### v3.0 — Integración MCP
+
 - Diagen expone un servidor MCP local
 - Claude Code puede leer el estado actual del diagrama
 - Claude Code puede hacer queries: "¿qué nodos están en el cluster VPC?"
@@ -1061,6 +1077,6 @@ Los siguientes items quedan explícitamente fuera del MVP y se documentan para v
 
 ---
 
-*Documento generado: Mayo 2026*
-*Versión: 1.0*
-*Estado: Aprobado para desarrollo MVP*
+_Documento generado: Mayo 2026_
+_Versión: 1.0_
+_Estado: Aprobado para desarrollo MVP_

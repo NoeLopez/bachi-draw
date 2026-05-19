@@ -1,67 +1,81 @@
 :root {
-  --ev-c-white: #ffffff;
-  --ev-c-white-soft: #f8f8f8;
-  --ev-c-white-mute: #f2f2f2;
-
-  --ev-c-black: #1b1b1f;
-  --ev-c-black-soft: #222222;
-  --ev-c-black-mute: #282828;
-
-  --ev-c-gray-1: #515c67;
-  --ev-c-gray-2: #414853;
-  --ev-c-gray-3: #32363f;
-
-  --ev-c-text-1: rgba(255, 255, 245, 0.86);
-  --ev-c-text-2: rgba(235, 235, 245, 0.6);
-  --ev-c-text-3: rgba(235, 235, 245, 0.38);
-
-  --ev-button-alt-border: transparent;
-  --ev-button-alt-text: var(--ev-c-text-1);
-  --ev-button-alt-bg: var(--ev-c-gray-3);
-  --ev-button-alt-hover-border: transparent;
-  --ev-button-alt-hover-text: var(--ev-c-text-1);
-  --ev-button-alt-hover-bg: var(--ev-c-gray-2);
-}
-
-:root {
-  --color-background: var(--ev-c-black);
-  --color-background-soft: var(--ev-c-black-soft);
-  --color-background-mute: var(--ev-c-black-mute);
-
-  --color-text: var(--ev-c-text-1);
-}
-
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  font-weight: normal;
-}
-
-ul {
-  list-style: none;
-}
-
-body {
-  min-height: 100vh;
-  color: var(--color-text);
-  background: var(--color-background);
-  line-height: 1.6;
+  color-scheme: light dark;
+  --bg-0: #f7f8fa;
+  --bg-1: #ffffff;
+  --bg-2: #eef0f4;
+  --border: #e1e4eb;
+  --border-strong: #c5cad3;
+  --text-0: #111827;
+  --text-1: #4b5563;
+  --text-2: #6b7280;
+  --accent: #4f46e5;
+  --accent-hover: #6366f1;
+  --danger: #dc2626;
+  --success: #059669;
+  --warn: #d97706;
+  --grid-dot: rgba(15, 23, 42, 0.08);
+  --edge-stroke: #6b7280;
+  --edge-label-bg: #ffffff;
+  --edge-label-border: #d1d5db;
+  --edge-label-text: #111827;
+  --cluster-fill: rgba(79, 70, 229, 0.05);
+  --cluster-stroke: #9ca3af;
+  --cluster-label: #4b5563;
   font-family:
-    Inter,
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    Roboto,
-    Oxygen,
-    Ubuntu,
-    Cantarell,
-    'Fira Sans',
-    'Droid Sans',
-    'Helvetica Neue',
-    sans-serif;
-  text-rendering: optimizeLegibility;
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 13px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--bg-0);
+  color: var(--text-0);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+  --bg-0: #0f1115;
+  --bg-1: #161a22;
+  --bg-2: #1e2330;
+  --border: #2a2f3a;
+  --border-strong: #3a4150;
+  --text-0: #e5e7eb;
+  --text-1: #9ca3af;
+  --text-2: #6b7280;
+  --accent: #6366f1;
+  --accent-hover: #818cf8;
+  --danger: #ef4444;
+  --success: #10b981;
+  --warn: #f59e0b;
+  --grid-dot: rgba(255, 255, 255, 0.06);
+  --edge-stroke: #9ca3af;
+  --edge-label-bg: #1e2330;
+  --edge-label-border: #374151;
+  --edge-label-text: #e5e7eb;
+  --cluster-fill: rgba(99, 102, 241, 0.08);
+  --cluster-stroke: #4b5563;
+  --cluster-label: #9ca3af;
 }

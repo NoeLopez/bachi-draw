@@ -1,22 +1,63 @@
-import { contextBridge } from 'electron'
+import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
-// Custom APIs for renderer
-const api = {}
+export interface OpenedFile {
+  path: string
+  content: string
+  archd: unknown | null
+}
 
-// Use `contextBridge` APIs to expose Electron APIs to
-// renderer only if context isolation is enabled, otherwise
-// just add to the DOM global.
+export interface ArchFileChangedPayload {
+  path: string
+  content: string
+}
+
+export interface ArchFileErrorPayload {
+  path: string
+  message: string
+}
+
+export interface ArchFileRemovedPayload {
+  path: string
+}
+
+type Disposer = () => void
+
+function on<T>(channel: string, handler: (payload: T) => void): Disposer {
+  const listener = (_event: IpcRendererEvent, payload: T): void => handler(payload)
+  ipcRenderer.on(channel, listener)
+  return () => ipcRenderer.removeListener(channel, listener)
+}
+
+const diagen = {
+  openFile: (): Promise<OpenedFile | null> => ipcRenderer.invoke('open-file-dialog'),
+  openFilePath: (path: string): Promise<OpenedFile | null> =>
+    ipcRenderer.invoke('open-file-path', path),
+  saveArchd: (archPath: string, data: unknown): Promise<{ path: string }> =>
+    ipcRenderer.invoke('save-archd', { archPath, data }),
+  stopWatching: (): Promise<void> => ipcRenderer.invoke('stop-watching'),
+  resolveArchName: (path: string): Promise<string> => ipcRenderer.invoke('resolve-arch-name', path),
+
+  onFileChanged: (handler: (payload: ArchFileChangedPayload) => void): Disposer =>
+    on('arch-file-changed', handler),
+  onFileError: (handler: (payload: ArchFileErrorPayload) => void): Disposer =>
+    on('arch-file-error', handler),
+  onFileRemoved: (handler: (payload: ArchFileRemovedPayload) => void): Disposer =>
+    on('arch-file-removed', handler)
+}
+
+export type DiagenApi = typeof diagen
+
 if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI)
-    contextBridge.exposeInMainWorld('api', api)
+    contextBridge.exposeInMainWorld('diagen', diagen)
   } catch (error) {
     console.error(error)
   }
 } else {
-  // @ts-ignore (define in dts)
+  // @ts-ignore (definidos en index.d.ts)
   window.electron = electronAPI
-  // @ts-ignore (define in dts)
-  window.api = api
+  // @ts-ignore (definidos en index.d.ts)
+  window.diagen = diagen
 }

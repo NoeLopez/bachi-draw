@@ -1,0 +1,133 @@
+name: "AWS Production Deployment"
+direction: LR
+
+nodes:
+  - id: users
+    type: oss/users
+    label: "Users"
+  - id: route53
+    type: aws/route53
+    label: "Route 53"
+  - id: cloudfront
+    type: aws/cloudfront
+    label: "CloudFront"
+  - id: s3_static
+    type: aws/s3
+    label: "S3 Static"
+  - id: cognito
+    type: aws/cognito
+    label: "Cognito"
+  - id: api_gateway
+    type: aws/apigateway
+    label: "API Gateway"
+  - id: s3_storage
+    type: aws/s3
+    label: "S3 Storage"
+
+clusters:
+  - id: vpc
+    label: "VPC  10.0.0.0/16"
+    clusters:
+      - id: public_subnet
+        label: "Public Subnet  10.0.1.0/24"
+        nodes:
+          - id: alb
+            type: aws/alb
+            label: "App Load Balancer"
+
+      - id: private_app
+        label: "Private Subnet — App  10.0.2.0/24"
+        nodes:
+          - id: ecs_api
+            type: aws/ecs
+            label: "API Service"
+          - id: ecs_worker
+            type: aws/ecs
+            label: "Worker Service"
+          - id: lambda_fn
+            type: aws/lambda
+            label: "Processor"
+
+      - id: private_data
+        label: "Private Subnet — Data  10.0.3.0/24"
+        nodes:
+          - id: aurora
+            type: aws/aurora
+            label: "Aurora MySQL"
+          - id: elasticache
+            type: aws/elasticache
+            label: "Redis"
+
+  - id: messaging
+    label: "Messaging"
+    nodes:
+      - id: sqs_jobs
+        type: aws/sqs
+        label: "Jobs Queue"
+      - id: sqs_dlq
+        type: aws/sqs
+        label: "Dead Letter Queue"
+      - id: sns_notify
+        type: aws/sns
+        label: "Notifications"
+
+edges:
+  # Capa de entrada
+  - from: users
+    to: route53
+  - from: route53
+    to: cloudfront
+  - from: cloudfront
+    to: s3_static
+    label: "static assets"
+    style: dashed
+  - from: cloudfront
+    to: alb
+    label: "HTTPS"
+
+  # Auth
+  - from: cognito
+    to: alb
+    label: "JWT"
+    style: dashed
+  - from: api_gateway
+    to: lambda_fn
+    label: "invoke"
+
+  # App tier
+  - from: alb
+    to: ecs_api
+    label: "HTTP/2"
+  - from: ecs_api
+    to: aurora
+    label: "SQL"
+  - from: ecs_api
+    to: elasticache
+    label: "cache"
+  - from: ecs_api
+    to: sqs_jobs
+    label: "publish"
+  - from: ecs_api
+    to: s3_storage
+    label: "put/get"
+    style: dashed
+
+  # Worker tier
+  - from: ecs_worker
+    to: sqs_jobs
+    label: "consume"
+  - from: ecs_worker
+    to: aurora
+  - from: ecs_worker
+    to: sns_notify
+    label: "notify"
+  - from: sqs_jobs
+    to: sqs_dlq
+    label: "on failure"
+    style: dashed
+
+  # Lambda
+  - from: lambda_fn
+    to: s3_storage
+    label: "presigned URL"
+    style: dashed
