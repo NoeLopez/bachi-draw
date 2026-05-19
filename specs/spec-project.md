@@ -174,12 +174,12 @@ No existe a la fecha (Mayo 2026) una herramienta que combine:
 
 | Capa          | Tecnología     | Versión | Justificación                                                                                                                |
 | ------------- | -------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Shell Desktop | **Electron**   | ^35.x   | Cross-platform, consistencia de rendering, mismo stack que DrawIO desktop, Claude Code puede construirlo completamente       |
-| Build Tool    | **Vite**       | ^6.x    | Hot reload de desarrollo rápido, integración nativa con Electron via `electron-vite`                                         |
+| Shell Desktop | **Electron**   | ^39.x   | Cross-platform, consistencia de rendering, mismo stack que DrawIO desktop, Claude Code puede construirlo completamente       |
+| Build Tool    | **Vite**       | ^7.x    | Hot reload de desarrollo rápido, integración nativa con Electron via `electron-vite`                                         |
 | UI Framework  | **React**      | ^19.x   | Ecosistema maduro, Claude Code lo genera con precisión                                                                       |
 | Lenguaje      | **TypeScript** | ^5.x    | Type safety, mejor DX, previene errores en transformaciones de datos                                                         |
 | Layout Engine | **elkjs**      | ^0.11.x | Motor moderno (Universidad de Kiel), algoritmos superiores a Graphviz, soporte nativo de clusters, sincronizado con ELK Java |
-| File Watcher  | **Chokidar**   | ^4.x    | Estándar de Node.js, usado internamente por Vite, confiable en todos los OS                                                  |
+| File Watcher  | **Chokidar**   | ^5.x    | Estándar de Node.js, usado internamente por Vite, confiable en todos los OS                                                  |
 | YAML Parser   | **js-yaml**    | ^4.x    | Parser YAML más usado en Node.js, manejo correcto de tipos                                                                   |
 | Renderizado   | **SVG nativo** | —       | Suficiente para MVP, editable via DOM, escalable sin pérdida de calidad                                                      |
 | Iconos        | **SVG Assets** | —       | Packs oficiales de AWS, GCP, Azure, K8s + OSS empaquetados en la app                                                         |
@@ -599,9 +599,9 @@ function toElkGraph(graph: ArchGraph): ElkNode {
     layoutOptions: {
       'elk.algorithm': 'layered',
       'elk.direction': graph.direction === 'LR' ? 'RIGHT' : 'DOWN',
-      'elk.layered.spacing.nodeNodeBetweenLayers': '80',
-      'elk.spacing.nodeNode': '40',
-      'elk.padding': '[top=40,left=40,bottom=40,right=40]',
+      'elk.layered.spacing.nodeNodeBetweenLayers': '30',
+      'elk.spacing.nodeNode': '10',
+      'elk.padding': '[top=10,left=10,bottom=10,right=10]',
       'elk.hierarchyHandling': 'INCLUDE_CHILDREN'
     },
     children: buildChildren(graph),
@@ -672,14 +672,17 @@ function buildEdgePath(points: Point[]): string {
 const LAYOUT_OPTIONS = {
   'elk.algorithm': 'layered',
   'elk.direction': 'RIGHT', // LR por defecto
-  'elk.layered.spacing.nodeNodeBetweenLayers': '80', // Espacio horizontal entre capas
-  'elk.spacing.nodeNode': '40', // Espacio entre nodos
-  'elk.padding': '[top=40,left=40,bottom=40,right=40]', // Padding dentro de clusters
+  'elk.layered.spacing.nodeNodeBetweenLayers': '30', // Espacio horizontal entre capas
+  'elk.spacing.nodeNode': '10', // Espacio entre nodos
+  'elk.padding': '[top=10,left=10,bottom=10,right=10]', // Padding dentro del root
   'elk.hierarchyHandling': 'INCLUDE_CHILDREN', // Crítico para clusters anidados
   'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP', // Minimiza cruces
-  'elk.edgeRouting': 'ORTHOGONAL' // Flechas ortogonales (90°)
+  'elk.edgeRouting': 'POLYLINE', // Diagonales naturales (ver §18.6)
+  'elk.layered.nodePlacement.bk.fixedAlignment': 'BALANCED'
 }
 ```
+
+Los clusters reciben un padding propio (`[top=24,left=8,bottom=8,right=8]`) que reserva espacio en la parte superior para el label del cluster sin invadir los nodos hijos.
 
 ### 11.4 Tamaños de nodos
 
@@ -996,7 +999,7 @@ Los siguientes items quedan explícitamente fuera del MVP y se documentan para v
 - **Edición visual** — Drag & drop de nodos, resize de clusters, mover flechas
 - **Export** — PNG, PDF, SVG, DrawIO XML
 - **Múltiples archivos** — Tabs, workspace, proyectos
-- **Temas** — Dark mode, light mode, temas de color por proveedor
+- **Temas de color por proveedor** — paletas diferenciadas para AWS, GCP, Azure (el toggle dark/light sí está incluido en el MVP)
 - **ELK Java** — Sidecar Java para diagramas de miles de nodos
 - **Undo/Redo** — Historial de cambios
 - **Colaboración** — Sync en la nube, multiplayer
@@ -1038,6 +1041,18 @@ Los siguientes items quedan explícitamente fuera del MVP y se documentan para v
 **Decisión:** YAML para el archivo `.arch` que escribe Claude Code.
 
 **Justificación:** YAML es más legible que JSON (sin llaves ni comillas en casos simples), es el formato estándar de Kubernetes y Docker Compose que los arquitectos ya conocen, y es trivial de parsear en Node.js. Claude Code lo genera limpio sin errores de sintaxis.
+
+### 18.6 POLYLINE sobre ORTHOGONAL como `edgeRouting`
+
+**Decisión:** Usar `elk.edgeRouting: 'POLYLINE'` en lugar del `'ORTHOGONAL'` planteado originalmente.
+
+**Justificación:** Con `ORTHOGONAL` (segmentos solo horizontales y verticales) y clusters anidados (VPC → Subnet → Service), ELK introduce un canal extra cada vez que una flecha entra a un cluster por sus paddings, generando zigzags en escalera incluso cuando la conexión podría ser una L pura. Probamos tres alternativas:
+
+1. **Post-procesado de bend points** para colapsar zigzags cortos en L: rompía la coordinación global de ELK (puertos, canales paralelos), provocando flechas que ya no entraban en el puerto correcto y líneas superpuestas.
+2. **`SPLINES`** (curvas Bezier): visualmente agradable pero demasiado orgánico, no transmite la rigidez esperada en un diagrama de arquitectura cloud.
+3. **`POLYLINE`**: ELK decide diagonales rectas naturales entre puntos de control, sin canales ortogonales forzados. Combinado con `stroke-linejoin: round` en el path SVG, los joins se ven suaves sin curvas exageradas.
+
+POLYLINE produce el balance correcto entre limpieza visual (sin zigzags) y aspecto técnico (sin curvas).
 
 ---
 
