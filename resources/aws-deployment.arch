@@ -1,133 +1,55 @@
-name: "AWS Production Deployment"
-direction: LR
+# arch-cloud v1 · header: "arch-cloud [lr|tb]" · group <id>[<label>] [in <parent>] ·
+# service <id>(<type>)[<label>] [in <parent>] · edges: a-->b · a -.->b (dashed) ·
+# a<-->b (bidir) · chains: a-->b-->c · label: ": texto" · # comentarios
+arch-cloud lr
 
-nodes:
-  - id: users
-    type: oss/users
-    label: "Users"
-  - id: route53
-    type: aws/route53
-    label: "Route 53"
-  - id: cloudfront
-    type: aws/cloudfront
-    label: "CloudFront"
-  - id: s3_static
-    type: aws/s3
-    label: "S3 Static"
-  - id: cognito
-    type: aws/cognito
-    label: "Cognito"
-  - id: api_gateway
-    type: aws/apigateway
-    label: "API Gateway"
-  - id: s3_storage
-    type: aws/s3
-    label: "S3 Storage"
+service users(oss/users)[Users]
+service route53(aws/route53)[Route 53]
+service cloudfront(aws/cloudfront)[CloudFront]
+service s3_static(aws/s3)[S3 Static]
+service cognito(aws/cognito)[Cognito]
+service api_gateway(aws/apigateway)[API Gateway]
+service s3_storage(aws/s3)[S3 Storage]
 
-clusters:
-  - id: vpc
-    label: "VPC  10.0.0.0/16"
-    clusters:
-      - id: public_subnet
-        label: "Public Subnet  10.0.1.0/24"
-        nodes:
-          - id: alb
-            type: aws/alb
-            label: "App Load Balancer"
+group vpc [VPC 10.0.0.0/16]
 
-      - id: private_app
-        label: "Private Subnet — App  10.0.2.0/24"
-        nodes:
-          - id: ecs_api
-            type: aws/ecs
-            label: "API Service"
-          - id: ecs_worker
-            type: aws/ecs
-            label: "Worker Service"
-          - id: lambda_fn
-            type: aws/lambda
-            label: "Processor"
+group public_subnet [Public Subnet 10.0.1.0/24] in vpc
+service alb(aws/alb)[App Load Balancer] in public_subnet
 
-      - id: private_data
-        label: "Private Subnet — Data  10.0.3.0/24"
-        nodes:
-          - id: aurora
-            type: aws/aurora
-            label: "Aurora MySQL"
-          - id: elasticache
-            type: aws/elasticache
-            label: "Redis"
+group private_app [Private Subnet — App 10.0.2.0/24] in vpc
+service ecs_api(aws/ecs)[API Service] in private_app
+service ecs_worker(aws/ecs)[Worker Service] in private_app
+service lambda_fn(aws/lambda)[Processor] in private_app
 
-  - id: messaging
-    label: "Messaging"
-    nodes:
-      - id: sqs_jobs
-        type: aws/sqs
-        label: "Jobs Queue"
-      - id: sqs_dlq
-        type: aws/sqs
-        label: "Dead Letter Queue"
-      - id: sns_notify
-        type: aws/sns
-        label: "Notifications"
+group private_data [Private Subnet — Data 10.0.3.0/24] in vpc
+service aurora(aws/aurora)[Aurora MySQL] in private_data
+service elasticache(aws/elasticache)[Redis] in private_data
 
-edges:
-  # Capa de entrada
-  - from: users
-    to: route53
-  - from: route53
-    to: cloudfront
-  - from: cloudfront
-    to: s3_static
-    label: "static assets"
-    style: dashed
-  - from: cloudfront
-    to: alb
-    label: "HTTPS"
+group messaging [Messaging]
+service sqs_jobs(aws/sqs)[Jobs Queue] in messaging
+service sqs_dlq(aws/sqs)[Dead Letter Queue] in messaging
+service sns_notify(aws/sns)[Notifications] in messaging
 
-  # Auth
-  - from: cognito
-    to: alb
-    label: "JWT"
-    style: dashed
-  - from: api_gateway
-    to: lambda_fn
-    label: "invoke"
+# Capa de entrada
+users --> route53 --> cloudfront --> alb : HTTPS
+cloudfront -.-> s3_static : "static assets"
 
-  # App tier
-  - from: alb
-    to: ecs_api
-    label: "HTTP/2"
-  - from: ecs_api
-    to: aurora
-    label: "SQL"
-  - from: ecs_api
-    to: elasticache
-    label: "cache"
-  - from: ecs_api
-    to: sqs_jobs
-    label: "publish"
-  - from: ecs_api
-    to: s3_storage
-    label: "put/get"
-    style: dashed
+# Auth
+cognito -.-> alb : JWT
+api_gateway --> lambda_fn : invoke
 
-  # Worker tier
-  - from: ecs_worker
-    to: sqs_jobs
-    label: "consume"
-  - from: ecs_worker
-    to: aurora
-  - from: ecs_worker
-    to: sns_notify
-    label: "notify"
-  - from: sqs_jobs
-    to: sqs_dlq
-    label: "on failure"
-    style: dashed
+# App tier
+alb --> ecs_api : "HTTP/2"
+ecs_api --> aurora : SQL
+ecs_api --> elasticache : cache
+ecs_api --> sqs_jobs : publish
+ecs_api -.-> s3_storage : "put/get"
 
-  # Lambda
-  - from: lambda_fn
-    to: s3_storage
-    label: "presigned URL"
-    style: dashed
+# Worker tier
+ecs_worker --> sqs_jobs : consume
+ecs_worker --> aurora
+ecs_worker --> sns_notify : notify
+sqs_jobs -.-> sqs_dlq : "on failure"
+
+# Lambda
+lambda_fn -.-> s3_storage : "presigned URL"

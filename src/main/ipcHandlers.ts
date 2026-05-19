@@ -15,7 +15,7 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     if (!win) return null
     const result = await dialog.showOpenDialog(win, {
       title: 'Abrir archivo .arch',
-      filters: [{ name: 'Diagen', extensions: ['arch', 'yaml', 'yml'] }],
+      filters: [{ name: 'Diagen', extensions: ['arch'] }],
       properties: ['openFile']
     })
     if (result.canceled || result.filePaths.length === 0) return null

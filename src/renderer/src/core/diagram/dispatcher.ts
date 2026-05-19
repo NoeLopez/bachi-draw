@@ -1,28 +1,30 @@
 import type { DiagramKind, DiagramResult } from './kind'
 import { getKindDef } from './registry'
 
-// Patrón del header del DSL nuevo: `arch-cloud`, `arch-bpmn`, etc.
-const HEADER_RE = /^\s*arch-([a-z][a-z0-9-]*)/m
+// Patrón del header: `arch-cloud`, `arch-bpmn`, etc.
+// Busca la primera línea no vacía que no sea comentario y exige el header válido.
+const HEADER_RE = /^\s*arch-([a-z][a-z0-9-]*)\b/m
 
 /**
- * Detecta el tipo de diagrama del contenido fuente.
- *
- * Reglas:
- *   - Si la primera línea no vacía y no comentario inicia con `arch-<kind>`,
- *     se usa ese kind (formato DSL nuevo).
- *   - Si no, se asume YAML legacy del tipo cloud (compatibilidad hacia atrás
- *     mientras migramos los `.arch` existentes).
+ * Detecta el tipo de diagrama del contenido fuente leyendo el header
+ * `arch-<kind>` en la primera línea efectiva. Lanza si no hay header o el
+ * tipo es desconocido.
  */
 export function detectKind(source: string): DiagramKind {
-  const match = source.match(HEADER_RE)
-  if (match) {
-    const candidate = match[1]
-    // Por ahora solo conocemos 'cloud'. Validamos.
-    if (candidate === 'cloud') return 'cloud'
-    throw new Error(`Tipo de diagrama desconocido: arch-${candidate}`)
+  // Saltamos comentarios y líneas vacías al inicio para encontrar el header real.
+  const firstSignificant = source
+    .split('\n')
+    .find((line) => line.trim() !== '' && !line.trim().startsWith('#'))
+
+  const match = firstSignificant?.match(HEADER_RE)
+  if (!match) {
+    throw new Error(
+      'archivo .arch sin header válido: la primera línea debe ser "arch-<tipo>" (ej. "arch-cloud lr")'
+    )
   }
-  // Fallback: YAML legacy → asumimos cloud.
-  return 'cloud'
+  const candidate = match[1]
+  if (candidate === 'cloud') return 'cloud'
+  throw new Error(`tipo de diagrama desconocido: arch-${candidate}`)
 }
 
 /**

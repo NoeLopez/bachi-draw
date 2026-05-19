@@ -18,6 +18,11 @@ interface OpenedDoc {
   content: string
 }
 
+function filenameWithoutExt(path: string): string {
+  const base = path.split(/[/\\]/).pop() ?? path
+  return base.replace(/\.[^.]+$/, '')
+}
+
 interface DiagramState {
   kind: DiagramKind
   layout: unknown
@@ -36,7 +41,7 @@ function App(): React.JSX.Element {
   const runIdRef = useRef(0)
   const { theme, toggleTheme } = useTheme()
 
-  const buildDiagram = useCallback(async (content: string): Promise<void> => {
+  const buildDiagram = useCallback(async (content: string, path: string): Promise<void> => {
     const runId = ++runIdRef.current
     setStatus('reloading')
     setStatusMessage(undefined)
@@ -47,10 +52,12 @@ function App(): React.JSX.Element {
       const model = def.parse(content)
       const layout = await def.layout(model)
       if (runIdRef.current !== runId) return
+      const rawName = def.getName(layout)
+      const name = rawName || filenameWithoutExt(path)
       setDiagram({
         kind,
         layout,
-        name: def.getName(layout),
+        name,
         bounds: def.getBounds(layout),
         stats: def.getStats(layout)
       })
@@ -68,7 +75,7 @@ function App(): React.JSX.Element {
   useEffect(() => {
     const offChanged = window.diagen.onFileChanged(({ path, content }) => {
       setDoc({ path, content })
-      void buildDiagram(content)
+      void buildDiagram(content, path)
     })
     const offError = window.diagen.onFileError(({ message }) => {
       setStatus('error')
@@ -89,7 +96,7 @@ function App(): React.JSX.Element {
     const opened = await window.diagen.openFile()
     if (!opened) return
     setDoc({ path: opened.path, content: opened.content })
-    void buildDiagram(opened.content)
+    void buildDiagram(opened.content, opened.path)
   }, [buildDiagram])
 
   const handleSaveArchd = useCallback(async () => {

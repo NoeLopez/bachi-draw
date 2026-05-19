@@ -1,105 +1,45 @@
-name: "Arquitectura de Microservicios"
-direction: LR
+# arch-cloud v1 · header: "arch-cloud [lr|tb]" · group <id>[<label>] [in <parent>] ·
+# service <id>(<type>)[<label>] [in <parent>] · edges: a-->b · a -.->b (dashed) ·
+# a<-->b (bidir) · chains: a-->b-->c · label: ": texto" · # comentarios
+arch-cloud lr
 
-nodes:
-  - id: clientes
-    type: oss/users
-    label: "clientes"
-  - id: api_gateway
-    type: oss/nginx
-    label: "api gateway"
-  - id: eventos
-    type: oss/kafka
-    label: "eventos"
-  - id: quispe
-    type: oss/lambda
-    label: "evento quispe"
+service clientes(oss/users)[clientes]
+service api_gateway(oss/nginx)[api gateway]
+service eventos(oss/kafka)[eventos]
+service quispe(oss/lambda)[evento quispe]
 
-clusters:
-  - id: servicios
-    label: "Servicios"
-    nodes:
-      - id: auth
-        type: oss/server
-        label: "auth"
-      - id: orders
-        type: oss/server
-        label: "orders"
-      - id: payments
-        type: oss/server
-        label: "payments"
+group servicios [Servicios]
+service auth(oss/server) in servicios
+service orders(oss/server) in servicios
+service payments(oss/server) in servicios
 
-  - id: workers
-    label: "Workers"
-    nodes:
-      - id: worker1
-        type: oss/server
-        label: "worker1"
-      - id: worker2
-        type: oss/server
-        label: "worker2"
+group workers [Workers]
+service worker1(oss/server) in workers
+service worker2(oss/server) in workers
 
-  - id: datos
-    label: "Datos"
-    nodes:
-      - id: postgres
-        type: oss/postgres
-        label: "postgres"
-      - id: redis
-        type: oss/redis
-        label: "redis"
+group datos [Datos]
+service postgres(oss/postgres) in datos
+service redis(oss/redis) in datos
 
-  - id: observabilidad
-    label: "Observabilidad"
-    nodes:
-      - id: prometheus
-        type: oss/prometheus
-        label: "prometheus"
-      - id: grafana
-        type: oss/grafana
-        label: "grafana"
+group observabilidad [Observabilidad]
+service prometheus(oss/prometheus) in observabilidad
+service grafana(oss/grafana) in observabilidad
 
-edges:
-  - from: clientes
-    to: api_gateway
-  - from: api_gateway
-    to: auth
-  - from: api_gateway
-    to: orders
-  - from: api_gateway
-    to: payments
-  - from: auth
-    to: eventos
-    label: "publish"
-    style: dashed
-  - from: orders
-    to: eventos
-    label: "publish"
-  - from: payments
-    to: eventos
-    label: "publish"
-  - from: eventos
-    to: worker1
-    label: "consume"
-  - from: eventos
-    to: worker2
-    label: "consume"
-  - from: worker1
-    to: postgres
-  - from: worker2
-    to: postgres
-  - from: orders
-    to: postgres
-  - from: payments
-    to: postgres
-  - from: orders
-    to: redis
-  - from: payments
-    to: redis
-  - from: worker1
-    to: prometheus
-    style: dashed
-  - from: prometheus
-    to: grafana
-  - from: quispe
-    to: api_gateway
+clientes --> api_gateway
+api_gateway --> auth
+api_gateway --> orders
+api_gateway --> payments
+auth -.-> eventos : publish
+orders --> eventos : publish
+payments --> eventos : publish
+eventos --> worker1 : consume
+eventos --> worker2 : consume
+worker1 --> postgres
+worker2 --> postgres
+orders --> postgres
+payments --> postgres
+orders --> redis
+payments --> redis
+worker1 -.-> prometheus
+prometheus --> grafana
+quispe --> api_gateway

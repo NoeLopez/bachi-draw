@@ -1,4 +1,4 @@
-import { parseCloudYaml } from '../parser/kinds/cloud/parser'
+import { parseCloudDsl } from '../parser/kinds/cloud/dslParser'
 import { runLayout as runCloudLayout } from '../layout/kinds/cloud/runner'
 import { serializeArchd } from '../state/kinds/cloud/archdSerializer'
 import CloudCanvas from '../../components/kinds/cloud/CloudCanvas'
@@ -10,7 +10,7 @@ import type { DiagramKind, DiagramKindDef } from './kind'
 const cloudKind: DiagramKindDef<CloudGraph, LayoutResult> = {
   kind: 'cloud',
   label: 'Arquitectura cloud',
-  parse: parseCloudYaml,
+  parse: parseCloudDsl,
   layout: runCloudLayout,
   Canvas: CloudCanvas,
   getName: (layout) => layout.name,
