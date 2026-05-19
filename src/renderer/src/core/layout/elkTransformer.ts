@@ -15,24 +15,19 @@ function rootLayoutOptions(direction: Direction): LayoutOptions {
   return {
     'elk.algorithm': 'layered',
     'elk.direction': direction === 'LR' ? 'RIGHT' : 'DOWN',
-    'elk.layered.spacing.nodeNodeBetweenLayers': '80',
-    'elk.spacing.nodeNode': '40',
-    'elk.padding': '[top=40,left=40,bottom=40,right=40]',
+    'elk.layered.spacing.nodeNodeBetweenLayers': '30',
+    'elk.spacing.nodeNode': '10',
+    'elk.padding': '[top=10,left=10,bottom=10,right=10]',
     'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
     'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
-    'elk.edgeRouting': 'ORTHOGONAL',
-    'elk.layered.nodePlacement.bk.fixedAlignment': 'BALANCED',
-    // Reducir dobleces innecesarios y compactar el grafo (cambios seguros que
-    // no alteran la asignación de puertos ni los canales paralelos entre aristas).
-    'elk.layered.unnecessaryBendpoints': 'true',
-    'elk.layered.compaction.postCompaction.strategy': 'EDGE_LENGTH',
-    'elk.layered.compaction.postCompaction.constraints': 'QUADRATIC'
+    'elk.edgeRouting': 'POLYLINE',
+    'elk.layered.nodePlacement.bk.fixedAlignment': 'BALANCED'
   }
 }
 
 function clusterLayoutOptions(): LayoutOptions {
   return {
-    'elk.padding': '[top=44,left=20,bottom=20,right=20]'
+    'elk.padding': '[top=24,left=8,bottom=8,right=8]'
   }
 }
 
