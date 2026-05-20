@@ -189,6 +189,10 @@ export async function runLayout(graph: CloudGraph): Promise<LayoutResult> {
   const edges: LayoutEdge[] = []
   collectEdges(result as ElkNode, { parentX: 0, parentY: 0 }, archEdgesById, edges)
 
+  // Post-procesado: centrar el contenido dentro de clusters cuando ELK los
+  // dimensionó más grandes que sus hijos por el ancho del label.
+  centerClusterContents(nodes, clusters, edges, graph)
+
   return {
     name: graph.name,
     direction: graph.direction,
@@ -198,6 +202,192 @@ export async function runLayout(graph: CloudGraph): Promise<LayoutResult> {
     clusters,
     edges
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Compactado y centrado de hijos dentro de clusters
+// ─────────────────────────────────────────────────────────────────────────
+
+// Espacio que el cluster reserva para su label/padding. Debe coincidir con
+// los valores definidos en clusterLayoutOptions() del transformer.
+const CLUSTER_PADDING = { top: 44, left: 12, bottom: 14, right: 12 }
+// Umbral para considerar que vale la pena reposicionar (evita micro-ajustes).
+const CENTER_THRESHOLD = 4
+// Umbral mínimo para encoger un cluster: solo lo hacemos si sobra bastante
+// espacio, para evitar tocar layouts ya razonablemente apretados.
+const SHRINK_THRESHOLD = 16
+// Estimado del ancho del label (debe coincidir con el del transformer).
+const LABEL_CHAR_WIDTH = 7
+const LABEL_HEIGHT = 18
+
+function centerClusterContents(
+  nodes: LayoutNode[],
+  clusters: LayoutCluster[],
+  edges: LayoutEdge[],
+  graph: CloudGraph
+): void {
+  // Mapas auxiliares para navegar la jerarquía.
+  const childNodesByCluster = new Map<string, LayoutNode[]>()
+  const childClustersByCluster = new Map<string, LayoutCluster[]>()
+  for (const n of nodes) {
+    if (!n.clusterId) continue
+    const arr = childNodesByCluster.get(n.clusterId) ?? []
+    arr.push(n)
+    childNodesByCluster.set(n.clusterId, arr)
+  }
+  for (const c of clusters) {
+    if (!c.parentClusterId) continue
+    const arr = childClustersByCluster.get(c.parentClusterId) ?? []
+    arr.push(c)
+    childClustersByCluster.set(c.parentClusterId, arr)
+  }
+
+  // Construir mapa cluster → todos los nodos descendientes (transitivo).
+  // Sirve para detectar qué aristas son internas al cluster.
+  const descendantNodes = new Map<string, Set<string>>()
+  const computeDescendants = (clusterId: string): Set<string> => {
+    const cached = descendantNodes.get(clusterId)
+    if (cached) return cached
+    const out = new Set<string>()
+    for (const n of childNodesByCluster.get(clusterId) ?? []) out.add(n.id)
+    for (const c of childClustersByCluster.get(clusterId) ?? []) {
+      for (const id of computeDescendants(c.id)) out.add(id)
+    }
+    descendantNodes.set(clusterId, out)
+    return out
+  }
+  for (const c of clusters) computeDescendants(c.id)
+
+  // Profundidad del cluster (root = 0) para procesar de hojas hacia arriba.
+  // Aunque solo movemos hijos directos (no resize), procesar leaf-first evita
+  // que mover un sub-cluster afecte el bbox de su padre antes de centrarlo.
+  const depth = new Map<string, number>()
+  const computeDepth = (clusterId: string): number => {
+    const cached = depth.get(clusterId)
+    if (cached !== undefined) return cached
+    const cluster = clusters.find((c) => c.id === clusterId)
+    if (!cluster || !cluster.parentClusterId) {
+      depth.set(clusterId, 0)
+      return 0
+    }
+    const d = computeDepth(cluster.parentClusterId) + 1
+    depth.set(clusterId, d)
+    return d
+  }
+  for (const c of clusters) computeDepth(c.id)
+
+  const sorted = [...clusters].sort((a, b) => (depth.get(b.id) ?? 0) - (depth.get(a.id) ?? 0))
+
+  for (const cluster of sorted) {
+    const directNodes = childNodesByCluster.get(cluster.id) ?? []
+    const directClusters = childClustersByCluster.get(cluster.id) ?? []
+    if (directNodes.length === 0 && directClusters.length === 0) continue
+
+    // Bounding box absoluto de los hijos directos.
+    let minX = Infinity
+    let minY = Infinity
+    let maxX = -Infinity
+    let maxY = -Infinity
+    for (const n of directNodes) {
+      if (n.x < minX) minX = n.x
+      if (n.y < minY) minY = n.y
+      if (n.x + n.width > maxX) maxX = n.x + n.width
+      if (n.y + n.height > maxY) maxY = n.y + n.height
+    }
+    for (const c of directClusters) {
+      if (c.x < minX) minX = c.x
+      if (c.y < minY) minY = c.y
+      if (c.x + c.width > maxX) maxX = c.x + c.width
+      if (c.y + c.height > maxY) maxY = c.y + c.height
+    }
+    const bboxW = maxX - minX
+    const bboxH = maxY - minY
+
+    // Tamaño mínimo real del cluster: lo que demande el label o el contenido,
+    // lo que sea mayor, más el padding fijo.
+    const labelMinW = Math.max(80, Math.ceil(cluster.label.length * LABEL_CHAR_WIDTH))
+    const idealW = Math.max(labelMinW, bboxW) + CLUSTER_PADDING.left + CLUSTER_PADDING.right
+    const idealH = CLUSTER_PADDING.top + Math.max(bboxH, LABEL_HEIGHT) + CLUSTER_PADDING.bottom
+
+    // ELK suele dar al cluster más espacio del necesario porque reserva canales
+    // para las aristas externas. Si sobra > SHRINK_THRESHOLD, encogemos.
+    if (cluster.width - idealW > SHRINK_THRESHOLD) cluster.width = idealW
+    if (cluster.height - idealH > SHRINK_THRESHOLD) cluster.height = idealH
+
+    // Recomputar área interna con el cluster ya ajustado.
+    const innerLeft = cluster.x + CLUSTER_PADDING.left
+    const innerRight = cluster.x + cluster.width - CLUSTER_PADDING.right
+    const innerTop = cluster.y + CLUSTER_PADDING.top
+    const innerBottom = cluster.y + cluster.height - CLUSTER_PADDING.bottom
+    const innerW = innerRight - innerLeft
+    const innerH = innerBottom - innerTop
+
+    // Centro objetivo del bbox de hijos dentro del área interna.
+    const targetX = innerLeft + (innerW - bboxW) / 2
+    const targetY = innerTop + (innerH - bboxH) / 2
+    const dx = targetX - minX
+    const dy = targetY - minY
+
+    if (Math.abs(dx) < CENTER_THRESHOLD && Math.abs(dy) < CENTER_THRESHOLD) continue
+
+    // Mover todos los descendientes (nodos y sub-clusters) por el mismo delta.
+    const inside = computeDescendants(cluster.id)
+    const movedClusterIds = new Set<string>()
+    movedClusterIds.add(cluster.id) // el cluster mismo no se mueve, pero lo marco como visitado
+    for (const n of nodes) {
+      if (!inside.has(n.id)) continue
+      n.x += dx
+      n.y += dy
+    }
+    // Mover también sub-clusters descendientes (todos los clusters cuyo
+    // descendantNodes esté contenido en inside).
+    for (const c of clusters) {
+      if (c.id === cluster.id) continue
+      const cDesc = descendantNodes.get(c.id)
+      if (!cDesc || cDesc.size === 0) continue
+      let allInside = true
+      for (const id of cDesc) {
+        if (!inside.has(id)) {
+          allInside = false
+          break
+        }
+      }
+      if (allInside) {
+        c.x += dx
+        c.y += dy
+        movedClusterIds.add(c.id)
+      }
+    }
+
+    // Mover aristas:
+    //  · ambos extremos dentro del cluster → mover todos los puntos
+    //  · solo un extremo dentro → ajustar solo el endpoint que se movió
+    //    (el resto del path mantiene su forma; el primer/último segmento
+    //    cambia de longitud lo necesario para reconectar con el nodo)
+    for (const edge of edges) {
+      const fromIn = inside.has(edge.from)
+      const toIn = inside.has(edge.to)
+      if (fromIn && toIn) {
+        for (const p of edge.points) {
+          p.x += dx
+          p.y += dy
+        }
+        if (edge.labelPosition) {
+          edge.labelPosition.x += dx
+          edge.labelPosition.y += dy
+        }
+      } else if (fromIn && edge.points.length > 0) {
+        edge.points[0].x += dx
+        edge.points[0].y += dy
+      } else if (toIn && edge.points.length > 0) {
+        const last = edge.points.length - 1
+        edge.points[last].x += dx
+        edge.points[last].y += dy
+      }
+    }
+  }
+
+  void graph // se mantiene en la firma por si se necesita info adicional
 }
 
 export { ROOT_ID }

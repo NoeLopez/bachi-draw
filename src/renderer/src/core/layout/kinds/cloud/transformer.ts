@@ -32,7 +32,12 @@ function rootLayoutOptions(direction: Direction): LayoutOptions {
 
 function clusterLayoutOptions(): LayoutOptions {
   return {
-    'elk.padding': '[top=24,left=8,bottom=8,right=8]'
+    'elk.padding': '[top=44,left=12,bottom=14,right=12]',
+    // El cluster debe ser al menos tan ancho como su label. Sin esto el cluster
+    // se dimensiona por sus hijos y el texto se desborda.
+    'elk.nodeSize.constraints': '[NODE_LABELS, MINIMUM_SIZE]',
+    // El label va dentro del cluster, alineado arriba-izquierda.
+    'elk.nodeLabels.placement': '[H_LEFT, V_TOP, INSIDE]'
   }
 }
 
@@ -75,7 +80,9 @@ function buildClusterTree(
     labels: [
       {
         text: cluster.label,
-        width: Math.max(60, cluster.label.length * 7),
+        // CSS aplica uppercase + letter-spacing 0.3 + weight 600. ~7px/char
+        // es suficiente porque el padding del cluster ya añade buffer lateral.
+        width: Math.max(80, Math.ceil(cluster.label.length * 7)),
         height: 18
       }
     ]
