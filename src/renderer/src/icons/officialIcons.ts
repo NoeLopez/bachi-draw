@@ -47,7 +47,14 @@ const SERVICE_ALIASES: Record<string, Record<string, string>> = {
     'api-gw': 'api-gateway',
     cloudwatch: 'cloudwatch', // ya existe sin acrónimo
     sfn: 'step-functions',
-    mq: 'mq' // ya existe sin alias
+    mq: 'mq', // ya existe sin alias
+    kms: 'key-management-service',
+    glacier: 'simple-storage-service-glacier',
+    's3-glacier': 'simple-storage-service-glacier',
+    rabbit: 'mq',
+    'amazon-mq': 'mq',
+    opensearch: 'opensearch-service',
+    'elastic-search': 'opensearch-service'
   }
 }
 

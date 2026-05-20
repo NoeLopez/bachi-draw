@@ -1,0 +1,269 @@
+# arch-cloud v1 · header: "arch-cloud [lr|tb]" · group <id>[<label>] [in <parent>] ·
+# service <id>(<type>)[<label>] [in <parent>] · edges: a-->b · a -.->b (dashed) ·
+# a<-->b (bidir) · chains: a-->b-->c · label: ": texto" · # comentarios
+arch-cloud lr
+
+# ════════════════════════════════════════════════════════════════════
+# Enterprise SaaS multi-región: usuarios → edge → multi-AZ → analytics
+# Ejercita capas, regiones, eventos, datos, ML, ops, CI/CD y security
+# ════════════════════════════════════════════════════════════════════
+
+# ── Clientes / entrada externa ──────────────────────────────────────
+service users(oss/users)[Customers]
+service mobile(oss/mobile)[Mobile App]
+service browser(oss/browser)[Web App]
+service partner(oss/server)[Partner API]
+
+# ── Edge / borde global ─────────────────────────────────────────────
+group edge [Edge & DNS]
+service r53(aws/route53)[Route 53] in edge
+service cdn(aws/cloudfront)[CloudFront] in edge
+service waf(aws/waf)[WAF] in edge
+service shield(aws/shield)[Shield Advanced] in edge
+service global_accel(aws/global-accelerator)[Global Accelerator] in edge
+
+# ── Identidad ──────────────────────────────────────────────────────
+group identity [Identity & Access]
+service cognito(aws/cognito)[Cognito User Pool] in identity
+service iam(aws/iam)[IAM] in identity
+service sso(aws/iam-identity-center)[IAM Identity Center] in identity
+service secrets(aws/secrets-manager)[Secrets Manager] in identity
+service kms(aws/kms)[KMS] in identity
+
+# ── API Gateway compartido ──────────────────────────────────────────
+service apigw(aws/apigateway)[API Gateway]
+service appsync(aws/appsync)[AppSync GraphQL]
+
+# ════════════════════════════════════════════════════════════════════
+# REGION us-east-1 (primary)
+# ════════════════════════════════════════════════════════════════════
+group region_use1 [Region us-east-1 — Primary]
+
+group vpc_use1 [VPC 10.0.0.0/16] in region_use1
+
+group public_use1 [Public Subnet 10.0.1.0/24] in vpc_use1
+service alb_use1(aws/alb)[App Load Balancer] in public_use1
+service nlb_use1(aws/elastic-load-balancing)[Network LB] in public_use1
+
+group app_use1 [Private App 10.0.2.0/24] in vpc_use1
+service api_use1(aws/ecs)[API Service] in app_use1
+service worker_use1(aws/ecs)[Worker Service] in app_use1
+service search_api(aws/ecs)[Search Service] in app_use1
+service lambda_auth(aws/lambda)[Auth Lambda] in app_use1
+service lambda_orch(aws/lambda)[Orchestrator] in app_use1
+service sfn_use1(aws/step-functions)[Workflows] in app_use1
+
+group data_use1 [Private Data 10.0.3.0/24] in vpc_use1
+service aurora_use1(aws/aurora)[Aurora Primary] in data_use1
+service redis_use1(aws/elasticache)[Redis Cluster] in data_use1
+service dynamo_use1(aws/dynamodb)[DynamoDB] in data_use1
+service os_use1(aws/opensearch)[OpenSearch] in data_use1
+
+# ════════════════════════════════════════════════════════════════════
+# REGION eu-west-1 (disaster recovery)
+# ════════════════════════════════════════════════════════════════════
+group region_euw1 [Region eu-west-1 — DR]
+
+group vpc_euw1 [VPC 10.1.0.0/16] in region_euw1
+
+group public_euw1 [Public Subnet 10.1.1.0/24] in vpc_euw1
+service alb_euw1(aws/alb)[App Load Balancer] in public_euw1
+
+group app_euw1 [Private App 10.1.2.0/24] in vpc_euw1
+service api_euw1(aws/ecs)[API Service - Replica] in app_euw1
+service lambda_dr(aws/lambda)[DR Functions] in app_euw1
+
+group data_euw1 [Private Data 10.1.3.0/24] in vpc_euw1
+service aurora_euw1(aws/aurora)[Aurora Replica] in data_euw1
+service redis_euw1(aws/elasticache)[Redis Replica] in data_euw1
+
+# ── Messaging & Eventos ────────────────────────────────────────────
+group messaging [Messaging & Eventos]
+service eb(aws/eventbridge)[EventBridge] in messaging
+service kinesis(aws/kinesis-data-streams)[Kinesis Streams] in messaging
+service firehose(aws/data-firehose)[Data Firehose] in messaging
+service jobs(aws/sqs)[Jobs Queue] in messaging
+service emails(aws/sqs)[Emails Queue] in messaging
+service dlq(aws/sqs)[Dead Letter Queue] in messaging
+service notify(aws/sns)[Notifications] in messaging
+service mq(aws/mq)[Amazon MQ] in messaging
+
+# ── Storage ────────────────────────────────────────────────────────
+group storage [Storage & Backup]
+service s3_static(aws/s3)[S3 Static Assets] in storage
+service s3_lake(aws/s3)[S3 Data Lake] in storage
+service s3_logs(aws/s3)[S3 Logs] in storage
+service s3_backup(aws/glacier)[Glacier Backup] in storage
+service efs(aws/efs)[EFS Shared FS] in storage
+service backup(aws/backup)[AWS Backup] in storage
+
+# ── Analytics ──────────────────────────────────────────────────────
+group analytics [Analytics & BI]
+service glue(aws/glue)[Glue ETL] in analytics
+service athena(aws/athena)[Athena] in analytics
+service redshift(aws/redshift)[Redshift DW] in analytics
+service quicksight(aws/quicksight)[QuickSight] in analytics
+service emr(aws/emr)[EMR] in analytics
+
+# ── Machine Learning ───────────────────────────────────────────────
+group ml [Machine Learning]
+service sagemaker(aws/sagemaker)[SageMaker] in ml
+service bedrock(aws/bedrock)[Bedrock LLMs] in ml
+service comprehend(aws/comprehend)[Comprehend] in ml
+service rekognition(aws/rekognition)[Rekognition] in ml
+service transcribe(aws/transcribe)[Transcribe] in ml
+
+# ── Observabilidad ────────────────────────────────────────────────
+group ops [Observability & Audit]
+service cw(aws/cloudwatch)[CloudWatch] in ops
+service xray(aws/x-ray)[X-Ray Tracing] in ops
+service ctrail(aws/cloudtrail)[CloudTrail] in ops
+service config_svc(aws/config)[AWS Config] in ops
+service grafana(aws/managed-grafana)[Managed Grafana] in ops
+
+# ── CI/CD ─────────────────────────────────────────────────────────
+group cicd [CI/CD Pipeline]
+service codecommit(aws/codecommit)[CodeCommit] in cicd
+service codebuild(aws/codebuild)[CodeBuild] in cicd
+service codepipe(aws/codepipeline)[CodePipeline] in cicd
+service codedeploy(aws/codedeploy)[CodeDeploy] in cicd
+service ecr(aws/ecr)[ECR Registry] in cicd
+
+# ── Security ──────────────────────────────────────────────────────
+group security [Security & Compliance]
+service guardduty(aws/guardduty)[GuardDuty] in security
+service inspector(aws/inspector)[Inspector] in security
+service securityhub(aws/security-hub)[Security Hub] in security
+service macie(aws/macie)[Macie] in security
+
+# ════════════════════════════════════════════════════════════════════
+# Aristas — flujo de tráfico, eventos y datos
+# ════════════════════════════════════════════════════════════════════
+
+# ── Entrada de tráfico ──────────────────────────────────────────────
+users --> mobile
+users --> browser
+mobile --> r53
+browser --> r53
+partner --> apigw : "OAuth2"
+
+r53 --> cdn
+r53 --> global_accel : multi-region
+cdn -.-> s3_static : "static assets"
+cdn --> waf : inspect
+waf -.-> shield : DDoS protect
+waf --> alb_use1 : HTTPS
+
+# ── Auth ───────────────────────────────────────────────────────────
+cognito -.-> alb_use1 : JWT
+cognito -.-> apigw : JWT
+sso -.-> cognito : federate
+apigw --> lambda_auth : authorize
+lambda_auth --> cognito : verify
+
+# ── GraphQL ────────────────────────────────────────────────────────
+apigw --> appsync : route
+appsync --> dynamo_use1 : query
+appsync --> lambda_orch : resolve
+
+# ── App tier primary ───────────────────────────────────────────────
+alb_use1 --> api_use1 : "HTTP/2"
+alb_use1 --> search_api : "HTTP/2"
+api_use1 --> aurora_use1 : SQL
+api_use1 --> redis_use1 : cache
+api_use1 --> dynamo_use1 : NoSQL
+api_use1 --> jobs : publish
+api_use1 --> emails : publish
+api_use1 -.-> kms : encrypt
+api_use1 -.-> secrets : retrieve
+api_use1 -.-> s3_lake : "put/get"
+api_use1 -.-> efs : mount
+
+search_api --> os_use1 : search
+search_api -.-> redis_use1 : cache
+
+# ── Workers ─────────────────────────────────────────────────────────
+worker_use1 --> jobs : consume
+worker_use1 --> emails : consume
+worker_use1 --> aurora_use1 : write
+worker_use1 --> notify : notify
+worker_use1 -.-> s3_lake : "process objects"
+jobs -.-> dlq : "on failure"
+emails -.-> dlq : "on failure"
+
+# ── Orquestación ────────────────────────────────────────────────────
+lambda_orch --> sfn_use1 : trigger
+sfn_use1 --> api_use1 : "step call"
+sfn_use1 --> lambda_orch : retry
+sfn_use1 -.-> dynamo_use1 : "state store"
+
+# ── Eventos ─────────────────────────────────────────────────────────
+api_use1 --> eb : publish
+worker_use1 --> eb : publish
+eb --> kinesis : stream
+eb --> jobs : route
+eb -.-> notify : fanout
+kinesis --> firehose : pipeline
+firehose -.-> s3_lake : land
+kinesis -.-> sagemaker : "real-time inference"
+mq <--> api_use1 : "AMQP legacy"
+
+# ── Cross-region (DR) ───────────────────────────────────────────────
+aurora_use1 -.-> aurora_euw1 : "global database"
+redis_use1 -.-> redis_euw1 : "global datastore"
+dynamo_use1 -.-> dynamo_use1 : "global tables"
+s3_lake -.-> s3_backup : "lifecycle to Glacier"
+global_accel --> alb_euw1 : "failover route"
+
+# ── DR region ──────────────────────────────────────────────────────
+alb_euw1 --> api_euw1 : "HTTP/2"
+api_euw1 --> aurora_euw1 : read
+api_euw1 --> redis_euw1 : cache
+api_euw1 --> lambda_dr : invoke
+
+# ── Analytics pipeline ─────────────────────────────────────────────
+s3_lake --> glue : crawl
+glue --> athena : catalog
+glue --> redshift : load
+athena --> quicksight : query
+redshift --> quicksight : viz
+emr -.-> s3_lake : "batch jobs"
+firehose --> redshift : ingest
+
+# ── Machine Learning ───────────────────────────────────────────────
+sagemaker -.-> s3_lake : "training data"
+bedrock -.-> api_use1 : "LLM inference"
+comprehend -.-> api_use1 : "sentiment + NER"
+rekognition -.-> api_use1 : "image analysis"
+transcribe -.-> s3_lake : "audio → text"
+sagemaker --> bedrock : "model registry"
+
+# ── Observabilidad ─────────────────────────────────────────────────
+api_use1 -.-> cw : "metrics + logs"
+worker_use1 -.-> cw : "metrics + logs"
+lambda_orch -.-> xray : trace
+api_use1 -.-> xray : trace
+search_api -.-> xray : trace
+ctrail -.-> cw : audit
+config_svc -.-> cw : compliance
+ctrail -.-> s3_logs : archive
+cw --> grafana : visualize
+
+# ── CI/CD ───────────────────────────────────────────────────────────
+codecommit --> codepipe : trigger
+codepipe --> codebuild : build
+codebuild --> ecr : push image
+codepipe --> codedeploy : deploy
+codedeploy --> api_use1 : update
+codedeploy --> worker_use1 : update
+codedeploy --> search_api : update
+
+# ── Security ───────────────────────────────────────────────────────
+guardduty -.-> securityhub : findings
+inspector -.-> securityhub : vulns
+macie -.-> securityhub : "PII alerts"
+ecr -.-> inspector : "scan images"
+config_svc -.-> securityhub : "drift detection"
+secrets -.-> kms : encrypt
+backup -.-> s3_backup : "snapshots"
+guardduty -.-> cw : alerts
