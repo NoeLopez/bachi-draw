@@ -1,4 +1,4 @@
-import type { LayoutResult } from '../../../parser/kinds/cloud/types'
+import type { LayoutNode, LayoutResult, Point } from '../../../parser/kinds/cloud/types'
 import type { SelectedItem } from '../../../diagram/editor/store'
 import { adjustEndpointOrthogonal } from './geometry'
 
@@ -88,6 +88,131 @@ export function moveElements(
   })
 
   return { ...layout, nodes, clusters, edges }
+}
+
+/**
+ * Elimina los elementos seleccionados. Función pura.
+ *
+ * Reglas:
+ *   - Nodo: se borra junto con todas las aristas que lo tocan.
+ *   - Edge: se borra la arista.
+ *   - Cluster: se borra el contenedor pero NO sus hijos; los nodos y
+ *     sub-clusters que contenía suben al padre del cluster borrado (o a root).
+ *     Es la opción menos destructiva — no se pierden nodos por accidente.
+ */
+export function deleteElements(layout: LayoutResult, selection: SelectedItem[]): LayoutResult {
+  const delNodes = new Set<string>()
+  const delClusters = new Set<string>()
+  const delEdges = new Set<string>()
+  for (const item of selection) {
+    if (item.kind === 'node') delNodes.add(item.id)
+    else if (item.kind === 'cluster') delClusters.add(item.id)
+    else if (item.kind === 'edge') delEdges.add(item.id)
+  }
+  if (delNodes.size === 0 && delClusters.size === 0 && delEdges.size === 0) return layout
+
+  const parentOf = new Map<string, string | undefined>()
+  for (const c of layout.clusters) parentOf.set(c.id, c.parentClusterId)
+
+  // Sube por la cadena de ancestros saltando los clusters que también se borran.
+  const resolveNewParent = (clusterId: string | undefined): string | undefined => {
+    let p = clusterId
+    while (p && delClusters.has(p)) p = parentOf.get(p)
+    return p
+  }
+
+  const nodes = layout.nodes
+    .filter((n) => !delNodes.has(n.id))
+    .map((n) =>
+      n.clusterId && delClusters.has(n.clusterId)
+        ? { ...n, clusterId: resolveNewParent(n.clusterId) }
+        : n
+    )
+
+  const clusters = layout.clusters
+    .filter((c) => !delClusters.has(c.id))
+    .map((c) =>
+      c.parentClusterId && delClusters.has(c.parentClusterId)
+        ? { ...c, parentClusterId: resolveNewParent(c.parentClusterId) }
+        : c
+    )
+
+  const edges = layout.edges.filter(
+    (e) => !delEdges.has(e.id) && !delNodes.has(e.from) && !delNodes.has(e.to)
+  )
+
+  return { ...layout, nodes, clusters, edges }
+}
+
+/** Centro del rectángulo del icono de un nodo. */
+function nodeCenter(n: LayoutNode): Point {
+  return { x: n.x + n.width / 2, y: n.y + n.height / 2 }
+}
+
+/** Punto en el borde del rect del nodo en dirección hacia (towardX, towardY). */
+function borderPoint(n: LayoutNode, towardX: number, towardY: number): Point {
+  const cx = n.x + n.width / 2
+  const cy = n.y + n.height / 2
+  const dx = towardX - cx
+  const dy = towardY - cy
+  if (dx === 0 && dy === 0) return { x: cx, y: cy }
+  const hw = n.width / 2
+  const hh = n.height / 2
+  const scaleX = dx !== 0 ? hw / Math.abs(dx) : Infinity
+  const scaleY = dy !== 0 ? hh / Math.abs(dy) : Infinity
+  const scale = Math.min(scaleX, scaleY)
+  return { x: cx + dx * scale, y: cy + dy * scale }
+}
+
+/**
+ * Crea una arista entre dos nodos. Función pura. Los puntos se calculan
+ * borde-a-borde (línea recta) sin re-ejecutar ELK; un "auto-layout" posterior
+ * la rerutea ortogonalmente. Evita duplicar una arista from→to existente.
+ */
+export function addEdge(layout: LayoutResult, fromId: string, toId: string): LayoutResult {
+  if (fromId === toId) return layout
+  const from = layout.nodes.find((n) => n.id === fromId)
+  const to = layout.nodes.find((n) => n.id === toId)
+  if (!from || !to) return layout
+  if (layout.edges.some((e) => e.from === fromId && e.to === toId)) return layout
+
+  const ca = nodeCenter(from)
+  const cb = nodeCenter(to)
+  const points: Point[] = [borderPoint(from, cb.x, cb.y), borderPoint(to, ca.x, ca.y)]
+
+  return {
+    ...layout,
+    edges: [
+      ...layout.edges,
+      {
+        id: `e_user_${fromId}__${toId}_${Date.now()}`,
+        from: fromId,
+        to: toId,
+        style: 'solid',
+        direction: 'forward',
+        points
+      }
+    ]
+  }
+}
+
+/** Cambia el label de un nodo o cluster. Función pura. */
+export function renameElement(
+  layout: LayoutResult,
+  kind: 'node' | 'cluster',
+  id: string,
+  label: string
+): LayoutResult {
+  if (kind === 'node') {
+    return {
+      ...layout,
+      nodes: layout.nodes.map((n) => (n.id === id ? { ...n, label } : n))
+    }
+  }
+  return {
+    ...layout,
+    clusters: layout.clusters.map((c) => (c.id === id ? { ...c, label } : c))
+  }
 }
 
 /** Recalcula el bounding box que abarca todo el contenido del layout.

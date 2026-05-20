@@ -1,6 +1,7 @@
 import { useEditorStore, useIsSelected } from '../../../core/diagram/editor/store'
 import type { LayoutNode } from '../../../core/parser/kinds/cloud/types'
 import { getIconDataUri } from '../../../icons/registry'
+import LabelEditor from './LabelEditor'
 
 interface NodeElementProps {
   node: LayoutNode
@@ -18,6 +19,15 @@ export default function NodeElement({ node }: NodeElementProps): React.JSX.Eleme
   const select = useEditorStore((s) => s.select)
   const mode = useEditorStore((s) => s.mode)
   const beginDrag = useEditorStore((s) => s.beginDrag)
+  const beginEditLabel = useEditorStore((s) => s.beginEditLabel)
+  const editing = useEditorStore((s) => s.editing?.kind === 'node' && s.editing.id === node.id)
+  const connectNode = useEditorStore((s) => s.connectNode)
+  const isConnectSource = useEditorStore((s) => s.connecting?.fromId === node.id)
+
+  const handleDoubleClick = (event: React.MouseEvent<SVGGElement>): void => {
+    event.stopPropagation()
+    beginEditLabel('node', node.id)
+  }
 
   const handlePointerDown = (event: React.PointerEvent<SVGGElement>): void => {
     // En modo pan dejamos pasar el evento al viewport para arrastrar el canvas.
@@ -29,7 +39,7 @@ export default function NodeElement({ node }: NodeElementProps): React.JSX.Eleme
       return
     }
     if (mode === 'connect') {
-      select({ kind: 'node', id: node.id }, false)
+      connectNode(node.id)
       return
     }
     // Click normal en modo select: si no estaba seleccionado, lo seleccionamos
@@ -41,9 +51,12 @@ export default function NodeElement({ node }: NodeElementProps): React.JSX.Eleme
 
   return (
     <g
-      className={`diagen-node ${selected ? 'is-selected' : ''}`}
+      className={`diagen-node ${selected ? 'is-selected' : ''} ${
+        isConnectSource ? 'is-connect-source' : ''
+      }`}
       transform={`translate(${node.x}, ${node.y})`}
       onPointerDown={handlePointerDown}
+      onDoubleClick={handleDoubleClick}
     >
       {/* Outline de selección detrás del contenido. Solo visible cuando el
           nodo está seleccionado; engloba icono + label para feedback claro. */}
@@ -58,16 +71,38 @@ export default function NodeElement({ node }: NodeElementProps): React.JSX.Eleme
           ry={6}
         />
       )}
+      {isConnectSource && (
+        <rect
+          className="diagen-connect-outline"
+          x={-SELECTION_PAD}
+          y={-SELECTION_PAD}
+          width={node.width + SELECTION_PAD * 2}
+          height={node.height + 20 + SELECTION_PAD * 2}
+          rx={6}
+          ry={6}
+        />
+      )}
       <image href={iconHref} x={iconX} y={2} width={ICON_SIZE} height={ICON_SIZE} />
-      <text
-        className="diagen-node-label"
-        x={node.width / 2}
-        y={labelY}
-        textAnchor="middle"
-        dominantBaseline="hanging"
-      >
-        {node.label}
-      </text>
+      {editing ? (
+        <LabelEditor
+          initial={node.label}
+          x={-20}
+          y={labelY - 3}
+          width={node.width + 40}
+          height={20}
+          align="center"
+        />
+      ) : (
+        <text
+          className="diagen-node-label"
+          x={node.width / 2}
+          y={labelY}
+          textAnchor="middle"
+          dominantBaseline="hanging"
+        >
+          {node.label}
+        </text>
+      )}
     </g>
   )
 }

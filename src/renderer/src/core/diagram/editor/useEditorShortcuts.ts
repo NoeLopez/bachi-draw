@@ -15,6 +15,8 @@ import { useEditorStore } from './store'
 export function useEditorShortcuts(): void {
   const setMode = useEditorStore((s) => s.setMode)
   const clearSelection = useEditorStore((s) => s.clearSelection)
+  const deleteSelection = useEditorStore((s) => s.deleteSelection)
+  const cancelConnect = useEditorStore((s) => s.cancelConnect)
 
   useEffect(() => {
     const isEditableTarget = (target: EventTarget | null): boolean => {
@@ -41,12 +43,16 @@ export function useEditorShortcuts(): void {
         setMode('connect')
         event.preventDefault()
       } else if (k === 'escape') {
+        cancelConnect()
         clearSelection()
+        event.preventDefault()
+      } else if (k === 'delete' || k === 'backspace') {
+        deleteSelection()
         event.preventDefault()
       }
     }
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [setMode, clearSelection])
+  }, [setMode, clearSelection, deleteSelection, cancelConnect])
 }

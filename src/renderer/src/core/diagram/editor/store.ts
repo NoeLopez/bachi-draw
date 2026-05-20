@@ -1,7 +1,13 @@
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 import type { DiagramKind } from '../kind'
-import { moveElements, recomputeBounds } from '../../layout/kinds/cloud/editOps'
+import {
+  addEdge,
+  deleteElements,
+  moveElements,
+  recomputeBounds,
+  renameElement
+} from '../../layout/kinds/cloud/editOps'
 import type { LayoutResult } from '../../parser/kinds/cloud/types'
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -54,6 +60,10 @@ export interface EditorState {
   selection: SelectedItem[]
   /** Estado del arrastre en curso, o null si no hay drag activo. */
   drag: DragState | null
+  /** Elemento cuyo label se está editando inline, o null. */
+  editing: { kind: 'node' | 'cluster'; id: string } | null
+  /** Conexión en progreso (modo connect): nodo origen ya elegido, o null. */
+  connecting: { fromId: string } | null
   /** true si el estado en memoria difiere del último guardado. */
   dirty: boolean
 
@@ -72,6 +82,18 @@ export interface EditorState {
   /** Finaliza el arrastre. Marca dirty solo si hubo movimiento real. */
   endDrag: () => void
 
+  // ─── Edición de label ──────────────────────────────────────────────────
+  beginEditLabel: (kind: 'node' | 'cluster', id: string) => void
+  commitEditLabel: (label: string) => void
+  cancelEditLabel: () => void
+
+  // ─── Connect tool ────────────────────────────────────────────────────────
+  /** En modo connect, gestiona el click sobre un nodo: si no hay origen lo
+   * fija; si ya hay, crea la arista origen→nodo. */
+  connectNode: (nodeId: string) => void
+  /** Cancela una conexión en progreso. */
+  cancelConnect: () => void
+
   /** Selecciona un item. `additive` = true preserva la selección previa
    * (shift-click); false la reemplaza (click normal). */
   select: (item: SelectedItem, additive: boolean) => void
@@ -79,6 +101,8 @@ export interface EditorState {
   clearSelection: () => void
   /** Helpers de consulta: comprueba si un id está seleccionado. */
   isSelected: (kind: SelectableKind, id: string) => boolean
+  /** Elimina los elementos seleccionados. */
+  deleteSelection: () => void
 
   markDirty: () => void
   markClean: () => void
@@ -96,6 +120,8 @@ export const useEditorStore = create<EditorState>()(
     mode: 'select',
     selection: [],
     drag: null,
+    editing: null,
+    connecting: null,
     dirty: false,
 
     setDiagram: (diagram, filePath, sourceContent) => {
@@ -105,6 +131,8 @@ export const useEditorStore = create<EditorState>()(
         state.sourceContent = sourceContent
         state.selection = []
         state.drag = null
+        state.editing = null
+        state.connecting = null
         state.dirty = false
       })
     },
@@ -116,6 +144,8 @@ export const useEditorStore = create<EditorState>()(
         state.sourceContent = null
         state.selection = []
         state.drag = null
+        state.editing = null
+        state.connecting = null
         state.dirty = false
       })
     },
@@ -123,6 +153,8 @@ export const useEditorStore = create<EditorState>()(
     setMode: (mode) => {
       set((state) => {
         state.mode = mode
+        // Salir del modo connect cancela cualquier conexión a medias.
+        if (mode !== 'connect') state.connecting = null
       })
     },
 
@@ -163,6 +195,62 @@ export const useEditorStore = create<EditorState>()(
       })
     },
 
+    beginEditLabel: (kind, id) => {
+      set((state) => {
+        state.editing = { kind, id }
+      })
+    },
+
+    commitEditLabel: (label) => {
+      const { editing, diagram } = get()
+      if (!editing || !diagram) return
+      const trimmed = label.trim()
+      const next = trimmed
+        ? renameElement(diagram.layout as LayoutResult, editing.kind, editing.id, trimmed)
+        : null
+      set((state) => {
+        state.editing = null
+        if (next && state.diagram) {
+          state.diagram.layout = next
+          state.dirty = true
+        }
+      })
+    },
+
+    cancelEditLabel: () => {
+      set((state) => {
+        state.editing = null
+      })
+    },
+
+    connectNode: (nodeId) => {
+      const { connecting, diagram } = get()
+      if (!diagram) return
+      if (!connecting) {
+        // Primer click: fijar nodo origen.
+        set((state) => {
+          state.connecting = { fromId: nodeId }
+        })
+        return
+      }
+      // Segundo click: crear arista origen→destino.
+      const next = addEdge(diagram.layout as LayoutResult, connecting.fromId, nodeId)
+      const changed = next !== diagram.layout
+      set((state) => {
+        state.connecting = null
+        if (changed && state.diagram) {
+          state.diagram.layout = next
+          state.dirty = true
+        }
+      })
+    },
+
+    cancelConnect: () => {
+      set((state) => {
+        state.connecting = null
+      })
+    },
+
     select: (item, additive) => {
       set((state) => {
         if (additive) {
@@ -189,6 +277,21 @@ export const useEditorStore = create<EditorState>()(
 
     isSelected: (kind, id) => {
       return get().selection.some((s) => s.kind === kind && s.id === id)
+    },
+
+    deleteSelection: () => {
+      const { selection, diagram } = get()
+      if (selection.length === 0 || !diagram) return
+      const next = deleteElements(diagram.layout as LayoutResult, selection)
+      const bounds = recomputeBounds(next)
+      set((state) => {
+        if (state.diagram) {
+          state.diagram.layout = next
+          state.diagram.bounds = bounds
+        }
+        state.selection = []
+        state.dirty = true
+      })
     },
 
     markDirty: () => {

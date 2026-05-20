@@ -1,5 +1,6 @@
 import { useEditorStore, useIsSelected } from '../../../core/diagram/editor/store'
 import type { LayoutCluster } from '../../../core/parser/kinds/cloud/types'
+import LabelEditor from './LabelEditor'
 
 interface ClusterElementProps {
   cluster: LayoutCluster
@@ -10,6 +11,15 @@ export default function ClusterElement({ cluster }: ClusterElementProps): React.
   const select = useEditorStore((s) => s.select)
   const mode = useEditorStore((s) => s.mode)
   const beginDrag = useEditorStore((s) => s.beginDrag)
+  const beginEditLabel = useEditorStore((s) => s.beginEditLabel)
+  const editing = useEditorStore(
+    (s) => s.editing?.kind === 'cluster' && s.editing.id === cluster.id
+  )
+
+  const handleDoubleClick = (event: React.MouseEvent<SVGElement>): void => {
+    event.stopPropagation()
+    beginEditLabel('cluster', cluster.id)
+  }
 
   // Hit detection: solo el borde y el label son clickeables; el interior no
   // captura eventos (para que clicks en el área del cluster lleguen a los
@@ -73,15 +83,27 @@ export default function ClusterElement({ cluster }: ClusterElementProps): React.
           pointerEvents="none"
         />
       )}
-      <text
-        className="diagen-cluster-label"
-        x={14}
-        y={20}
-        dominantBaseline="middle"
-        onPointerDown={handlePointerDown}
-      >
-        {cluster.label}
-      </text>
+      {editing ? (
+        <LabelEditor
+          initial={cluster.label}
+          x={10}
+          y={9}
+          width={Math.max(120, cluster.width - 20)}
+          height={22}
+          align="left"
+        />
+      ) : (
+        <text
+          className="diagen-cluster-label"
+          x={14}
+          y={20}
+          dominantBaseline="middle"
+          onPointerDown={handlePointerDown}
+          onDoubleClick={handleDoubleClick}
+        >
+          {cluster.label}
+        </text>
+      )}
     </g>
   )
 }

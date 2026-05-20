@@ -57,6 +57,20 @@ export default function CloudCanvas({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layoutId])
 
+  // Connect tool: línea preview desde el nodo origen hasta el cursor.
+  const connecting = useEditorStore((s) => s.connecting)
+  const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null)
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>): void => {
+    if (!connecting) return
+    const el = wrapperRef.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    setCursor({
+      x: (e.clientX - rect.left - viewport.offsetX) / viewport.zoom,
+      y: (e.clientY - rect.top - viewport.offsetY) / viewport.zoom
+    })
+  }
+
   // Cuando layout es null no renderizamos nada — App.tsx muestra el EmptyState
   // compartido (que es agnóstico del tipo de diagrama).
   if (!layout) return <div ref={wrapperRef} className="diagen-canvas" />
@@ -64,6 +78,19 @@ export default function CloudCanvas({
   // Las dimensiones del viewport son el bounding box del layout.
   const width = layout.width
   const height = layout.height
+
+  // Path del preview de conexión (origen → cursor), si aplica.
+  let connectPreview: React.JSX.Element | null = null
+  if (connecting && cursor) {
+    const src = layout.nodes.find((n) => n.id === connecting.fromId)
+    if (src) {
+      const cx = src.x + src.width / 2
+      const cy = src.y + src.height / 2
+      connectPreview = (
+        <path className="diagen-connect-preview" d={`M ${cx} ${cy} L ${cursor.x} ${cursor.y}`} />
+      )
+    }
+  }
 
   const content = (
     <>
@@ -76,11 +103,12 @@ export default function CloudCanvas({
       {layout.nodes.map((node) => (
         <NodeElement key={node.id} node={node} />
       ))}
+      {connectPreview}
     </>
   )
 
   return (
-    <div ref={wrapperRef} className="diagen-canvas">
+    <div ref={wrapperRef} className="diagen-canvas" onPointerMove={handlePointerMove}>
       <SVGViewport
         width={width}
         height={height}
