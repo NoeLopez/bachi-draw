@@ -20,13 +20,41 @@ function rootLayoutOptions(direction: Direction): LayoutOptions {
   return {
     'elk.algorithm': 'layered',
     'elk.direction': direction === 'LR' ? 'RIGHT' : 'DOWN',
-    'elk.layered.spacing.nodeNodeBetweenLayers': '30',
-    'elk.spacing.nodeNode': '10',
+
+    // Espacios — más aire entre capas y nodos reduce cruces aparentes y le
+    // da a ELK margen para rutear sin que las aristas pasen rasando iconos.
+    'elk.layered.spacing.nodeNodeBetweenLayers': '60',
+    'elk.spacing.nodeNode': '24',
+    'elk.layered.spacing.edgeNodeBetweenLayers': '20',
+    // Separación entre rieles paralelos: subida para evitar que aristas
+    // distintas queden visualmente solapadas en grafos densos.
+    'elk.layered.spacing.edgeEdgeBetweenLayers': '18',
+    'elk.spacing.edgeNode': '16',
+    'elk.spacing.edgeEdge': '18',
+
     'elk.padding': '[top=10,left=10,bottom=10,right=10]',
     'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
+
+    // Minimización de cruces: LAYER_SWEEP con un thoroughness moderado.
+    // Valores muy altos (>10) en grafos densos a veces empeoran el resultado
+    // por sobreoptimizar segmentos individuales.
     'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
-    'elk.edgeRouting': 'POLYLINE',
-    'elk.layered.nodePlacement.bk.fixedAlignment': 'BALANCED'
+    'elk.layered.thoroughness': '7',
+    'elk.layered.layering.strategy': 'NETWORK_SIMPLEX',
+
+    // Deliberadamente NO usamos mergeEdges: aunque reduce visualmente los
+    // canales paralelos, produce "dobles" cerca de los nodos donde la fusión
+    // se rompe y dos aristas distintas terminan saliendo casi por el mismo
+    // punto del icono. Mejor cada arista en su propio riel.
+
+    'elk.edgeRouting': 'ORTHOGONAL',
+    'elk.layered.nodePlacement.bk.fixedAlignment': 'BALANCED',
+
+    // Elimina bend points colineales y compacta por longitud de arista —
+    // solo aplica con ORTHOGONAL.
+    'elk.layered.unnecessaryBendpoints': 'true',
+    'elk.layered.compaction.postCompaction.strategy': 'EDGE_LENGTH',
+    'elk.layered.compaction.postCompaction.constraints': 'QUADRATIC'
   }
 }
 

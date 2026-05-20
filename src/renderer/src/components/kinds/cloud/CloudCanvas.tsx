@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CanvasProps } from '../../../core/diagram/kind'
+import { useEditorStore } from '../../../core/diagram/editor/store'
 import type { LayoutResult } from '../../../core/parser/kinds/cloud/types'
 import ClusterElement from './ClusterElement'
 import EdgeElement from './EdgeElement'
@@ -14,6 +15,25 @@ export default function CloudCanvas({
 }: CanvasProps<LayoutResult>): React.JSX.Element {
   const wrapperRef = useRef<HTMLDivElement | null>(null)
   const [size, setSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 })
+
+  // Mientras hay un drag activo, escuchamos pointermove/up globales (no en el
+  // elemento) para que el arrastre continúe aunque el cursor salga del nodo.
+  // El delta de pantalla se convierte a delta de canvas con el zoom actual.
+  const dragActive = useEditorStore((s) => s.drag !== null)
+  const updateDrag = useEditorStore((s) => s.updateDrag)
+  const endDrag = useEditorStore((s) => s.endDrag)
+  const zoom = viewport.zoom
+  useEffect(() => {
+    if (!dragActive) return
+    const onMove = (e: PointerEvent): void => updateDrag(e.clientX, e.clientY, zoom)
+    const onUp = (): void => endDrag()
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    return () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+    }
+  }, [dragActive, zoom, updateDrag, endDrag])
 
   useEffect(() => {
     const el = wrapperRef.current

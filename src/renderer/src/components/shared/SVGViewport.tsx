@@ -1,4 +1,5 @@
 import { ReactNode, useCallback, useRef, useState } from 'react'
+import { useEditorStore } from '../../core/diagram/editor/store'
 import {
   fitToContainer,
   pan,
@@ -65,13 +66,23 @@ export default function SVGViewport({
     [onViewportChange]
   )
 
-  const handlePointerUp = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-    if (dragRef.current) {
+  const clearSelection = useEditorStore((s) => s.clearSelection)
+
+  const handlePointerUp = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      const drag = dragRef.current
+      if (!drag) return
+      // Si el cursor casi no se movió, lo tratamos como un click en zona
+      // vacía: vacía la selección. El umbral de 3px evita falsas limpiezas
+      // por temblores del cursor entre pointerdown y pointerup.
+      const moved = Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY)
+      if (moved < 3) clearSelection()
       event.currentTarget.releasePointerCapture(event.pointerId)
       dragRef.current = null
       setIsPanning(false)
-    }
-  }, [])
+    },
+    [clearSelection]
+  )
 
   // Permitir doble-click para resetear el zoom al fit del contenido.
   const handleDoubleClick = useCallback(() => {

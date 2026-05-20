@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import EmptyState from './components/shared/EmptyState'
+import ModeBar from './components/shared/ModeBar'
 import StatusBar, { ReloadStatus } from './components/shared/StatusBar'
 import Toolbar from './components/shared/Toolbar'
-import type { DiagramKind, DiagramStat } from './core/diagram/kind'
 import { detectKind } from './core/diagram/dispatcher'
+import { useEditorStore } from './core/diagram/editor/store'
+import { useEditorShortcuts } from './core/diagram/editor/useEditorShortcuts'
 import { getKindDef } from './core/diagram/registry'
 import {
   clampZoom,
@@ -13,68 +15,68 @@ import {
 } from './core/renderer/viewportManager'
 import { useTheme } from './core/theme/useTheme'
 
-interface OpenedDoc {
-  path: string
-  content: string
-}
-
 function filenameWithoutExt(path: string): string {
   const base = path.split(/[/\\]/).pop() ?? path
   return base.replace(/\.[^.]+$/, '')
 }
 
-interface DiagramState {
-  kind: DiagramKind
-  layout: unknown
-  name: string
-  bounds: { width: number; height: number }
-  stats: DiagramStat[]
-}
-
 function App(): React.JSX.Element {
-  const [doc, setDoc] = useState<OpenedDoc | null>(null)
-  const [diagram, setDiagram] = useState<DiagramState | null>(null)
+  // Estado UI puramente local (no es modelo del diagrama):
   const [status, setStatus] = useState<ReloadStatus>('idle')
   const [statusMessage, setStatusMessage] = useState<string | undefined>()
   const [lastReloadMs, setLastReloadMs] = useState<number | undefined>()
   const [viewport, setViewport] = useState<ViewportState>(DEFAULT_VIEWPORT)
   const runIdRef = useRef(0)
   const { theme, toggleTheme } = useTheme()
+  useEditorShortcuts()
 
-  const buildDiagram = useCallback(async (content: string, path: string): Promise<void> => {
-    const runId = ++runIdRef.current
-    setStatus('reloading')
-    setStatusMessage(undefined)
-    const start = performance.now()
-    try {
-      const kind = detectKind(content)
-      const def = getKindDef(kind)
-      const model = def.parse(content)
-      const layout = await def.layout(model)
-      if (runIdRef.current !== runId) return
-      const rawName = def.getName(layout)
-      const name = rawName || filenameWithoutExt(path)
-      setDiagram({
-        kind,
-        layout,
-        name,
-        bounds: def.getBounds(layout),
-        stats: def.getStats(layout)
-      })
-      setLastReloadMs(Math.round(performance.now() - start))
-      setStatus('ok')
-    } catch (err) {
-      if (runIdRef.current !== runId) return
-      const message = err instanceof Error ? err.message : String(err)
-      setStatus('error')
-      setStatusMessage(message)
-      // No limpiamos el diagrama previo: el usuario sigue viendo el último válido.
-    }
-  }, [])
+  // Estado del diagrama vive en el store. Aquí solo nos suscribimos a lo
+  // mínimo necesario para que el resto del componente no re-renderice
+  // cuando cambian cosas no relacionadas (selección, modo, etc.).
+  const diagram = useEditorStore((s) => s.diagram)
+  const filePath = useEditorStore((s) => s.filePath)
+  const setDiagramInStore = useEditorStore((s) => s.setDiagram)
+
+  const buildDiagram = useCallback(
+    async (content: string, path: string): Promise<void> => {
+      const runId = ++runIdRef.current
+      setStatus('reloading')
+      setStatusMessage(undefined)
+      const start = performance.now()
+      try {
+        const kind = detectKind(content)
+        const def = getKindDef(kind)
+        const model = def.parse(content)
+        const layout = await def.layout(model)
+        if (runIdRef.current !== runId) return
+        const rawName = def.getName(layout)
+        const name = rawName || filenameWithoutExt(path)
+        setDiagramInStore(
+          {
+            kind,
+            model,
+            layout,
+            name,
+            bounds: def.getBounds(layout)
+          },
+          path,
+          content
+        )
+        setLastReloadMs(Math.round(performance.now() - start))
+        setStatus('ok')
+      } catch (err) {
+        if (runIdRef.current !== runId) return
+        const message = err instanceof Error ? err.message : String(err)
+        setStatus('error')
+        setStatusMessage(message)
+        // No limpiamos el diagrama previo: el usuario sigue viendo el último válido.
+      }
+    },
+    [setDiagramInStore]
+  )
 
   useEffect(() => {
     const offChanged = window.diagen.onFileChanged(({ path, content }) => {
-      setDoc({ path, content })
       void buildDiagram(content, path)
     })
     const offError = window.diagen.onFileError(({ message }) => {
@@ -95,14 +97,13 @@ function App(): React.JSX.Element {
   const handleOpenFile = useCallback(async () => {
     const opened = await window.diagen.openFile()
     if (!opened) return
-    setDoc({ path: opened.path, content: opened.content })
     void buildDiagram(opened.content, opened.path)
   }, [buildDiagram])
 
   const handleSaveArchd = useCallback(async () => {
-    if (!doc || !diagram) return
+    if (!filePath || !diagram) return
     try {
-      const fileName = doc.path.split(/[/\\]/).pop() ?? doc.path
+      const fileName = filePath.split(/[/\\]/).pop() ?? filePath
       const def = getKindDef(diagram.kind)
       const archd = def.serialize(fileName, diagram.layout, {
         zoom: viewport.zoom,
@@ -111,7 +112,7 @@ function App(): React.JSX.Element {
         width: diagram.bounds.width,
         height: diagram.bounds.height
       })
-      const result = await window.diagen.saveArchd(doc.path, archd)
+      const result = await window.diagen.saveArchd(filePath, archd)
       setStatus('ok')
       setStatusMessage(`Guardado ${result.path.split(/[/\\]/).pop()}`)
     } catch (err) {
@@ -119,7 +120,7 @@ function App(): React.JSX.Element {
       setStatus('error')
       setStatusMessage(message)
     }
-  }, [doc, diagram, viewport])
+  }, [filePath, diagram, viewport])
 
   const handleZoomIn = useCallback(() => {
     setViewport((v) => ({ ...v, zoom: clampZoom(v.zoom * 1.2) }))
@@ -149,8 +150,15 @@ function App(): React.JSX.Element {
     [diagram]
   )
 
-  // Componente Canvas del kind activo. Se resuelve dinámicamente para
-  // soportar múltiples tipos de diagrama (cloud, bpmn, sequence...).
+  // Stats genéricos: cada kind sabe contar lo suyo (nodos/edges/clusters,
+  // tasks/gateways, etc.). Recalculado solo cuando cambia el diagrama.
+  const stats = useMemo(() => {
+    if (!diagram) return []
+    return getKindDef(diagram.kind).getStats(diagram.layout)
+  }, [diagram])
+
+  // Canvas del kind activo. Se resuelve dinámicamente para soportar varios
+  // tipos de diagrama (cloud, bpmn, sequence...).
   const Canvas = useMemo(() => {
     if (!diagram) return null
     return getKindDef(diagram.kind).Canvas
@@ -168,7 +176,7 @@ function App(): React.JSX.Element {
         onResetView={handleResetView}
         onSaveArchd={handleSaveArchd}
         onToggleTheme={toggleTheme}
-        canSave={Boolean(doc && diagram)}
+        canSave={Boolean(filePath && diagram)}
       />
       <main className="diagen-main">
         {Canvas && diagram ? (
@@ -183,10 +191,11 @@ function App(): React.JSX.Element {
             <EmptyState />
           </div>
         )}
+        {diagram && <ModeBar />}
       </main>
       <StatusBar
-        filePath={doc?.path ?? null}
-        stats={diagram?.stats ?? []}
+        filePath={filePath}
+        stats={stats}
         status={status}
         message={statusMessage}
         lastReloadMs={lastReloadMs}

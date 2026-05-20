@@ -101,6 +101,50 @@
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
+  position: relative;
+}
+
+/* ── ModeBar flotante (estilo Excalidraw) ──────────────────── */
+
+.diagen-modebar {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+  z-index: 10;
+  pointer-events: auto;
+}
+
+.diagen-modebar-btn {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-1);
+  border: 0;
+  transition:
+    background 100ms ease,
+    color 100ms ease;
+}
+
+.diagen-modebar-btn:hover {
+  background: var(--bg-2);
+  color: var(--text-0);
+}
+
+.diagen-modebar-btn.is-active {
+  background: var(--accent);
+  color: #fff;
 }
 
 .diagen-canvas {
@@ -153,6 +197,43 @@
 
 .diagen-arrow-marker {
   fill: var(--edge-stroke);
+}
+
+/* ── Selección ─────────────────────────────────────────── */
+
+.diagen-selection-outline {
+  fill: rgba(99, 102, 241, 0.08);
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  stroke-dasharray: none;
+  pointer-events: none;
+}
+
+.diagen-node {
+  cursor: pointer;
+}
+
+.diagen-edge {
+  cursor: pointer;
+}
+
+.diagen-edge.is-selected .diagen-edge-path {
+  stroke: var(--accent);
+  stroke-width: 2.4;
+}
+
+.diagen-edge.is-selected .diagen-edge-label-bg {
+  stroke: var(--accent);
+}
+
+.diagen-cluster-hit,
+.diagen-cluster-label {
+  cursor: pointer;
+}
+
+.diagen-cluster.is-selected .diagen-cluster-rect {
+  stroke: var(--accent);
+  stroke-dasharray: none;
 }
 
 .diagen-cluster-rect {

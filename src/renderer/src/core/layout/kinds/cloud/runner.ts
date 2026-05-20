@@ -10,6 +10,7 @@ import type {
   Point
 } from '../../../parser/kinds/cloud/types'
 import { NODE_SIZE, ROOT_ID, toElkGraph } from './transformer'
+import { adjustEndpointOrthogonal } from './geometry'
 
 const elk = new ELK()
 
@@ -361,9 +362,9 @@ function centerClusterContents(
 
     // Mover aristas:
     //  · ambos extremos dentro del cluster → mover todos los puntos
-    //  · solo un extremo dentro → ajustar solo el endpoint que se movió
-    //    (el resto del path mantiene su forma; el primer/último segmento
-    //    cambia de longitud lo necesario para reconectar con el nodo)
+    //  · solo un extremo dentro → reconectar el endpoint manteniendo
+    //    la ortogonalidad del último segmento (puede requerir insertar
+    //    un bend point intermedio si el delta no es axial-alineado)
     for (const edge of edges) {
       const fromIn = inside.has(edge.from)
       const toIn = inside.has(edge.to)
@@ -376,13 +377,10 @@ function centerClusterContents(
           edge.labelPosition.x += dx
           edge.labelPosition.y += dy
         }
-      } else if (fromIn && edge.points.length > 0) {
-        edge.points[0].x += dx
-        edge.points[0].y += dy
-      } else if (toIn && edge.points.length > 0) {
-        const last = edge.points.length - 1
-        edge.points[last].x += dx
-        edge.points[last].y += dy
+      } else if (fromIn) {
+        adjustEndpointOrthogonal(edge.points, 'first', dx, dy)
+      } else if (toIn) {
+        adjustEndpointOrthogonal(edge.points, 'last', dx, dy)
       }
     }
   }

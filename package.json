@@ -25,7 +25,9 @@
     "@electron-toolkit/utils": "^4.0.0",
     "chokidar": "^5.0.0",
     "electron-updater": "^6.3.9",
-    "elkjs": "^0.11.1"
+    "elkjs": "^0.11.1",
+    "immer": "^11.1.8",
+    "zustand": "^5.0.13"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",

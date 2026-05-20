@@ -1,3 +1,4 @@
+import { useEditorStore, useIsSelected } from '../../../core/diagram/editor/store'
 import type { LayoutNode } from '../../../core/parser/kinds/cloud/types'
 import { getIconDataUri } from '../../../icons/registry'
 
@@ -6,14 +7,57 @@ interface NodeElementProps {
 }
 
 const ICON_SIZE = 56
+// Padding alrededor del icono y del label para el outline de selección.
+const SELECTION_PAD = 4
 
 export default function NodeElement({ node }: NodeElementProps): React.JSX.Element {
   const iconHref = getIconDataUri(node.type)
   const iconX = (node.width - ICON_SIZE) / 2
   const labelY = 2 + ICON_SIZE + 6 // justo debajo del icono, no del bounding box
+  const selected = useIsSelected('node', node.id)
+  const select = useEditorStore((s) => s.select)
+  const mode = useEditorStore((s) => s.mode)
+  const beginDrag = useEditorStore((s) => s.beginDrag)
+
+  const handlePointerDown = (event: React.PointerEvent<SVGGElement>): void => {
+    // En modo pan dejamos pasar el evento al viewport para arrastrar el canvas.
+    if (mode === 'pan') return
+    event.stopPropagation()
+    // Shift+click: alterna selección sin iniciar arrastre.
+    if (event.shiftKey) {
+      select({ kind: 'node', id: node.id }, true)
+      return
+    }
+    if (mode === 'connect') {
+      select({ kind: 'node', id: node.id }, false)
+      return
+    }
+    // Click normal en modo select: si no estaba seleccionado, lo seleccionamos
+    // solo a él; si ya estaba (posible multi-selección), conservamos. Luego
+    // iniciamos el arrastre con la selección vigente.
+    if (!selected) select({ kind: 'node', id: node.id }, false)
+    beginDrag(event.clientX, event.clientY)
+  }
 
   return (
-    <g className="diagen-node" transform={`translate(${node.x}, ${node.y})`}>
+    <g
+      className={`diagen-node ${selected ? 'is-selected' : ''}`}
+      transform={`translate(${node.x}, ${node.y})`}
+      onPointerDown={handlePointerDown}
+    >
+      {/* Outline de selección detrás del contenido. Solo visible cuando el
+          nodo está seleccionado; engloba icono + label para feedback claro. */}
+      {selected && (
+        <rect
+          className="diagen-selection-outline"
+          x={-SELECTION_PAD}
+          y={-SELECTION_PAD}
+          width={node.width + SELECTION_PAD * 2}
+          height={node.height + 20 + SELECTION_PAD * 2}
+          rx={6}
+          ry={6}
+        />
+      )}
       <image href={iconHref} x={iconX} y={2} width={ICON_SIZE} height={ICON_SIZE} />
       <text
         className="diagen-node-label"
