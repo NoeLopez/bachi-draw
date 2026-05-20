@@ -27,6 +27,7 @@
 17. [Fuera de Alcance MVP](#17-fuera-de-alcance-mvp)
 18. [Decisiones de Diseño y Justificaciones](#18-decisiones-de-diseño-y-justificaciones)
 19. [Evolución Futura](#19-evolución-futura)
+20. [Arquitectura Multi-Tipo](#20-arquitectura-multi-tipo)
 
 ---
 
@@ -77,7 +78,7 @@ No existe a la fecha (Mayo 2026) una herramienta que combine:
 
 ## 3. Objetivos del MVP
 
-1. **Formato legible para IA** — Claude Code puede generar y editar el archivo `.arch` (YAML) sin conocer coordenadas ni IDs internos
+1. **Formato legible para IA** — Claude Code puede generar y editar el archivo `.arch` (DSL Mermaid-style) sin conocer coordenadas ni IDs internos
 2. **Layout automático correcto** — Flechas que conectan exactamente donde deben, sin cruces innecesarios, clusters bien delimitados
 3. **Iconos oficiales** — AWS, GCP, Azure y tecnologías OSS comunes (Nginx, Postgres, Redis, Prometheus, Grafana, Kafka, etc.)
 4. **Hot reload en tiempo real** — El diagrama se actualiza en menos de 500ms desde que Claude Code guarda el archivo
@@ -90,8 +91,8 @@ No existe a la fecha (Mayo 2026) una herramienta que combine:
 
 ### Incluido
 
-- Abrir y monitorear un archivo `.arch` (YAML)
-- Parsear el YAML y transformarlo al formato elkjs
+- Abrir y monitorear un archivo `.arch` (DSL `arch-cloud`)
+- Parsear el DSL y transformarlo al formato elkjs
 - Calcular layout con elkjs (algoritmo `layered`)
 - Renderizar el diagrama como SVG en el canvas
 - Mostrar iconos oficiales de: AWS, GCP, Azure, Kubernetes, y OSS (Nginx, Postgres, Redis, Prometheus, Grafana, Kafka, RabbitMQ, MongoDB)
@@ -109,7 +110,7 @@ No existe a la fecha (Mayo 2026) una herramienta que combine:
 - Edición visual de nodos (drag & drop)
 - Múltiples archivos o tabs
 - Export a PNG, PDF o SVG
-- Temas visuales (dark/light)
+- Temas de color por proveedor (el toggle dark/light sí está incluido)
 - Colaboración o sync en la nube
 - ELK Java como motor alternativo
 - Iconos de Azure DevOps, Alibaba Cloud u otros proveedores adicionales
@@ -149,40 +150,41 @@ No existe a la fecha (Mayo 2026) una herramienta que combine:
   ┌──────┴──────┐                    ┌────────┴────────┐
   │ archivo     │                    │  Claude Code /  │
   │ .arch       │                    │  cualquier      │
-  │ (YAML)      │                    │  agente IA      │
+  │ (DSL)       │                    │  agente IA      │
   └─────────────┘                    └─────────────────┘
 ```
 
 ### Flujo de datos completo
 
 ```
-1. Claude Code escribe/edita archivo.arch (YAML)
-2. Chokidar detecta cambio en filesystem (< 50ms)
-3. Main Process lee el archivo y lo envía via ipcMain
-4. Renderer Process recibe el contenido YAML
-5. YAMLParser transforma a estructura interna ArchGraph
-6. ELKTransformer convierte ArchGraph al formato JSON de elkjs
-7. elkjs.layout() calcula posiciones x,y de nodos y rutas de flechas
-8. SVGRenderer genera el SVG con posiciones calculadas + iconos SVG
-9. DiagramCanvas actualiza el DOM — el usuario ve el cambio
-10. StateManager guarda el resultado en .archd (JSON)
+ 1. Claude Code escribe/edita archivo.arch (DSL arch-cloud)
+ 2. Chokidar detecta cambio en filesystem (< 50ms)
+ 3. Main Process lee el archivo y lo envía via ipcMain
+ 4. Renderer Process recibe el contenido del DSL
+ 5. Dispatcher detecta el tipo de diagrama (arch-<kind>) y enruta
+ 6. DslParser (kinds/cloud) transforma a estructura interna CloudGraph
+ 7. ELKTransformer convierte CloudGraph al formato JSON de elkjs
+ 8. elkjs.layout() calcula posiciones x,y de nodos y rutas de flechas
+ 9. SVGRenderer (CloudCanvas) genera el SVG con posiciones + iconos
+10. App actualiza el DOM — el usuario ve el cambio
+11. StateManager guarda el resultado en .archd (JSON, regenerable)
 ```
 
 ---
 
 ## 6. Stack Tecnológico
 
-| Capa          | Tecnología     | Versión | Justificación                                                                                                                |
-| ------------- | -------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Shell Desktop | **Electron**   | ^39.x   | Cross-platform, consistencia de rendering, mismo stack que DrawIO desktop, Claude Code puede construirlo completamente       |
-| Build Tool    | **Vite**       | ^7.x    | Hot reload de desarrollo rápido, integración nativa con Electron via `electron-vite`                                         |
-| UI Framework  | **React**      | ^19.x   | Ecosistema maduro, Claude Code lo genera con precisión                                                                       |
-| Lenguaje      | **TypeScript** | ^5.x    | Type safety, mejor DX, previene errores en transformaciones de datos                                                         |
-| Layout Engine | **elkjs**      | ^0.11.x | Motor moderno (Universidad de Kiel), algoritmos superiores a Graphviz, soporte nativo de clusters, sincronizado con ELK Java |
-| File Watcher  | **Chokidar**   | ^5.x    | Estándar de Node.js, usado internamente por Vite, confiable en todos los OS                                                  |
-| YAML Parser   | **js-yaml**    | ^4.x    | Parser YAML más usado en Node.js, manejo correcto de tipos                                                                   |
-| Renderizado   | **SVG nativo** | —       | Suficiente para MVP, editable via DOM, escalable sin pérdida de calidad                                                      |
-| Iconos        | **SVG Assets** | —       | Packs oficiales de AWS, GCP, Azure, K8s + OSS empaquetados en la app                                                         |
+| Capa          | Tecnología     | Versión | Justificación                                                                                                                      |
+| ------------- | -------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Shell Desktop | **Electron**   | ^39.x   | Cross-platform, consistencia de rendering, mismo stack que DrawIO desktop, Claude Code puede construirlo completamente             |
+| Build Tool    | **Vite**       | ^7.x    | Hot reload de desarrollo rápido, integración nativa con Electron via `electron-vite`                                               |
+| UI Framework  | **React**      | ^19.x   | Ecosistema maduro, Claude Code lo genera con precisión                                                                             |
+| Lenguaje      | **TypeScript** | ^5.x    | Type safety, mejor DX, previene errores en transformaciones de datos                                                               |
+| Layout Engine | **elkjs**      | ^0.11.x | Motor moderno (Universidad de Kiel), algoritmos superiores a Graphviz, soporte nativo de clusters, sincronizado con ELK Java       |
+| File Watcher  | **Chokidar**   | ^5.x    | Estándar de Node.js, usado internamente por Vite, confiable en todos los OS                                                        |
+| DSL Parser    | **propio**     | —       | Lexer + recursive-descent parser sin dependencias. Sintaxis Mermaid-style con extensiones (chains, labels, dashed). Ver §8 y §18.7 |
+| Renderizado   | **SVG nativo** | —       | Suficiente para MVP, editable via DOM, escalable sin pérdida de calidad                                                            |
+| Iconos        | **SVG Assets** | —       | Packs oficiales de AWS, GCP, Azure, K8s + OSS empaquetados en la app                                                               |
 
 ### Por qué Electron sobre Tauri
 
@@ -217,33 +219,49 @@ Diagen/
 │       ├── main.tsx                 # Entry point React
 │       │
 │       ├── components/
-│       │   ├── DiagramCanvas.tsx    # Canvas principal, contiene el SVG
-│       │   ├── NodeElement.tsx      # Renderiza un nodo individual (ícono + label)
-│       │   ├── EdgeElement.tsx      # Renderiza una flecha con su label
-│       │   ├── ClusterElement.tsx   # Renderiza un grupo/cluster con su borde
-│       │   ├── Toolbar.tsx          # Controles de zoom, abrir archivo
-│       │   └── StatusBar.tsx        # Nombre del archivo, estado de hot reload
+│       │   ├── shared/              # Compartidos entre tipos de diagrama
+│       │   │   ├── SVGViewport.tsx  # Wrapper con zoom + pan
+│       │   │   ├── Toolbar.tsx      # Controles de zoom, abrir archivo, tema
+│       │   │   ├── StatusBar.tsx    # Stats genéricos del diagrama
+│       │   │   └── EmptyState.tsx   # Pantalla "abre un .arch"
+│       │   │
+│       │   └── kinds/cloud/         # Componentes específicos de arch-cloud
+│       │       ├── CloudCanvas.tsx  # Canvas del tipo cloud (implementa CanvasProps)
+│       │       ├── NodeElement.tsx  # Ícono + label del nodo
+│       │       ├── EdgeElement.tsx  # Flecha + label, esquinas redondeadas
+│       │       └── ClusterElement.tsx # Borde dashed + label del cluster
 │       │
 │       ├── core/
+│       │   ├── diagram/             # Sistema multi-tipo (ver §20)
+│       │   │   ├── kind.ts          # DiagramKind, DiagramKindDef, CanvasProps
+│       │   │   ├── dispatcher.ts    # detectKind() lee header arch-<kind>
+│       │   │   └── registry.ts      # Registro de tipos disponibles
+│       │   │
 │       │   ├── parser/
-│       │   │   ├── archParser.ts    # YAML → ArchGraph (estructura interna)
-│       │   │   └── types.ts         # Tipos TypeScript: ArchGraph, ArchNode, ArchEdge, ArchCluster
+│       │   │   ├── common/
+│       │   │   │   └── lexer.ts     # Tokenizer reusable con posición línea/col
+│       │   │   └── kinds/cloud/
+│       │   │       ├── dslParser.ts # Recursive descent → CloudGraph
+│       │   │       └── types.ts     # CloudGraph, CloudNode, CloudEdge, CloudCluster
 │       │   │
 │       │   ├── layout/
-│       │   │   ├── elkTransformer.ts  # ArchGraph → formato JSON elkjs
-│       │   │   ├── elkRunner.ts       # Ejecuta elk.layout(), retorna posiciones
-│       │   │   └── layoutTypes.ts     # Tipos del resultado de layout
+│       │   │   └── kinds/cloud/
+│       │   │       ├── transformer.ts # CloudGraph → formato JSON elkjs
+│       │   │       └── runner.ts      # Ejecuta elk.layout(), aplana coords
 │       │   │
 │       │   ├── renderer/
-│       │   │   ├── svgRenderer.ts   # LayoutResult → SVG elements
-│       │   │   └── viewportManager.ts # Zoom, pan, coordenadas
+│       │   │   └── viewportManager.ts # Zoom, pan, fit-to-container
 │       │   │
-│       │   └── state/
-│       │       ├── stateManager.ts  # Gestiona ArchGraph + LayoutResult
-│       │       └── archdSerializer.ts # LayoutResult → .archd JSON
+│       │   ├── state/
+│       │   │   └── kinds/cloud/
+│       │   │       └── archdSerializer.ts # LayoutResult → .archd JSON
+│       │   │
+│       │   └── theme/
+│       │       └── useTheme.ts      # Toggle dark/light + persistencia
 │       │
 │       └── icons/
-│           ├── registry.ts          # Map de tipo → SVG string
+│           ├── registry.ts          # Map de tipo → SVG (placeholders fallback)
+│           ├── officialIcons.ts     # Auto-discovery de SVGs oficiales con import.meta.glob
 │           ├── aws/                 # SVGs oficiales AWS
 │           ├── gcp/                 # SVGs oficiales GCP
 │           ├── azure/               # SVGs oficiales Azure
@@ -258,160 +276,117 @@ Diagen/
 
 ## 8. Formato de Archivo `.arch`
 
-El archivo `.arch` es YAML simple. Es el formato que Claude Code y cualquier agente de IA deben generar. Está diseñado para ser:
+El `.arch` es un **DSL declarativo inspirado en Mermaid `architecture-beta`**. Cada archivo declara su tipo de diagrama en la primera línea (`arch-cloud` para arquitecturas cloud; en el futuro `arch-bpmn`, `arch-sequence`, etc. — ver §20). El formato está diseñado para ser:
 
 - Escrito por IA sin conocer coordenadas
+- Sin sensibilidad a indentación (a diferencia de YAML)
+- Mínimo en tokens (≈60% menos que YAML equivalente)
+- Familiar para la IA (Mermaid está en su training data)
 - Legible y editable por humanos
-- Mínimo en su sintaxis
 - Separado del estado de la aplicación (posiciones, zoom, etc.)
 
-### 8.1 Schema completo
+### 8.1 Gramática `arch-cloud` (EBNF)
 
-```yaml
-# Metadata del diagrama
-name: 'Nombre del diagrama' # Requerido
-direction: LR # LR (left-right) | TB (top-bottom). Default: LR
+```ebnf
+document   = header , { line } ;
 
-# Nodos individuales (sin cluster)
-nodes:
-  - id: nombre_unico # Requerido. Snake_case, sin espacios
-    type: aws/alb # Requerido. Ver sección de iconos
-    label: 'Load Balancer' # Opcional. Si omitido, usa el id
+header     = "arch-cloud" , [ direction ] , NEWLINE ;
+direction  = "lr" | "tb" ;                    (* default: lr *)
 
-# Clusters / grupos
-clusters:
-  - id: vpc # Requerido
-    label: 'VPC' # Requerido. Texto del header del grupo
-    nodes: # Nodos dentro del cluster
-      - id: ecs
-        type: aws/ecs
-        label: 'Fargate'
-      - id: rds
-        type: aws/rds
-        label: 'Aurora'
-    clusters: # Sub-clusters (anidamiento)
-      - id: subnet_private
-        label: 'Private Subnet'
-        nodes:
-          - id: lambda
-            type: aws/lambda
-            label: 'Lambda'
+line       = group | service | edgeStmt | NEWLINE ;
 
-# Conexiones
-edges:
-  - from: alb # Requerido. ID del nodo origen
-    to: ecs # Requerido. ID del nodo destino
-    label: 'HTTPS' # Opcional. Label de la flecha
-    style: solid # solid | dashed. Default: solid
-    direction: forward # forward | back | both. Default: forward
+group      = "group" , IDENT , [ category ] , [ bracketLabel ] ,
+             [ membership ] , NEWLINE ;
+service    = "service" , IDENT , [ category ] , [ bracketLabel ] ,
+             [ membership ] , NEWLINE ;
+category   = "(" , IDENT , ")" ;              (* tipo del nodo en service;
+                                                 ignorada por ahora en group *)
+bracketLabel = "[" , RAW , "]" ;              (* RAW = cualquier carácter
+                                                 excepto ']' y '\n' *)
+membership = "in" , IDENT ;                   (* cluster padre *)
+
+edgeStmt   = IDENT , arrow , IDENT , { arrow , IDENT } ,
+             [ ":" , labelText ] , NEWLINE ;
+arrow      = "-->" | "-.->" | "<-->" ;        (* solid · dashed · bidir *)
+labelText  = IDENT | STRING | IDENT { IDENT } ;
+
+IDENT      = ( letter | "_" ) , { letter | digit | "_" | "-" | "/" | "." } ;
+STRING     = '"' , { any char except '"' or '\n' } , '"' ;
+COMMENT    = "#" ... NEWLINE                   (* consumido por el lexer *)
 ```
+
+**Reglas clave**:
+
+- El header `arch-cloud` es **obligatorio** y debe ser la primera línea no vacía/comentario.
+- La dirección es **opcional**: `arch-cloud` (default `lr`), `arch-cloud lr`, `arch-cloud tb`.
+- Los IDs siguen `snake_case` o `kebab-case`. Los **tipos** de service (ej. `aws/alb`) pueden incluir `/` y `.` (ver §8.3).
+- Los labels entre `[...]` son **texto raw** — admiten espacios, unicode, em-dash, CIDR notation, etc., sin necesidad de comillas. Solo `]` y newline los terminan.
+- Los labels de edge entre comillas (`: "static assets"`) se requieren cuando incluyen espacios. Una sola palabra puede ir sin comillas (`: HTTPS`).
+- **Chains**: `a --> b --> c --> d` se expande a 3 edges (`a→b`, `b→c`, `c→d`). Si hay un label al final del chain, aplica solo al último segmento.
+- **Comentarios**: `# texto hasta fin de línea`. Permitidos en cualquier lugar.
+- **IDs únicos**: un mismo ID no puede aparecer dos veces (ya sea como `group` o `service`).
+- **Referencias**: cualquier ID usado en `in <parent>` o en una arista debe haber sido declarado antes en el archivo.
 
 ### 8.2 Ejemplo real — Arquitectura de Microservicios
 
-Este es el caso de prueba benchmark derivado de la imagen de referencia:
+Caso de prueba benchmark. Comparado con el equivalente YAML anterior (~105 líneas), el DSL queda en ~49 líneas:
 
-```yaml
-name: 'Arquitectura de Microservicios'
-direction: LR
-
-nodes:
-  - id: clientes
-    type: oss/users
-    label: 'clientes'
-  - id: api_gateway
-    type: oss/nginx
-    label: 'api gateway'
-  - id: eventos
-    type: oss/kafka
-    label: 'eventos'
-
-clusters:
-  - id: servicios
-    label: 'Servicios'
-    nodes:
-      - id: auth
-        type: oss/server
-        label: 'auth'
-      - id: orders
-        type: oss/server
-        label: 'orders'
-      - id: payments
-        type: oss/server
-        label: 'payments'
-
-  - id: workers
-    label: 'Workers'
-    nodes:
-      - id: worker1
-        type: oss/server
-        label: 'worker1'
-      - id: worker2
-        type: oss/server
-        label: 'worker2'
-
-  - id: datos
-    label: 'Datos'
-    nodes:
-      - id: postgres
-        type: oss/postgres
-        label: 'postgres'
-      - id: redis
-        type: oss/redis
-        label: 'redis'
-
-  - id: observabilidad
-    label: 'Observabilidad'
-    nodes:
-      - id: prometheus
-        type: oss/prometheus
-        label: 'prometheus'
-      - id: grafana
-        type: oss/grafana
-        label: 'grafana'
-
-edges:
-  - from: clientes
-    to: api_gateway
-  - from: api_gateway
-    to: auth
-  - from: api_gateway
-    to: orders
-  - from: api_gateway
-    to: payments
-  - from: auth
-    to: eventos
-    label: 'publish'
-    style: dashed
-  - from: orders
-    to: eventos
-    label: 'publish'
-  - from: payments
-    to: eventos
-    label: 'publish'
-  - from: eventos
-    to: worker1
-    label: 'consume'
-  - from: eventos
-    to: worker2
-    label: 'consume'
-  - from: worker1
-    to: postgres
-  - from: worker2
-    to: postgres
-  - from: orders
-    to: postgres
-  - from: payments
-    to: postgres
-  - from: orders
-    to: redis
-  - from: payments
-    to: redis
-  - from: worker1
-    to: observabilidad
-    style: dashed
-  - from: prometheus
-    to: grafana
 ```
+arch-cloud lr
+
+service clientes(oss/users)[clientes]
+service api_gateway(oss/nginx)[api gateway]
+service eventos(oss/kafka)[eventos]
+
+group servicios [Servicios]
+service auth(oss/server) in servicios
+service orders(oss/server) in servicios
+service payments(oss/server) in servicios
+
+group workers [Workers]
+service worker1(oss/server) in workers
+service worker2(oss/server) in workers
+
+group datos [Datos]
+service postgres(oss/postgres) in datos
+service redis(oss/redis) in datos
+
+group observabilidad [Observabilidad]
+service prometheus(oss/prometheus) in observabilidad
+service grafana(oss/grafana) in observabilidad
+
+clientes --> api_gateway
+api_gateway --> auth
+api_gateway --> orders
+api_gateway --> payments
+auth -.-> eventos : publish
+orders --> eventos : publish
+payments --> eventos : publish
+eventos --> worker1 : consume
+eventos --> worker2 : consume
+worker1 --> postgres
+worker2 --> postgres
+orders --> postgres
+payments --> postgres
+orders --> redis
+payments --> redis
+worker1 -.-> prometheus
+prometheus --> grafana
+```
+
+### 8.2.1 Header para que la IA infiera la gramática
+
+Para que un agente pueda generar `.arch` sin un system prompt explícito, cada archivo lleva una primera línea de comentario con la gramática mínima. La IA aprende todo lo que necesita del propio archivo:
+
+```
+# arch-cloud v1 · header: "arch-cloud [lr|tb]" · group <id>[<label>] [in <parent>] ·
+# service <id>(<type>)[<label>] [in <parent>] · edges: a-->b · a -.->b (dashed) ·
+# a<-->b (bidir) · chains: a-->b-->c · label: ": texto" · # comentarios
+arch-cloud lr
+...
+```
+
+~80 tokens fijos para "instalar el lenguaje" en cada conversación, sin requerir prompts auxiliares.
 
 ### 8.3 Tipos de iconos soportados en MVP
 
@@ -494,7 +469,7 @@ edges:
 
 El archivo `.archd` es el formato de documento guardado. Lo escribe y lee la aplicación. Contiene toda la información necesaria para restaurar el estado visual exacto del diagrama, incluyendo posiciones calculadas por elkjs o ajustadas manualmente en el futuro.
 
-**Regla importante:** El archivo `.arch` (YAML) es la fuente de verdad de la topología. El `.archd` es el estado visual. Si existe un `.archd` para el `.arch` abierto, la app usa las posiciones del `.archd`. Si no existe, calcula el layout desde cero con elkjs.
+**Regla importante:** El archivo `.arch` (DSL) es la fuente de verdad de la topología. El `.archd` es el estado visual derivado y regenerable. Si existe un `.archd` para el `.arch` abierto, la app usa las posiciones del `.archd`. Si no existe, calcula el layout desde cero con elkjs.
 
 ```json
 {
@@ -549,18 +524,20 @@ El archivo `.archd` es el formato de documento guardado. Lo escribe y lee la apl
 
 ## 10. Pipeline de Renderizado
 
-### 10.1 Transformación YAML → ArchGraph
+### 10.1 Transformación DSL → CloudGraph
+
+El parser del DSL (recursive descent, sin librerías externas) emite el modelo de dominio `CloudGraph`. El lexer está en `core/parser/common/lexer.ts` y es reusable por otros tipos de diagrama. El parser específico vive en `core/parser/kinds/cloud/dslParser.ts`.
 
 ```typescript
-// types.ts
-interface ArchNode {
+// core/parser/kinds/cloud/types.ts
+interface CloudNode {
   id: string
   type: string
   label: string
   clusterId?: string // ID del cluster padre, si aplica
 }
 
-interface ArchEdge {
+interface CloudEdge {
   id: string
   from: string
   to: string
@@ -569,7 +546,7 @@ interface ArchEdge {
   direction: 'forward' | 'back' | 'both'
 }
 
-interface ArchCluster {
+interface CloudCluster {
   id: string
   label: string
   nodeIds: string[]
@@ -577,23 +554,23 @@ interface ArchCluster {
   parentClusterId?: string
 }
 
-interface ArchGraph {
+interface CloudGraph {
   name: string
   direction: 'LR' | 'TB'
-  nodes: ArchNode[]
-  edges: ArchEdge[]
-  clusters: ArchCluster[]
+  nodes: CloudNode[]
+  edges: CloudEdge[]
+  clusters: CloudCluster[]
 }
 ```
 
-### 10.2 Transformación ArchGraph → formato elkjs
+### 10.2 Transformación CloudGraph → formato elkjs
 
 elkjs espera un grafo JSON con `children` (nodos) y `edges`. Los clusters se representan como nodos con sus propios `children`.
 
 ```typescript
-// elkTransformer.ts — lógica de transformación
+// core/layout/kinds/cloud/transformer.ts — lógica de transformación
 
-function toElkGraph(graph: ArchGraph): ElkNode {
+function toElkGraph(graph: CloudGraph): ElkNode {
   return {
     id: 'root',
     layoutOptions: {
@@ -788,7 +765,7 @@ ipcMain.emit('arch-file-changed', contenido)
     ↓
 preload/index.ts expone evento via contextBridge
     ↓
-React recibe el nuevo contenido YAML
+React recibe el nuevo contenido del DSL
     ↓
 Re-ejecuta pipeline completo: parse → layout → render
     ↓
@@ -943,10 +920,11 @@ function DiagramCanvas() {
     window.Diagen.onFileChanged(async ({ content }) => {
       setIsLoading(true)
       try {
-        const graph = parseArch(content)           // YAML → ArchGraph
-        const elkGraph = toElkGraph(graph)         // ArchGraph → elkjs format
-        const result = await elk.layout(elkGraph)  // elkjs calcula posiciones
-        setLayoutResult(transformResult(result))   // elkjs result → LayoutResult
+        const kind = detectKind(content)             // 'cloud'
+        const def = getKindDef(kind)
+        const graph = def.parse(content)             // DSL → CloudGraph
+        const layout = await def.layout(graph)       // CloudGraph → LayoutResult
+        setLayoutResult(layout)
       } catch (err) {
         console.error('Error en pipeline:', err)
       } finally {
@@ -1014,9 +992,9 @@ Los siguientes items quedan explícitamente fuera del MVP y se documentan para v
 
 ### 18.1 Dos formatos de archivo (`.arch` y `.archd`)
 
-**Decisión:** Separar el formato de autoría (YAML simple) del formato de documento (JSON con posiciones).
+**Decisión:** Separar el formato de autoría (DSL declarativo) del formato de documento (JSON con posiciones).
 
-**Justificación:** Cuando se agregue edición visual, la app necesita guardar las posiciones que el usuario ajustó manualmente. Si se usara un solo archivo, al editarlo Claude Code perdería las posiciones manuales, y al editarlo la app perdería la sintaxis limpia del YAML. La separación es el patrón que usan todos los editores maduros.
+**Justificación:** Cuando se agregue edición visual, la app necesita guardar las posiciones que el usuario ajustó manualmente. Si se usara un solo archivo, al editarlo Claude Code perdería las posiciones manuales, y al editarlo la app perdería la sintaxis limpia del DSL. La separación es el patrón que usan todos los editores maduros.
 
 ### 18.2 elkjs sobre Graphviz
 
@@ -1036,11 +1014,20 @@ Los siguientes items quedan explícitamente fuera del MVP y se documentan para v
 
 **Justificación:** SVG es suficiente para el MVP y tiene ventajas importantes: los elementos son parte del DOM (accesibles, inspeccionables), CSS aplica directamente, y es el formato nativo de los iconos. Canvas 2D o WebGL (como usa Figma) son necesarios para miles de nodos o animaciones complejas — fuera del alcance del MVP.
 
-### 18.5 YAML como formato de autoría
+### 18.5 DSL Mermaid-style sobre YAML como formato de autoría
 
-**Decisión:** YAML para el archivo `.arch` que escribe Claude Code.
+**Decisión:** Adoptar un DSL declarativo inspirado en `mermaid architecture-beta` (con extensiones para labels de edge, direccionalidad y chains) en lugar del YAML inicialmente planteado.
 
-**Justificación:** YAML es más legible que JSON (sin llaves ni comillas en casos simples), es el formato estándar de Kubernetes y Docker Compose que los arquitectos ya conocen, y es trivial de parsear en Node.js. Claude Code lo genera limpio sin errores de sintaxis.
+**Justificación:**
+
+1. **Densidad de tokens**: el DSL queda en ~60% menos tokens que YAML equivalente (`aws-deployment.arch` pasó de 134 a 50 líneas). En un agente con contexto limitado o que genera muchos diagramas por sesión, esto importa.
+2. **Robustez**: YAML es sensible a indentación. Un espacio de más rompe el archivo silenciosamente. El DSL usa palabras clave + delimitadores explícitos (`group`, `service`, `[...]`, `-->`, etc.), así que la IA no rompe el archivo por desliz.
+3. **Familiaridad para la IA**: Mermaid `architecture-beta` está en el training data masivo. Claude lo genera nativamente. No requiere system prompt extra para enseñárselo.
+4. **Comentario auto-explicativo**: cada `.arch` lleva un comentario inicial de ~80 tokens con la gramática mínima. La IA infiere todo el lenguaje del archivo mismo (ver §8.2.1).
+
+YAML quedó descartado tras prototipar ambos: la IA generaba YAML correctamente pero el archivo era 2.5× más verbose y los errores de indentación reaparecían al editar parcialmente.
+
+**Trade-off conocido:** se mantiene un parser propio (lexer + recursive descent, ~400 líneas) en lugar de reusar `js-yaml`. La gramática es estrecha y la sintaxis no va a divergir mucho de Mermaid, así que el mantenimiento es bajo.
 
 ### 18.6 POLYLINE sobre ORTHOGONAL como `edgeRouting`
 
@@ -1092,6 +1079,70 @@ POLYLINE produce el balance correcto entre limpieza visual (sin zigzags) y aspec
 
 ---
 
+## 20. Arquitectura Multi-Tipo
+
+Diagen está diseñado para soportar **múltiples tipos de diagrama** bajo un mismo runtime: arquitectura cloud (`arch-cloud`, implementado), procesos BPMN (`arch-bpmn`, futuro), diagramas de secuencia (`arch-sequence`, futuro), ER (`arch-erd`), C4, etc.
+
+Cada tipo es un **módulo independiente** que se enchufa al pipeline central. La regla del diseño: **agregar un tipo nuevo no requiere modificar el código de los demás**.
+
+### 20.1 Anatomía de un tipo de diagrama
+
+Cada tipo provee cuatro piezas, todas tipadas vía la interfaz `DiagramKindDef<Model, Layout>`:
+
+| Pieza         | Responsabilidad                                                                           | Vive en                     |
+| ------------- | ----------------------------------------------------------------------------------------- | --------------------------- |
+| **Parser**    | Texto fuente → modelo de dominio (`Model`)                                                | `core/parser/kinds/<kind>/` |
+| **Layout**    | Modelo → resultado con coordenadas (`Layout`)                                             | `core/layout/kinds/<kind>/` |
+| **Canvas**    | Componente React que renderiza el `Layout`                                                | `components/kinds/<kind>/`  |
+| **Accesores** | `getName`, `getBounds`, `getStats`, `serialize` para que el shell de la app sea agnóstico | en el registry              |
+
+### 20.2 Dispatcher
+
+`core/diagram/dispatcher.ts` lee la primera línea no-comentario del archivo. Si encuentra `arch-<kind>` y `<kind>` está registrado, devuelve ese tipo. Si no, lanza un error explícito. **No hay heurísticas de detección**: el header es la fuente de verdad.
+
+```typescript
+// Pseudo-código del dispatcher
+export function detectKind(source: string): DiagramKind {
+  const header = firstNonCommentLine(source).match(/^arch-([a-z0-9-]+)/)
+  if (!header) throw new Error('Archivo sin header arch-<tipo>')
+  return validateKnownKind(header[1])
+}
+```
+
+### 20.3 Registry
+
+`core/diagram/registry.ts` registra las definiciones disponibles en build-time:
+
+```typescript
+const KIND_REGISTRY: Record<DiagramKind, DiagramKindDef> = {
+  cloud: cloudKindDef
+  // future: bpmn: bpmnKindDef, sequence: sequenceKindDef, ...
+}
+```
+
+Para añadir un tipo nuevo: implementar `DiagramKindDef`, importarlo, registrarlo aquí. El `App.tsx` lo recoge automáticamente vía el dispatcher.
+
+### 20.4 Roadmap de tipos plausibles
+
+| Tipo                   | Header       | Estado           | Layout engine ideal                | Notas                                            |
+| ---------------------- | ------------ | ---------------- | ---------------------------------- | ------------------------------------------------ |
+| Cloud / Microservicios | `arch-cloud` | **Implementado** | ELK `layered`                      | El MVP. Iconos por proveedor                     |
+| Flowchart              | `arch-flow`  | Futuro           | ELK `layered`                      | Sintaxis Mermaid-style ya cercana                |
+| Sequence               | `arch-seq`   | Futuro           | Layout custom (lanes verticales)   | Sin ELK; algoritmo de "swimlane + timeline"      |
+| ER                     | `arch-erd`   | Futuro           | ELK `force` o `stress`             | Entidades + relaciones tipadas                   |
+| State machine          | `arch-state` | Futuro           | ELK `layered` con soporte de loops | Estados, transiciones, eventos                   |
+| C4                     | `arch-c4`    | Futuro           | ELK `layered`                      | Niveles: contexto/contenedor/componente          |
+| BPMN                   | `arch-bpmn`  | Futuro           | Custom (swimlanes + ELK por lane)  | El más complejo: pools, lanes, eventos, gateways |
+
+### 20.5 Ventajas
+
+1. **Aislamiento**: un bug en el parser BPMN no toca cloud.
+2. **Velocidad de iteración**: añadir un tipo nuevo es escribir un módulo, no refactor del shell.
+3. **Vocabulario optimizado por tipo**: BPMN no tiene `service`, tendrá `task`/`gateway`/`event`; ese vocabulario vive solo en el módulo BPMN.
+4. **Iconos por tipo**: cada kind puede traer su propio set sin polucionar el namespace de los demás.
+
+---
+
 _Documento generado: Mayo 2026_
-_Versión: 1.0_
+_Versión: 1.1 — DSL `arch-cloud` + arquitectura multi-tipo_
 _Estado: Aprobado para desarrollo MVP_
