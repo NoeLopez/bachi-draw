@@ -1,0 +1,124 @@
+import { type Edge, MarkerType, type Node } from '@xyflow/react'
+import type { LayoutResult } from '../../../parser/kinds/cloud/types'
+
+// ── Tipos de data de los nodos custom ───────────────────────────────────────
+
+export interface ServiceNodeData extends Record<string, unknown> {
+  label: string
+  /** Tipo de icono (ej. aws/ec2). */
+  iconType: string
+  /** true mientras se edita el label inline. */
+  editing?: boolean
+}
+
+export interface GroupNodeData extends Record<string, unknown> {
+  label: string
+  /** true mientras se edita el label inline. */
+  editing?: boolean
+}
+
+export interface CloudEdgeData extends Record<string, unknown> {
+  style: 'solid' | 'dashed'
+  direction: 'forward' | 'back' | 'both'
+}
+
+export type ServiceNode = Node<ServiceNodeData, 'service'>
+export type GroupNode = Node<GroupNodeData, 'group'>
+export type CloudFlowNode = ServiceNode | GroupNode
+
+/**
+ * Convierte el LayoutResult (coordenadas absolutas calculadas por ELK) al
+ * modelo de React Flow.
+ *
+ * Diferencias clave que resuelve:
+ *   - React Flow usa posiciones RELATIVAS al nodo padre para anidación; ELK
+ *     da absolutas. Restamos la posición absoluta del cluster contenedor.
+ *   - El orden importa: un nodo hijo debe aparecer en el array después de su
+ *     padre. Emitimos primero los clusters ordenados por profundidad
+ *     (ancestros antes que descendientes), luego los services.
+ *   - El routing de aristas lo hace React Flow (smoothstep ortogonal); no
+ *     reusamos los bend points de ELK.
+ */
+export function toReactFlow(layout: LayoutResult): {
+  nodes: CloudFlowNode[]
+  edges: Edge<CloudEdgeData>[]
+} {
+  const clusterById = new Map(layout.clusters.map((c) => [c.id, c]))
+
+  const depthOf = (clusterId: string): number => {
+    let d = 0
+    let c = clusterById.get(clusterId)
+    while (c?.parentClusterId) {
+      d++
+      c = clusterById.get(c.parentClusterId)
+    }
+    return d
+  }
+
+  // Posición absoluta del contenedor padre (0,0 si es top-level).
+  const parentAbs = (clusterId: string | undefined): { x: number; y: number } => {
+    if (!clusterId) return { x: 0, y: 0 }
+    const c = clusterById.get(clusterId)
+    return c ? { x: c.x, y: c.y } : { x: 0, y: 0 }
+  }
+
+  const nodes: CloudFlowNode[] = []
+
+  // Clusters primero, ordenados por profundidad (ancestros antes).
+  const sortedClusters = [...layout.clusters].sort((a, b) => depthOf(a.id) - depthOf(b.id))
+  for (const c of sortedClusters) {
+    const base = parentAbs(c.parentClusterId)
+    nodes.push({
+      id: c.id,
+      type: 'group',
+      position: { x: c.x - base.x, y: c.y - base.y },
+      data: { label: c.label },
+      width: c.width,
+      height: c.height,
+      ...(c.parentClusterId ? { parentId: c.parentClusterId } : {}),
+      // Los grupos van detrás de los services y se arrastran por su borde.
+      zIndex: 0
+    })
+  }
+
+  // Service nodes.
+  for (const n of layout.nodes) {
+    const base = parentAbs(n.clusterId)
+    nodes.push({
+      id: n.id,
+      type: 'service',
+      position: { x: n.x - base.x, y: n.y - base.y },
+      data: { label: n.label, iconType: n.type },
+      width: n.width,
+      height: n.height,
+      ...(n.clusterId ? { parentId: n.clusterId } : {}),
+      zIndex: 1
+    })
+  }
+
+  // Edges. React Flow rutea (smoothstep = ortogonal con esquinas suaves).
+  const edges: Edge<CloudEdgeData>[] = layout.edges.map((e) => {
+    const dashed = e.style === 'dashed'
+    const markerEnd =
+      e.direction === 'back' ? undefined : { type: MarkerType.ArrowClosed, width: 18, height: 18 }
+    const markerStart =
+      e.direction === 'back' || e.direction === 'both'
+        ? { type: MarkerType.ArrowClosed, width: 18, height: 18 }
+        : undefined
+    return {
+      id: e.id,
+      source: e.from,
+      target: e.to,
+      type: 'smoothstep',
+      label: e.label,
+      data: { style: e.style, direction: e.direction },
+      markerEnd,
+      markerStart,
+      // Permite arrastrar cualquiera de los dos extremos para reconectar.
+      reconnectable: true,
+      style: dashed ? { strokeDasharray: '6 4' } : undefined
+    }
+  })
+
+  return { nodes, edges }
+}

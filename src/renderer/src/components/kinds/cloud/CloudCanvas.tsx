@@ -1,122 +1,322 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
+import {
+  addEdge,
+  Background,
+  BackgroundVariant,
+  type Connection,
+  ConnectionMode,
+  Controls,
+  type Edge,
+  MarkerType,
+  MiniMap,
+  type Node,
+  ReactFlow,
+  ReactFlowProvider,
+  reconnectEdge,
+  useEdgesState,
+  useNodesState,
+  useReactFlow,
+  type NodeChange,
+  type EdgeChange
+} from '@xyflow/react'
+import '@xyflow/react/dist/style.css'
 import type { CanvasProps } from '../../../core/diagram/kind'
 import { useEditorStore } from '../../../core/diagram/editor/store'
-import type { LayoutResult } from '../../../core/parser/kinds/cloud/types'
-import ClusterElement from './ClusterElement'
-import EdgeElement from './EdgeElement'
-import NodeElement from './NodeElement'
-import SVGViewport from '../../shared/SVGViewport'
+import {
+  type CloudEdgeData,
+  type CloudFlowNode,
+  toReactFlow
+} from '../../../core/layout/kinds/cloud/toReactFlow'
+import type { LayoutResult, LayoutEdge } from '../../../core/parser/kinds/cloud/types'
+import GroupNode from './GroupNode'
+import ServiceNode from './ServiceNode'
 
-export default function CloudCanvas({
-  layout,
-  viewport,
-  onViewportChange,
-  onAutoFit
-}: CanvasProps<LayoutResult>): React.JSX.Element {
-  const wrapperRef = useRef<HTMLDivElement | null>(null)
-  const [size, setSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 })
+// Definidos fuera del componente: React Flow exige referencias estables.
+const nodeTypes = { service: ServiceNode, group: GroupNode }
 
-  // Mientras hay un drag activo, escuchamos pointermove/up globales (no en el
-  // elemento) para que el arrastre continúe aunque el cursor salga del nodo.
-  // El delta de pantalla se convierte a delta de canvas con el zoom actual.
-  const dragActive = useEditorStore((s) => s.drag !== null)
-  const updateDrag = useEditorStore((s) => s.updateDrag)
-  const endDrag = useEditorStore((s) => s.endDrag)
-  const zoom = viewport.zoom
-  useEffect(() => {
-    if (!dragActive) return
-    const onMove = (e: PointerEvent): void => updateDrag(e.clientX, e.clientY, zoom)
-    const onUp = (): void => endDrag()
-    window.addEventListener('pointermove', onMove)
-    window.addEventListener('pointerup', onUp)
-    return () => {
-      window.removeEventListener('pointermove', onMove)
-      window.removeEventListener('pointerup', onUp)
+function updateLayoutWithReactFlow(
+  layout: LayoutResult,
+  rfNodes: CloudFlowNode[],
+  rfEdges: Edge<CloudEdgeData>[]
+): LayoutResult {
+  const nodesMap = new Map(rfNodes.map((n) => [n.id, n]))
+
+  // Helper to get absolute positions from relative coordinates in React Flow
+  const getAbsolutePosition = (nodeId: string): { x: number; y: number } => {
+    const node = nodesMap.get(nodeId)
+    if (!node) return { x: 0, y: 0 }
+    if (!node.parentId) {
+      return { x: node.position.x, y: node.position.y }
     }
-  }, [dragActive, zoom, updateDrag, endDrag])
-
-  useEffect(() => {
-    const el = wrapperRef.current
-    if (!el) return
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0]
-      const w = entry.contentRect.width
-      const h = entry.contentRect.height
-      setSize({ w, h })
-    })
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
-
-  const layoutId = layout ? `${layout.name}|${layout.nodes.length}|${layout.edges.length}` : null
-  useEffect(() => {
-    if (layout && size.w > 0 && size.h > 0) {
-      onAutoFit(size.w, size.h)
-    }
-    // Reencuadre cuando cambia el layout o cuando el contenedor cambia drásticamente de tamaño.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layoutId])
-
-  // Connect tool: línea preview desde el nodo origen hasta el cursor.
-  const connecting = useEditorStore((s) => s.connecting)
-  const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null)
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>): void => {
-    if (!connecting) return
-    const el = wrapperRef.current
-    if (!el) return
-    const rect = el.getBoundingClientRect()
-    setCursor({
-      x: (e.clientX - rect.left - viewport.offsetX) / viewport.zoom,
-      y: (e.clientY - rect.top - viewport.offsetY) / viewport.zoom
-    })
-  }
-
-  // Cuando layout es null no renderizamos nada — App.tsx muestra el EmptyState
-  // compartido (que es agnóstico del tipo de diagrama).
-  if (!layout) return <div ref={wrapperRef} className="diagen-canvas" />
-
-  // Las dimensiones del viewport son el bounding box del layout.
-  const width = layout.width
-  const height = layout.height
-
-  // Path del preview de conexión (origen → cursor), si aplica.
-  let connectPreview: React.JSX.Element | null = null
-  if (connecting && cursor) {
-    const src = layout.nodes.find((n) => n.id === connecting.fromId)
-    if (src) {
-      const cx = src.x + src.width / 2
-      const cy = src.y + src.height / 2
-      connectPreview = (
-        <path className="diagen-connect-preview" d={`M ${cx} ${cy} L ${cursor.x} ${cursor.y}`} />
-      )
+    const parentPos = getAbsolutePosition(node.parentId)
+    return {
+      x: node.position.x + parentPos.x,
+      y: node.position.y + parentPos.y
     }
   }
 
-  const content = (
-    <>
-      {layout.clusters.map((cluster) => (
-        <ClusterElement key={cluster.id} cluster={cluster} />
-      ))}
-      {layout.edges.map((edge) => (
-        <EdgeElement key={edge.id} edge={edge} />
-      ))}
-      {layout.nodes.map((node) => (
-        <NodeElement key={node.id} node={node} />
-      ))}
-      {connectPreview}
-    </>
+  // Update layout nodes with new positions and labels
+  const updatedNodes = layout.nodes.map((n) => {
+    const rfNode = nodesMap.get(n.id)
+    if (!rfNode || rfNode.type !== 'service') return n
+    const absPos = getAbsolutePosition(n.id)
+    return {
+      ...n,
+      x: absPos.x,
+      y: absPos.y,
+      label: rfNode.data.label
+    }
+  })
+
+  // Update layout clusters with new positions and labels
+  const updatedClusters = layout.clusters.map((c) => {
+    const rfNode = nodesMap.get(c.id)
+    if (!rfNode || rfNode.type !== 'group') return c
+    const absPos = getAbsolutePosition(c.id)
+    return {
+      ...c,
+      x: absPos.x,
+      y: absPos.y,
+      label: rfNode.data.label,
+      width: rfNode.width ?? c.width,
+      height: rfNode.height ?? c.height
+    }
+  })
+
+  // Update edges.
+  // Match rfEdges back to LayoutEdge.
+  const updatedEdges = rfEdges.map((rfEdge): LayoutEdge => {
+    const existing = layout.edges.find((e) => e.id === rfEdge.id)
+    if (existing) {
+      return {
+        ...existing,
+        from: rfEdge.source,
+        to: rfEdge.target
+      }
+    }
+    // It's a new edge
+    return {
+      id: rfEdge.id,
+      from: rfEdge.source,
+      to: rfEdge.target,
+      label: rfEdge.label as string | undefined,
+      style: (rfEdge.data?.style ?? 'solid') as 'solid' | 'dashed',
+      direction: (rfEdge.data?.direction ?? 'forward') as 'forward' | 'back' | 'both',
+      points: []
+    }
+  })
+
+  return {
+    ...layout,
+    nodes: updatedNodes,
+    clusters: updatedClusters,
+    edges: updatedEdges
+  }
+}
+
+function getLayoutBounds(layout: LayoutResult): { width: number; height: number } {
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+
+  for (const n of layout.nodes) {
+    minX = Math.min(minX, n.x)
+    minY = Math.min(minY, n.y)
+    maxX = Math.max(maxX, n.x + n.width)
+    maxY = Math.max(maxY, n.y + n.height)
+  }
+  for (const c of layout.clusters) {
+    minX = Math.min(minX, c.x)
+    minY = Math.min(minY, c.y)
+    maxX = Math.max(maxX, c.x + c.width)
+    maxY = Math.max(maxY, c.y + c.height)
+  }
+
+  const width = minX === Infinity ? 0 : maxX - minX + 40
+  const height = minY === Infinity ? 0 : maxY - minY + 40
+  return { width, height }
+}
+
+function CloudCanvasInner({ layout }: CanvasProps<LayoutResult>): React.JSX.Element {
+  const [nodes, setNodes, onNodesChange] = useNodesState<CloudFlowNode>([])
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge<CloudEdgeData>>([])
+  const { fitView, updateNodeData } = useReactFlow()
+  const markDirty = useEditorStore((s) => s.markDirty)
+  const updateLayout = useEditorStore((s) => s.updateLayout)
+  // Marca si una reconexión tuvo éxito; si se suelta en el vacío, la borramos.
+  const reconnectSucceeded = useRef(true)
+
+  const syncToStore = useCallback(
+    (currentNodes: CloudFlowNode[], currentEdges: Edge<CloudEdgeData>[]) => {
+      if (!layout) return
+      const nextLayout = updateLayoutWithReactFlow(layout, currentNodes, currentEdges)
+      const bounds = getLayoutBounds(nextLayout)
+      nextLayout.width = bounds.width
+      nextLayout.height = bounds.height
+      updateLayout(nextLayout, bounds)
+    },
+    [layout, updateLayout]
   )
 
+  // (Re)convierte el layout a nodos/edges de React Flow cuando se carga un
+  // archivo o llega un hot reload. La key cambia con el contenido relevante.
+  const layoutKey = layout
+    ? `${layout.name}|${layout.nodes.length}|${layout.edges.length}|${layout.clusters.length}`
+    : null
+  useEffect(() => {
+    if (!layout) {
+      setNodes([])
+      setEdges([])
+      return
+    }
+    const { nodes: n, edges: e } = toReactFlow(layout)
+    setNodes(n)
+    setEdges(e)
+    // Encuadrar tras pintar el nuevo contenido.
+    requestAnimationFrame(() => fitView({ padding: 0.15, duration: 200 }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layoutKey])
+
+  // Crear arista al soltar una conexión entre handles.
+  const onConnect = useCallback(
+    (c: Connection) => {
+      const newEdgeId = `e_${c.source}_${c.target}`
+      const newEdge: Edge<CloudEdgeData> = {
+        id: newEdgeId,
+        source: c.source,
+        target: c.target,
+        sourceHandle: c.sourceHandle,
+        targetHandle: c.targetHandle,
+        type: 'smoothstep',
+        markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 },
+        reconnectable: true,
+        data: { style: 'solid', direction: 'forward' }
+      }
+      setEdges((eds) => {
+        const nextEdges = addEdge(newEdge, eds)
+        syncToStore(nodes, nextEdges)
+        return nextEdges
+      })
+      markDirty()
+    },
+    [setEdges, markDirty, syncToStore, nodes]
+  )
+
+  // Reconexión: arrastrar el extremo de una arista existente a otro nodo/lado.
+  // Patrón recomendado por React Flow: una bandera detecta si se soltó sobre un
+  // handle válido (onReconnect) o en el vacío (entonces se borra en onReconnectEnd).
+  const onReconnectStart = useCallback(() => {
+    reconnectSucceeded.current = false
+  }, [])
+
+  const onReconnect = useCallback(
+    (oldEdge: Edge<CloudEdgeData>, newConnection: Connection) => {
+      reconnectSucceeded.current = true
+      setEdges((eds) => {
+        const nextEdges = reconnectEdge(oldEdge, newConnection, eds)
+        syncToStore(nodes, nextEdges)
+        return nextEdges
+      })
+      markDirty()
+    },
+    [setEdges, markDirty, syncToStore, nodes]
+  )
+
+  const onReconnectEnd = useCallback(
+    (_: MouseEvent | TouchEvent, edge: Edge<CloudEdgeData>) => {
+      // Soltada en el vacío: eliminar la arista (comportamiento estándar).
+      if (!reconnectSucceeded.current) {
+        setEdges((eds) => {
+          const nextEdges = eds.filter((e) => e.id !== edge.id)
+          syncToStore(nodes, nextEdges)
+          return nextEdges
+        })
+        markDirty()
+      }
+      reconnectSucceeded.current = true
+    },
+    [setEdges, markDirty, syncToStore, nodes]
+  )
+
+  // Doble click en un nodo → activa edición inline de su label.
+  const onNodeDoubleClick = useCallback(
+    (_: React.MouseEvent, node: Node) => {
+      updateNodeData(node.id, { editing: true })
+    },
+    [updateNodeData]
+  )
+
+  // Marcar dirty cuando el usuario mueve o borra nodos/edges.
+  const onNodeDragStop = useCallback(() => {
+    markDirty()
+    syncToStore(nodes, edges)
+  }, [markDirty, syncToStore, nodes, edges])
+
+  const onNodesChangeWrapped = useCallback(
+    (changes: NodeChange<CloudFlowNode>[]) => {
+      onNodesChange(changes)
+      const hasRemoveOrReplace = changes.some((c) => c.type === 'remove' || c.type === 'replace')
+      if (hasRemoveOrReplace) {
+        setNodes((nds) => {
+          syncToStore(nds, edges)
+          return nds
+        })
+      }
+    },
+    [onNodesChange, setNodes, syncToStore, edges]
+  )
+
+  const onEdgesChangeWrapped = useCallback(
+    (changes: EdgeChange<Edge<CloudEdgeData>>[]) => {
+      onEdgesChange(changes)
+      const hasRemove = changes.some((c) => c.type === 'remove')
+      if (hasRemove) {
+        setEdges((eds) => {
+          syncToStore(nodes, eds)
+          return eds
+        })
+      }
+    },
+    [onEdgesChange, setEdges, syncToStore, nodes]
+  )
+
+  if (!layout) return <div className="diagen-canvas" />
+
   return (
-    <div ref={wrapperRef} className="diagen-canvas" onPointerMove={handlePointerMove}>
-      <SVGViewport
-        width={width}
-        height={height}
-        viewport={viewport}
-        onViewportChange={onViewportChange}
+    <div className="diagen-canvas">
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChangeWrapped}
+        onEdgesChange={onEdgesChangeWrapped}
+        onConnect={onConnect}
+        onReconnectStart={onReconnectStart}
+        onReconnect={onReconnect}
+        onReconnectEnd={onReconnectEnd}
+        onNodeDoubleClick={onNodeDoubleClick}
+        onNodeDragStop={onNodeDragStop}
+        nodeTypes={nodeTypes}
+        connectionMode={ConnectionMode.Loose}
+        deleteKeyCode={['Delete', 'Backspace']}
+        minZoom={0.1}
+        maxZoom={3}
+        fitView
+        proOptions={{ hideAttribution: true }}
       >
-        {content}
-      </SVGViewport>
+        <Background variant={BackgroundVariant.Dots} gap={24} size={1} />
+        <Controls />
+        <MiniMap pannable zoomable />
+      </ReactFlow>
     </div>
+  )
+}
+
+/** El provider habilita los hooks de React Flow (useReactFlow) en el árbol. */
+export default function CloudCanvas(props: CanvasProps<LayoutResult>): React.JSX.Element {
+  return (
+    <ReactFlowProvider>
+      <CloudCanvasInner {...props} />
+    </ReactFlowProvider>
   )
 }

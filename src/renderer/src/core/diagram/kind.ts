@@ -1,5 +1,4 @@
 import type { ComponentType } from 'react'
-import type { ViewportState } from '../renderer/viewportManager'
 
 /** Identificador único de un tipo de diagrama. Cada tipo declara su propio
  * lenguaje (header de archivo), su modelo de dominio, su layout y su renderer. */
@@ -73,11 +72,9 @@ export interface DiagramKindDef<Model = unknown, Layout = unknown> {
 
 /**
  * Props comunes que recibe cualquier Canvas de cualquier tipo de diagrama.
- * El layout es del tipo específico del kind; el resto es genérico.
+ * El viewport (zoom/pan/fit) lo gestiona internamente el renderer (React Flow),
+ * por eso el contrato es mínimo: solo el layout a dibujar.
  */
 export interface CanvasProps<Layout> {
   layout: Layout | null
-  viewport: ViewportState
-  onViewportChange: (next: ViewportState) => void
-  onAutoFit: (containerWidth: number, containerHeight: number) => void
 }

@@ -2,12 +2,8 @@ import type { Theme } from '../../core/theme/useTheme'
 
 interface ToolbarProps {
   diagramName: string
-  zoom: number
   theme: Theme
   onOpenFile: () => void
-  onZoomIn: () => void
-  onZoomOut: () => void
-  onResetView: () => void
   onSaveArchd: () => void
   onToggleTheme: () => void
   canSave: boolean
@@ -43,12 +39,8 @@ const MOON_ICON = (
 
 export default function Toolbar({
   diagramName,
-  zoom,
   theme,
   onOpenFile,
-  onZoomIn,
-  onZoomOut,
-  onResetView,
   onSaveArchd,
   onToggleTheme,
   canSave
@@ -72,17 +64,6 @@ export default function Toolbar({
           title="Guardar .archd"
         >
           Guardar .archd
-        </button>
-        <span className="diagen-toolbar-divider" />
-        <button type="button" className="diagen-btn-icon" onClick={onZoomOut} title="Zoom out">
-          −
-        </button>
-        <span className="diagen-zoom-readout">{Math.round(zoom * 100)}%</span>
-        <button type="button" className="diagen-btn-icon" onClick={onZoomIn} title="Zoom in">
-          +
-        </button>
-        <button type="button" className="diagen-btn-icon" onClick={onResetView} title="Encuadrar">
-          ⤢
         </button>
         <span className="diagen-toolbar-divider" />
         <button

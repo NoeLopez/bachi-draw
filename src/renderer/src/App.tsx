@@ -1,19 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import EmptyState from './components/shared/EmptyState'
-import ModeBar from './components/shared/ModeBar'
 import StatusBar, { ReloadStatus } from './components/shared/StatusBar'
 import Toolbar from './components/shared/Toolbar'
 import { detectKind } from './core/diagram/dispatcher'
 import { useEditorStore } from './core/diagram/editor/store'
-import { useEditorShortcuts } from './core/diagram/editor/useEditorShortcuts'
 import { getKindDef } from './core/diagram/registry'
-import {
-  clampZoom,
-  DEFAULT_VIEWPORT,
-  fitToContainer,
-  ViewportState
-} from './core/renderer/viewportManager'
 import { useTheme } from './core/theme/useTheme'
+import { reconcileLayoutWithArchd } from './core/layout/kinds/cloud/reconcile'
 
 function filenameWithoutExt(path: string): string {
   const base = path.split(/[/\\]/).pop() ?? path
@@ -25,20 +18,17 @@ function App(): React.JSX.Element {
   const [status, setStatus] = useState<ReloadStatus>('idle')
   const [statusMessage, setStatusMessage] = useState<string | undefined>()
   const [lastReloadMs, setLastReloadMs] = useState<number | undefined>()
-  const [viewport, setViewport] = useState<ViewportState>(DEFAULT_VIEWPORT)
   const runIdRef = useRef(0)
   const { theme, toggleTheme } = useTheme()
-  useEditorShortcuts()
 
-  // Estado del diagrama vive en el store. Aquí solo nos suscribimos a lo
-  // mínimo necesario para que el resto del componente no re-renderice
-  // cuando cambian cosas no relacionadas (selección, modo, etc.).
+  // El estado del diagrama vive en el store. El viewport (zoom/pan/fit) lo
+  // gestiona React Flow internamente, así que aquí ya no lo manejamos.
   const diagram = useEditorStore((s) => s.diagram)
   const filePath = useEditorStore((s) => s.filePath)
   const setDiagramInStore = useEditorStore((s) => s.setDiagram)
 
   const buildDiagram = useCallback(
-    async (content: string, path: string): Promise<void> => {
+    async (content: string, path: string, archd?: any): Promise<void> => {
       const runId = ++runIdRef.current
       setStatus('reloading')
       setStatusMessage(undefined)
@@ -47,18 +37,22 @@ function App(): React.JSX.Element {
         const kind = detectKind(content)
         const def = getKindDef(kind)
         const model = def.parse(content)
-        const layout = await def.layout(model)
+        let layout = await def.layout(model)
         if (runIdRef.current !== runId) return
+
+        // Reconcile layout with archd (loaded from disk) or with the existing in-memory layout.
+        // The in-memory state is the most fresh visual state (preserving unsaved visual edits).
+        const currentDiagram = useEditorStore.getState().diagram
+        const reconciliationSource = archd || currentDiagram?.layout
+
+        if (reconciliationSource) {
+          layout = reconcileLayoutWithArchd(layout as any, reconciliationSource)
+        }
+
         const rawName = def.getName(layout)
         const name = rawName || filenameWithoutExt(path)
         setDiagramInStore(
-          {
-            kind,
-            model,
-            layout,
-            name,
-            bounds: def.getBounds(layout)
-          },
+          { kind, model, layout, name, bounds: def.getBounds(layout) },
           path,
           content
         )
@@ -97,7 +91,7 @@ function App(): React.JSX.Element {
   const handleOpenFile = useCallback(async () => {
     const opened = await window.diagen.openFile()
     if (!opened) return
-    void buildDiagram(opened.content, opened.path)
+    void buildDiagram(opened.content, opened.path, opened.archd)
   }, [buildDiagram])
 
   const handleSaveArchd = useCallback(async () => {
@@ -106,9 +100,9 @@ function App(): React.JSX.Element {
       const fileName = filePath.split(/[/\\]/).pop() ?? filePath
       const def = getKindDef(diagram.kind)
       const archd = def.serialize(fileName, diagram.layout, {
-        zoom: viewport.zoom,
-        offsetX: viewport.offsetX,
-        offsetY: viewport.offsetY,
+        zoom: 1,
+        offsetX: 0,
+        offsetY: 0,
         width: diagram.bounds.width,
         height: diagram.bounds.height
       })
@@ -120,45 +114,15 @@ function App(): React.JSX.Element {
       setStatus('error')
       setStatusMessage(message)
     }
-  }, [filePath, diagram, viewport])
+  }, [filePath, diagram])
 
-  const handleZoomIn = useCallback(() => {
-    setViewport((v) => ({ ...v, zoom: clampZoom(v.zoom * 1.2) }))
-  }, [])
-
-  const handleZoomOut = useCallback(() => {
-    setViewport((v) => ({ ...v, zoom: clampZoom(v.zoom / 1.2) }))
-  }, [])
-
-  const handleResetView = useCallback(() => {
-    if (!diagram) return
-    const container = document.querySelector<HTMLDivElement>('.diagen-canvas')
-    if (!container) return
-    const rect = container.getBoundingClientRect()
-    setViewport(
-      fitToContainer(diagram.bounds.width, diagram.bounds.height, rect.width, rect.height)
-    )
-  }, [diagram])
-
-  const handleAutoFit = useCallback(
-    (containerWidth: number, containerHeight: number) => {
-      if (!diagram) return
-      setViewport(
-        fitToContainer(diagram.bounds.width, diagram.bounds.height, containerWidth, containerHeight)
-      )
-    },
-    [diagram]
-  )
-
-  // Stats genéricos: cada kind sabe contar lo suyo (nodos/edges/clusters,
-  // tasks/gateways, etc.). Recalculado solo cuando cambia el diagrama.
+  // Stats genéricos: cada kind sabe contar lo suyo (nodos/edges/clusters).
   const stats = useMemo(() => {
     if (!diagram) return []
     return getKindDef(diagram.kind).getStats(diagram.layout)
   }, [diagram])
 
-  // Canvas del kind activo. Se resuelve dinámicamente para soportar varios
-  // tipos de diagrama (cloud, bpmn, sequence...).
+  // Canvas del kind activo, resuelto dinámicamente para soportar varios tipos.
   const Canvas = useMemo(() => {
     if (!diagram) return null
     return getKindDef(diagram.kind).Canvas
@@ -168,30 +132,20 @@ function App(): React.JSX.Element {
     <div className="diagen-app">
       <Toolbar
         diagramName={diagram?.name ?? ''}
-        zoom={viewport.zoom}
         theme={theme}
         onOpenFile={handleOpenFile}
-        onZoomIn={handleZoomIn}
-        onZoomOut={handleZoomOut}
-        onResetView={handleResetView}
         onSaveArchd={handleSaveArchd}
         onToggleTheme={toggleTheme}
         canSave={Boolean(filePath && diagram)}
       />
       <main className="diagen-main">
         {Canvas && diagram ? (
-          <Canvas
-            layout={diagram.layout}
-            viewport={viewport}
-            onViewportChange={setViewport}
-            onAutoFit={handleAutoFit}
-          />
+          <Canvas layout={diagram.layout} />
         ) : (
           <div className="diagen-canvas">
             <EmptyState />
           </div>
         )}
-        {diagram && <ModeBar />}
       </main>
       <StatusBar
         filePath={filePath}
