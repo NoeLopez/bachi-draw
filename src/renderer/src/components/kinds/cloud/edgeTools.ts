@@ -7,3 +7,12 @@ import { createContext } from 'react'
  * flotante de JumpEdge.
  */
 export const EdgeToolsContext = createContext<{ toggleJumps: (id: string) => void } | null>(null)
+
+/**
+ * El canvas inyecta cómo abrir el editor de puntos de conexión de un nodo. Lo
+ * consume la paleta flotante de ServiceNode (sustituye al menú contextual del
+ * clic derecho, que ahora se usa para pan del lienzo).
+ */
+export const NodeToolsContext = createContext<{
+  editConnectionPoints: (id: string) => void
+} | null>(null)

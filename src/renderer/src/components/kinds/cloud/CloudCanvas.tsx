@@ -13,6 +13,7 @@ import {
   ReactFlow,
   ReactFlowProvider,
   reconnectEdge,
+  SelectionMode,
   useEdgesState,
   useNodesState,
   useReactFlow,
@@ -34,7 +35,7 @@ import AlignmentGuides from './AlignmentGuides'
 import ConnectionPointsEditor from './ConnectionPointsEditor'
 import GroupNode from './GroupNode'
 import JumpEdge from './JumpEdge'
-import { EdgeToolsContext } from './edgeTools'
+import { EdgeToolsContext, NodeToolsContext } from './edgeTools'
 import ServiceNode from './ServiceNode'
 
 // Definidos fuera del componente: React Flow exige referencias estables.
@@ -182,8 +183,6 @@ function CloudCanvasInner({ layout }: CanvasProps<LayoutResult>): React.JSX.Elem
   const reconnectSucceeded = useRef(true)
   // Guías de alineación visibles durante el arrastre de un nodo.
   const [guides, setGuides] = useState<GuideLine[]>([])
-  // Menú contextual de nodo (clic derecho): posición en pantalla + nodo.
-  const [menu, setMenu] = useState<{ nodeId: string; x: number; y: number } | null>(null)
   // Nodo cuyo editor de puntos de conexión está abierto (modal).
   const [editorNodeId, setEditorNodeId] = useState<string | null>(null)
   // Layout más reciente, leído por el efecto de re-siembra sin que éste dependa
@@ -374,13 +373,6 @@ function CloudCanvasInner({ layout }: CanvasProps<LayoutResult>): React.JSX.Elem
     [setEdges, syncToStore, markDirty, nodes]
   )
 
-  // Clic derecho sobre un nodo de servicio → abre el menú contextual.
-  const onNodeContextMenu = useCallback((e: React.MouseEvent, node: Node) => {
-    e.preventDefault()
-    if (node.type !== 'service') return
-    setMenu({ nodeId: node.id, x: e.clientX, y: e.clientY })
-  }, [])
-
   // Aplica los puntos extra al nodo. Pasa por setNodes/setEdges + syncToStore
   // (no toca externalRev, así el zoom se conserva). Las aristas que apuntaban a
   // un punto extra que ya no existe se resetean a null (React Flow reengancha al
@@ -423,64 +415,58 @@ function CloudCanvasInner({ layout }: CanvasProps<LayoutResult>): React.JSX.Elem
   )
 
   const edgeTools = useMemo(() => ({ toggleJumps }), [toggleJumps])
+  const nodeTools = useMemo(
+    () => ({ editConnectionPoints: (id: string) => setEditorNodeId(id) }),
+    []
+  )
 
   if (!layout) return <div className="diagen-canvas" />
 
   return (
-    <div className="diagen-canvas">
+    // Evita el menú contextual nativo del SO: el clic derecho se usa para pan.
+    <div className="diagen-canvas" onContextMenu={(e) => e.preventDefault()}>
       <EdgeToolsContext.Provider value={edgeTools}>
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChangeWrapped}
-          onEdgesChange={onEdgesChangeWrapped}
-          onConnect={onConnect}
-          onReconnectStart={onReconnectStart}
-          onReconnect={onReconnect}
-          onReconnectEnd={onReconnectEnd}
-          onNodeDoubleClick={onNodeDoubleClick}
-          onNodeContextMenu={onNodeContextMenu}
-          onNodeDrag={onNodeDrag}
-          onNodeDragStop={onNodeDragStop}
-          nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
-          connectionMode={ConnectionMode.Loose}
-          // Radio amplio: al soltar una conexión, React Flow engancha al handle
-          // más cercano dentro de este radio. 60px cubre desde el centro de un
-          // nodo (80px) a cualquiera de sus 4 puntos, así soltar en cualquier
-          // parte de la figura ancla la flecha por el lado más próximo (Lucid).
-          connectionRadius={60}
-          deleteKeyCode={['Delete', 'Backspace']}
-          minZoom={0.1}
-          maxZoom={3}
-          fitView
-          proOptions={{ hideAttribution: true }}
-        >
-          <Background variant={BackgroundVariant.Dots} gap={24} size={1} />
-          <Controls />
-          <MiniMap pannable zoomable />
-          <AlignmentGuides guides={guides} />
-        </ReactFlow>
+        <NodeToolsContext.Provider value={nodeTools}>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChangeWrapped}
+            onEdgesChange={onEdgesChangeWrapped}
+            onConnect={onConnect}
+            onReconnectStart={onReconnectStart}
+            onReconnect={onReconnect}
+            onReconnectEnd={onReconnectEnd}
+            onNodeDoubleClick={onNodeDoubleClick}
+            onNodeDrag={onNodeDrag}
+            onNodeDragStop={onNodeDragStop}
+            nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
+            connectionMode={ConnectionMode.Loose}
+            // Radio amplio: al soltar una conexión, React Flow engancha al handle
+            // más cercano dentro de este radio. 60px cubre desde el centro de un
+            // nodo (80px) a cualquiera de sus 4 puntos, así soltar en cualquier
+            // parte de la figura ancla la flecha por el lado más próximo (Lucid).
+            connectionRadius={60}
+            deleteKeyCode={['Delete', 'Backspace']}
+            // Interacción estilo Figma/Lucid:
+            //  - Botón izquierdo arrastrando en vacío → caja de selección grupal.
+            //  - Botón derecho (código 2) arrastrando → pan del lienzo (la manito).
+            //  - Selección parcial: la caja selecciona todo lo que toca.
+            panOnDrag={[2]}
+            selectionOnDrag
+            selectionMode={SelectionMode.Partial}
+            minZoom={0.1}
+            maxZoom={3}
+            fitView
+            proOptions={{ hideAttribution: true }}
+          >
+            <Background variant={BackgroundVariant.Dots} gap={24} size={1} />
+            <Controls />
+            <MiniMap pannable zoomable />
+            <AlignmentGuides guides={guides} />
+          </ReactFlow>
+        </NodeToolsContext.Provider>
       </EdgeToolsContext.Provider>
-
-      {/* Menú contextual del nodo (clic derecho). */}
-      {menu ? (
-        <>
-          <div className="diagen-rf-menu-backdrop" onPointerDown={() => setMenu(null)} />
-          <div className="diagen-rf-context-menu" style={{ left: menu.x, top: menu.y }}>
-            <button
-              type="button"
-              className="diagen-rf-menu-item"
-              onClick={() => {
-                setEditorNodeId(menu.nodeId)
-                setMenu(null)
-              }}
-            >
-              Editar puntos de conexión
-            </button>
-          </div>
-        </>
-      ) : null}
 
       {/* Modal de edición de puntos de conexión. */}
       {editorNodeId

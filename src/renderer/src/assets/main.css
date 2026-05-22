@@ -500,39 +500,43 @@
   cursor: crosshair;
 }
 
-/* ── Menú contextual de nodo (clic derecho) ──────────────────────────────── */
-.diagen-rf-menu-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-}
-
-.diagen-rf-context-menu {
-  position: fixed;
-  z-index: 41;
-  min-width: 200px;
-  padding: 4px;
+/* ── Paleta flotante del nodo seleccionado ───────────────────────────────────
+   Aparece sobre el icono al seleccionar; sustituye al menú del clic derecho. */
+.diagen-rf-node-toolbar {
+  position: absolute;
+  bottom: calc(100% - 2px); /* sobre el icono (top:2px) */
+  left: 50%;
+  transform: translate(-50%, -8px);
+  display: flex;
+  gap: 2px;
+  padding: 3px;
   background: var(--bg-1);
   border: 1px solid var(--border);
   border-radius: 8px;
-  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.18);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.14);
+  pointer-events: all;
+  z-index: 3;
 }
 
-.diagen-rf-menu-item {
-  display: block;
-  width: 100%;
-  text-align: left;
-  padding: 7px 10px;
-  border: 0;
+.diagen-rf-node-tool {
+  width: 26px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 5px;
   background: transparent;
-  color: var(--text-0);
-  font-size: 13px;
+  color: var(--text-1);
+  border: 0;
   cursor: pointer;
+  transition:
+    background 100ms ease,
+    color 100ms ease;
 }
 
-.diagen-rf-menu-item:hover {
+.diagen-rf-node-tool:hover {
   background: var(--bg-2);
+  color: var(--text-0);
 }
 
 /* ── Modal: editor de puntos de conexión ─────────────────────────────────── */

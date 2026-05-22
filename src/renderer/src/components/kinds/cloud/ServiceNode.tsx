@@ -1,4 +1,4 @@
-import { type CSSProperties, useEffect } from 'react'
+import { type CSSProperties, useContext, useEffect } from 'react'
 import { Handle, type NodeProps, Position, useUpdateNodeInternals } from '@xyflow/react'
 import { getIconDataUri } from '../../../icons/registry'
 import type { ServiceNode as ServiceNodeType } from '../../../core/layout/kinds/cloud/toReactFlow'
@@ -8,6 +8,7 @@ import {
   SIDES as EXTRA_SIDES,
   type Side
 } from '../../../core/layout/kinds/cloud/connectionHandles'
+import { NodeToolsContext } from './edgeTools'
 import NodeLabelInput from './NodeLabelInput'
 
 // 4 imanes centrales VISIBLES (ids t/r/b/l, los que usan las aristas guardadas).
@@ -35,6 +36,7 @@ export default function ServiceNode({
   const iconHref = getIconDataUri(data.iconType)
   const extra = data.extraHandles
   const updateNodeInternals = useUpdateNodeInternals()
+  const nodeTools = useContext(NodeToolsContext)
 
   // Cuando cambia la config de puntos extra, React Flow debe recalcular los
   // bounds de los handles; sin esto los handles nuevos se dibujan pero su área
@@ -95,6 +97,36 @@ export default function ServiceNode({
       ) : (
         <div className="diagen-rf-label">{data.label}</div>
       )}
+      {/* Paleta flotante al seleccionar: sustituye al menú del clic derecho
+          (ahora reservado para pan). El botón abre el editor de puntos. */}
+      {selected && !data.editing ? (
+        <div className="diagen-rf-node-toolbar nodrag nopan">
+          <button
+            type="button"
+            className="diagen-rf-node-tool"
+            title="Editar puntos de conexión"
+            onClick={() => nodeTools?.editConnectionPoints(id)}
+          >
+            {/* Icono: cuadrado con puntos en los lados. */}
+            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+              <rect
+                x="4"
+                y="4"
+                width="8"
+                height="8"
+                rx="1.5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.3"
+              />
+              <circle cx="8" cy="2" r="1.3" fill="currentColor" />
+              <circle cx="8" cy="14" r="1.3" fill="currentColor" />
+              <circle cx="2" cy="8" r="1.3" fill="currentColor" />
+              <circle cx="14" cy="8" r="1.3" fill="currentColor" />
+            </svg>
+          </button>
+        </div>
+      ) : null}
     </div>
   )
 }
