@@ -1,5 +1,5 @@
 import { type Edge, MarkerType, type Node } from '@xyflow/react'
-import type { LayoutResult } from '../../../parser/kinds/cloud/types'
+import type { ExtraHandles, LayoutResult } from '../../../parser/kinds/cloud/types'
 
 // ── Tipos de data de los nodos custom ───────────────────────────────────────
 
@@ -9,6 +9,8 @@ export interface ServiceNodeData extends Record<string, unknown> {
   iconType: string
   /** true mientras se edita el label inline. */
   editing?: boolean
+  /** Puntos de conexión extra por lado (además de los 4 imanes centrales). */
+  extraHandles?: ExtraHandles
 }
 
 export interface GroupNodeData extends Record<string, unknown> {
@@ -90,7 +92,7 @@ export function toReactFlow(layout: LayoutResult): {
       id: n.id,
       type: 'service',
       position: { x: n.x - base.x, y: n.y - base.y },
-      data: { label: n.label, iconType: n.type },
+      data: { label: n.label, iconType: n.type, extraHandles: n.extraHandles },
       width: n.width,
       height: n.height,
       ...(n.clusterId ? { parentId: n.clusterId } : {}),

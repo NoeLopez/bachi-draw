@@ -32,7 +32,8 @@ export function reconcileLayoutWithArchd(elkLayout: LayoutResult, archd: any): L
         x: typeof saved.x === 'number' ? saved.x : n.x,
         y: typeof saved.y === 'number' ? saved.y : n.y,
         width: typeof saved.width === 'number' ? saved.width : n.width,
-        height: typeof saved.height === 'number' ? saved.height : n.height
+        height: typeof saved.height === 'number' ? saved.height : n.height,
+        extraHandles: saved.extraHandles ?? n.extraHandles
       }
     }
     return n

@@ -27,9 +27,11 @@ import {
   type CloudFlowNode,
   toReactFlow
 } from '../../../core/layout/kinds/cloud/toReactFlow'
-import type { LayoutResult, LayoutEdge } from '../../../core/parser/kinds/cloud/types'
+import type { ExtraHandles, LayoutResult, LayoutEdge } from '../../../core/parser/kinds/cloud/types'
 import { type GuideLine, snapToAlignment } from '../../../core/layout/kinds/cloud/alignment'
+import { allExtraHandleIds } from '../../../core/layout/kinds/cloud/connectionHandles'
 import AlignmentGuides from './AlignmentGuides'
+import ConnectionPointsEditor from './ConnectionPointsEditor'
 import GroupNode from './GroupNode'
 import JumpEdge from './JumpEdge'
 import { EdgeToolsContext } from './edgeTools'
@@ -85,7 +87,8 @@ function updateLayoutWithReactFlow(
       ...n,
       x: absPos.x,
       y: absPos.y,
-      label: rfNode.data.label
+      label: rfNode.data.label,
+      extraHandles: rfNode.data.extraHandles
     }
   })
 
@@ -179,6 +182,10 @@ function CloudCanvasInner({ layout }: CanvasProps<LayoutResult>): React.JSX.Elem
   const reconnectSucceeded = useRef(true)
   // Guías de alineación visibles durante el arrastre de un nodo.
   const [guides, setGuides] = useState<GuideLine[]>([])
+  // Menú contextual de nodo (clic derecho): posición en pantalla + nodo.
+  const [menu, setMenu] = useState<{ nodeId: string; x: number; y: number } | null>(null)
+  // Nodo cuyo editor de puntos de conexión está abierto (modal).
+  const [editorNodeId, setEditorNodeId] = useState<string | null>(null)
   // Layout más reciente, leído por el efecto de re-siembra sin que éste dependa
   // del layout (así no se re-dispara con cada edición).
   const layoutRef = useRef<LayoutResult | null>(layout)
@@ -367,6 +374,54 @@ function CloudCanvasInner({ layout }: CanvasProps<LayoutResult>): React.JSX.Elem
     [setEdges, syncToStore, markDirty, nodes]
   )
 
+  // Clic derecho sobre un nodo de servicio → abre el menú contextual.
+  const onNodeContextMenu = useCallback((e: React.MouseEvent, node: Node) => {
+    e.preventDefault()
+    if (node.type !== 'service') return
+    setMenu({ nodeId: node.id, x: e.clientX, y: e.clientY })
+  }, [])
+
+  // Aplica los puntos extra al nodo. Pasa por setNodes/setEdges + syncToStore
+  // (no toca externalRev, así el zoom se conserva). Las aristas que apuntaban a
+  // un punto extra que ya no existe se resetean a null (React Flow reengancha al
+  // más cercano por connectionMode="loose").
+  const applyExtraHandles = useCallback(
+    (nodeId: string, extraHandles: ExtraHandles) => {
+      const validIds = allExtraHandleIds(extraHandles)
+      const orphan = (handle: string | null | undefined, source: boolean, edge: Edge): boolean => {
+        const onThisNode = source ? edge.source === nodeId : edge.target === nodeId
+        if (!onThisNode || !handle) return false
+        // Solo nos importan los handles extra (prefijo 'e'); los centrales y los
+        // de otros nodos no se tocan.
+        if (!handle.startsWith('e')) return false
+        return !validIds.has(handle)
+      }
+
+      let nextNodes: CloudFlowNode[] = []
+      let nextEdges: Edge<CloudEdgeData>[] = []
+      setNodes((nds) => {
+        nextNodes = nds.map((n) =>
+          n.id === nodeId ? { ...n, data: { ...n.data, extraHandles } } : n
+        ) as CloudFlowNode[]
+        return nextNodes
+      })
+      setEdges((eds) => {
+        nextEdges = eds.map((e) => {
+          const sh = orphan(e.sourceHandle, true, e) ? null : e.sourceHandle
+          const th = orphan(e.targetHandle, false, e) ? null : e.targetHandle
+          return sh === e.sourceHandle && th === e.targetHandle
+            ? e
+            : { ...e, sourceHandle: sh, targetHandle: th }
+        })
+        return nextEdges
+      })
+      syncToStore(nextNodes, nextEdges)
+      markDirty()
+      setEditorNodeId(null)
+    },
+    [setNodes, setEdges, syncToStore, markDirty]
+  )
+
   const edgeTools = useMemo(() => ({ toggleJumps }), [toggleJumps])
 
   if (!layout) return <div className="diagen-canvas" />
@@ -384,11 +439,17 @@ function CloudCanvasInner({ layout }: CanvasProps<LayoutResult>): React.JSX.Elem
           onReconnect={onReconnect}
           onReconnectEnd={onReconnectEnd}
           onNodeDoubleClick={onNodeDoubleClick}
+          onNodeContextMenu={onNodeContextMenu}
           onNodeDrag={onNodeDrag}
           onNodeDragStop={onNodeDragStop}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           connectionMode={ConnectionMode.Loose}
+          // Radio amplio: al soltar una conexión, React Flow engancha al handle
+          // más cercano dentro de este radio. 60px cubre desde el centro de un
+          // nodo (80px) a cualquiera de sus 4 puntos, así soltar en cualquier
+          // parte de la figura ancla la flecha por el lado más próximo (Lucid).
+          connectionRadius={60}
           deleteKeyCode={['Delete', 'Backspace']}
           minZoom={0.1}
           maxZoom={3}
@@ -401,6 +462,44 @@ function CloudCanvasInner({ layout }: CanvasProps<LayoutResult>): React.JSX.Elem
           <AlignmentGuides guides={guides} />
         </ReactFlow>
       </EdgeToolsContext.Provider>
+
+      {/* Menú contextual del nodo (clic derecho). */}
+      {menu ? (
+        <>
+          <div className="diagen-rf-menu-backdrop" onPointerDown={() => setMenu(null)} />
+          <div className="diagen-rf-context-menu" style={{ left: menu.x, top: menu.y }}>
+            <button
+              type="button"
+              className="diagen-rf-menu-item"
+              onClick={() => {
+                setEditorNodeId(menu.nodeId)
+                setMenu(null)
+              }}
+            >
+              Editar puntos de conexión
+            </button>
+          </div>
+        </>
+      ) : null}
+
+      {/* Modal de edición de puntos de conexión. */}
+      {editorNodeId
+        ? (() => {
+            const node = nodes.find((n) => n.id === editorNodeId)
+            if (!node || node.type !== 'service') return null
+            return (
+              <ConnectionPointsEditor
+                label={node.data.label}
+                iconType={node.data.iconType}
+                width={node.width ?? 80}
+                height={node.height ?? 80}
+                initial={node.data.extraHandles}
+                onCancel={() => setEditorNodeId(null)}
+                onSave={(extra) => applyExtraHandles(editorNodeId, extra)}
+              />
+            )
+          })()
+        : null}
     </div>
   )
 }

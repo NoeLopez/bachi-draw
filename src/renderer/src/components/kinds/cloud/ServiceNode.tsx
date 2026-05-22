@@ -1,12 +1,17 @@
+import type { CSSProperties } from 'react'
 import { Handle, type NodeProps, Position } from '@xyflow/react'
 import { getIconDataUri } from '../../../icons/registry'
 import type { ServiceNode as ServiceNodeType } from '../../../core/layout/kinds/cloud/toReactFlow'
+import {
+  extraHandleId,
+  extraHandlePositions,
+  SIDES as EXTRA_SIDES,
+  type Side
+} from '../../../core/layout/kinds/cloud/connectionHandles'
 import NodeLabelInput from './NodeLabelInput'
 
-// Modelo estilo Lucid: 4 handles VISIBLES, uno centrado en cada lado (ids
-// t/r/b/l, los que ya usaban las aristas guardadas). Son los "imanes" cómodos
-// para tirar una flecha y para engancharla limpia. Con connectionMode="loose"
-// cada uno sirve como origen y destino.
+// 4 imanes centrales VISIBLES (ids t/r/b/l, los que usan las aristas guardadas).
+// Con connectionMode="loose" cada uno sirve como origen y destino.
 const SIDES = [
   { id: 't', position: Position.Top },
   { id: 'r', position: Position.Right },
@@ -14,14 +19,24 @@ const SIDES = [
   { id: 'l', position: Position.Left }
 ] as const
 
+// Mapa lado → Position de React Flow y eje de offset para los puntos extra.
+const SIDE_META: Record<Side, { position: Position; axis: 'x' | 'y' }> = {
+  top: { position: Position.Top, axis: 'x' },
+  right: { position: Position.Right, axis: 'y' },
+  bottom: { position: Position.Bottom, axis: 'x' },
+  left: { position: Position.Left, axis: 'y' }
+}
+
 export default function ServiceNode({
   id,
   data,
   selected
 }: NodeProps<ServiceNodeType>): React.JSX.Element {
   const iconHref = getIconDataUri(data.iconType)
+  const extra = data.extraHandles
   return (
     <div className={`diagen-rf-service ${selected ? 'is-selected' : ''}`}>
+      {/* 4 imanes centrales */}
       {SIDES.map((h) => (
         <Handle
           key={h.id}
@@ -31,6 +46,27 @@ export default function ServiceNode({
           className="diagen-rf-handle"
         />
       ))}
+      {/* Puntos extra por lado, repartidos proporcionalmente. */}
+      {extra
+        ? EXTRA_SIDES.flatMap((side) => {
+            const count = extra[side] ?? 0
+            const meta = SIDE_META[side]
+            return extraHandlePositions(count).map((pct, i) => {
+              const style: CSSProperties =
+                meta.axis === 'x' ? { left: `${pct}%` } : { top: `${pct}%` }
+              return (
+                <Handle
+                  key={extraHandleId(side, i)}
+                  id={extraHandleId(side, i)}
+                  type="source"
+                  position={meta.position}
+                  style={style}
+                  className="diagen-rf-handle"
+                />
+              )
+            })
+          })
+        : null}
       <img className="diagen-rf-icon" src={iconHref} alt="" draggable={false} />
       {data.editing ? (
         <div className="diagen-rf-label-wrap">

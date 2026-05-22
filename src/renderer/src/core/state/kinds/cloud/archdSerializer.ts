@@ -1,4 +1,4 @@
-import type { LayoutResult } from '../../../parser/kinds/cloud/types'
+import type { ExtraHandles, LayoutResult } from '../../../parser/kinds/cloud/types'
 
 export interface ArchdCanvas {
   zoom: number
@@ -21,6 +21,7 @@ export interface ArchdDocument {
     y: number
     width: number
     height: number
+    extraHandles: ExtraHandles | null
   }>
   clusters: Array<{
     id: string
@@ -61,7 +62,8 @@ export function serializeArchd(
       x: n.x,
       y: n.y,
       width: n.width,
-      height: n.height
+      height: n.height,
+      extraHandles: n.extraHandles ?? null
     })),
     clusters: layout.clusters.map((c) => ({
       id: c.id,

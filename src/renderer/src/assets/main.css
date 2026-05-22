@@ -472,6 +472,211 @@
   transform: translate(0, -50%) scale(1.35);
 }
 
+/* ── Menú contextual de nodo (clic derecho) ──────────────────────────────── */
+.diagen-rf-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+
+.diagen-rf-context-menu {
+  position: fixed;
+  z-index: 41;
+  min-width: 200px;
+  padding: 4px;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.18);
+}
+
+.diagen-rf-menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-0);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.diagen-rf-menu-item:hover {
+  background: var(--bg-2);
+}
+
+/* ── Modal: editor de puntos de conexión ─────────────────────────────────── */
+.diagen-cpe-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.diagen-cpe-modal {
+  width: 440px;
+  max-width: calc(100vw - 32px);
+  padding: 20px;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.3);
+}
+
+.diagen-cpe-title {
+  margin: 0 0 4px;
+  font-size: 16px;
+  color: var(--text-0);
+}
+
+.diagen-cpe-sub {
+  margin: 0 0 16px;
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.4;
+}
+
+.diagen-cpe-body {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.diagen-cpe-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: 1 1 auto;
+}
+
+.diagen-cpe-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-1);
+}
+
+.diagen-cpe-field select {
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  color: var(--text-0);
+  font-size: 13px;
+}
+
+.diagen-cpe-stepper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.diagen-cpe-stepper button {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  color: var(--text-0);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.diagen-cpe-stepper button:hover:not(:disabled) {
+  background: var(--bg-0);
+  border-color: var(--border-strong);
+}
+
+.diagen-cpe-stepper button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.diagen-cpe-count {
+  min-width: 22px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-0);
+  font-variant-numeric: tabular-nums;
+}
+
+.diagen-cpe-preview {
+  flex: 0 0 auto;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle at 1px 1px, var(--grid-dot) 1px, transparent 0) 0 0 / 16px 16px,
+    var(--bg-0);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.diagen-cpe-node {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-1);
+  border: 1.5px solid var(--border-strong);
+  border-radius: 6px;
+}
+
+.diagen-cpe-node-icon {
+  width: 56%;
+  height: 56%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.diagen-cpe-node-label {
+  font-size: 9px;
+  color: var(--text-1);
+  margin-top: 2px;
+}
+
+.diagen-cpe-dot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 1.5px solid var(--bg-1);
+  transform: translate(-50%, -50%);
+}
+
+.diagen-cpe-dot.is-center {
+  background: var(--bg-1);
+  border-color: var(--accent);
+}
+
+.diagen-cpe-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.diagen-btn-primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.diagen-btn-primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
 /* Group node: contenedor de cluster */
 .diagen-rf-group {
   width: 100%;

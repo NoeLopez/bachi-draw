@@ -44,6 +44,15 @@ export interface Point {
   y: number
 }
 
+/** Nº de puntos de conexión EXTRA por lado, añadidos a mano desde el editor.
+ * Se suman a los 4 imanes centrales (t/r/b/l) que todo nodo tiene siempre. */
+export interface ExtraHandles {
+  top?: number
+  right?: number
+  bottom?: number
+  left?: number
+}
+
 export interface LayoutNode {
   id: string
   type: string
@@ -53,6 +62,7 @@ export interface LayoutNode {
   width: number
   height: number
   clusterId?: string
+  extraHandles?: ExtraHandles
 }
 
 export interface LayoutCluster {
