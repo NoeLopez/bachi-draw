@@ -21,29 +21,47 @@ export const EXTRA_PREFIX: Record<Side, string> = {
 
 export const SIDES: Side[] = ['top', 'right', 'bottom', 'left']
 
-/** Máximo de puntos extra por lado (evita saturar un lado). */
+/** Máximo de puntos extra por lado. 6 extra = 7 puntos totales; con punto de
+ * 8px y margen 6% caben en un nodo de ~80px sin solaparse (gap ≈8.8px). */
 export const MAX_EXTRA_PER_SIDE = 6
 
-/** Margen en % a cada extremo del lado, para no pegar puntos a las esquinas. */
-const MARGIN_PCT = 20
+/** Margen en % a cada extremo del lado, para no pegar puntos a las esquinas.
+ * Reducido para que quepan hasta 6 extra por lado separados. */
+const MARGIN_PCT = 6
 
 /**
- * Posiciones (en % a lo largo del lado, 0..100) de `count` puntos extra,
- * repartidos proporcionalmente entre los márgenes (space-between).
+ * Posiciones (en % a lo largo del lado, 0..100) de `count` puntos EXTRA,
+ * repartidos respetando el imán central fijo en 50%.
  *
- * count=1 → [50]; count=2 → [~36, ~64]; count=3 → [~30, 50, 70]; etc.
- * Cuando count es impar uno cae en el centro (50%), donde ya está el imán
- * central: funcionalmente es el mismo punto de conexión, así que conviven sin
- * problema (el imán central siempre existe aparte).
+ * El centro divide el lado en dos mitades: izquierda [MARGIN, 50] y derecha
+ * [50, 100-MARGIN]. Los extra se reparten simétricamente, llenando cada mitad
+ * con un space-between propio, de modo que el conjunto (centro + extra) queda
+ * equilibrado y el centro nunca se mueve.
+ *
+ *   0 → []                       (solo el central en 50%)
+ *   1 → [72]                     (medio de la mitad derecha)
+ *   2 → [28, 72]                 (uno por mitad, simétrico)
+ *   4 → [21, 35, 65, 79]         (dos por mitad, simétrico)
+ *
+ * left = floor(count/2) van a la mitad izquierda; el resto a la derecha. Con
+ * números impares la derecha lleva uno más (asimetría mínima aceptable).
  */
 export function extraHandlePositions(count: number): number[] {
   if (count <= 0) return []
-  const span = 100 - 2 * MARGIN_PCT
-  const positions: number[] = []
-  for (let i = 0; i < count; i++) {
-    positions.push(MARGIN_PCT + (span * (i + 1)) / (count + 1))
+  const left = Math.floor(count / 2) // puntos en la mitad izquierda
+  const right = count - left // resto en la derecha (>= left)
+
+  // Reparte `n` puntos en [a, b] con space-between (huecos iguales en ambos
+  // extremos): posición k (1-based) = a + (b-a) * k / (n+1).
+  const spread = (a: number, b: number, n: number): number[] => {
+    const out: number[] = []
+    for (let k = 1; k <= n; k++) out.push(a + ((b - a) * k) / (n + 1))
+    return out
   }
-  return positions
+
+  const leftPositions = spread(MARGIN_PCT, 50, left)
+  const rightPositions = spread(50, 100 - MARGIN_PCT, right)
+  return [...leftPositions, ...rightPositions]
 }
 
 /** Id estable del extra `i` (0-based) de un lado. */

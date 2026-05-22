@@ -1,5 +1,5 @@
-import type { CSSProperties } from 'react'
-import { Handle, type NodeProps, Position } from '@xyflow/react'
+import { type CSSProperties, useEffect } from 'react'
+import { Handle, type NodeProps, Position, useUpdateNodeInternals } from '@xyflow/react'
 import { getIconDataUri } from '../../../icons/registry'
 import type { ServiceNode as ServiceNodeType } from '../../../core/layout/kinds/cloud/toReactFlow'
 import {
@@ -34,6 +34,18 @@ export default function ServiceNode({
 }: NodeProps<ServiceNodeType>): React.JSX.Element {
   const iconHref = getIconDataUri(data.iconType)
   const extra = data.extraHandles
+  const updateNodeInternals = useUpdateNodeInternals()
+
+  // Cuando cambia la config de puntos extra, React Flow debe recalcular los
+  // bounds de los handles; sin esto los handles nuevos se dibujan pero su área
+  // de conexión queda desactualizada (no se puede iniciar ni soltar en ellos).
+  const extraKey = extra
+    ? `${extra.top ?? 0}-${extra.right ?? 0}-${extra.bottom ?? 0}-${extra.left ?? 0}`
+    : ''
+  useEffect(() => {
+    updateNodeInternals(id)
+  }, [id, extraKey, updateNodeInternals])
+
   return (
     <div className={`diagen-rf-service ${selected ? 'is-selected' : ''}`}>
       {/* 4 imanes centrales */}

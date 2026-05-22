@@ -426,26 +426,22 @@
    4 puntos visibles (uno por lado) que aparecen al hover/selección. Limpios,
    redondeados, crecen al apuntarlos. */
 .diagen-rf-handle {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: var(--bg-1);
   border: 2px solid var(--accent);
   opacity: 0;
   transition:
     opacity 120ms ease,
-    transform 100ms ease,
-    background 100ms ease;
+    background 100ms ease,
+    border-color 100ms ease;
 }
 
-/* Halo invisible alrededor del punto: amplía el área de enganche sin agrandar
-   el punto visible, para tirar la flecha sin apuntar al pixel exacto. */
-.diagen-rf-handle::after {
-  content: '';
-  position: absolute;
-  inset: -7px;
-  border-radius: 50%;
-}
+/* Sin halo de captura: cada punto captura solo su propia área, así puntos
+   densos no se roban los clics entre sí (el central y los extra conectan por
+   separado). La facilidad de enganche la da connectionRadius en el lienzo, que
+   engancha al handle más cercano al soltar. */
 
 .diagen-rf-service:hover .diagen-rf-handle,
 .react-flow__node.selected .diagen-rf-handle,
@@ -453,23 +449,12 @@
   opacity: 1;
 }
 
-/* Al apuntar un punto: se rellena de color y crece, confirmando el objetivo.
-   El translate mantiene el centrado propio de cada lado al escalar. */
+/* Al apuntar un punto: se rellena de color para confirmar el objetivo. No
+   escalamos ni movemos el punto (eso desplazaba el cursor fuera y causaba
+   parpadeo/imprecisión); solo cambia el color. */
 .diagen-rf-handle:hover {
   background: var(--accent);
   cursor: crosshair;
-}
-.react-flow__handle-top.diagen-rf-handle:hover {
-  transform: translate(-50%, 0) scale(1.35);
-}
-.react-flow__handle-bottom.diagen-rf-handle:hover {
-  transform: translate(-50%, 0) scale(1.35);
-}
-.react-flow__handle-left.diagen-rf-handle:hover {
-  transform: translate(0, -50%) scale(1.35);
-}
-.react-flow__handle-right.diagen-rf-handle:hover {
-  transform: translate(0, -50%) scale(1.35);
 }
 
 /* ── Menú contextual de nodo (clic derecho) ──────────────────────────────── */
