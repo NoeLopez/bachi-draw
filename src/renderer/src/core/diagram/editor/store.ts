@@ -31,6 +31,10 @@ export interface EditorState {
   sourceContent: string | null
   /** true si el estado en memoria difiere del último guardado. */
   dirty: boolean
+  /** Contador que solo aumenta al cargar un layout EXTERNO (archivo / hot
+   * reload). El canvas lo usa para re-sembrar y reencuadrar solo entonces; las
+   * ediciones del usuario (updateLayout) no lo tocan, así el zoom se conserva. */
+  externalRev: number
 
   setDiagram: (diagram: DiagramData, filePath: string, sourceContent: string) => void
   clearDiagram: () => void
@@ -45,6 +49,7 @@ export const useEditorStore = create<EditorState>()(
     filePath: null,
     sourceContent: null,
     dirty: false,
+    externalRev: 0,
 
     setDiagram: (diagram, filePath, sourceContent) => {
       set((state) => {
@@ -52,6 +57,8 @@ export const useEditorStore = create<EditorState>()(
         state.filePath = filePath
         state.sourceContent = sourceContent
         state.dirty = false
+        // Layout externo: dispara la re-siembra/encuadre del canvas.
+        state.externalRev += 1
       })
     },
 
@@ -61,6 +68,7 @@ export const useEditorStore = create<EditorState>()(
         state.filePath = null
         state.sourceContent = null
         state.dirty = false
+        state.externalRev += 1
       })
     },
 

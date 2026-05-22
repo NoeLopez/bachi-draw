@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   addEdge,
   Background,
@@ -31,10 +31,29 @@ import type { LayoutResult, LayoutEdge } from '../../../core/parser/kinds/cloud/
 import { type GuideLine, snapToAlignment } from '../../../core/layout/kinds/cloud/alignment'
 import AlignmentGuides from './AlignmentGuides'
 import GroupNode from './GroupNode'
+import JumpEdge from './JumpEdge'
+import { EdgeToolsContext } from './edgeTools'
 import ServiceNode from './ServiceNode'
 
 // Definidos fuera del componente: React Flow exige referencias estables.
 const nodeTypes = { service: ServiceNode, group: GroupNode }
+const edgeTypes = { jump: JumpEdge }
+
+/**
+ * Genera un id de arista único. Parte de `e_<source>_<target>` con los handles
+ * implicados; si ya existe (misma conexión repetida), añade un sufijo numérico.
+ * React Flow descarta aristas con id duplicado, así que esto es lo que permite
+ * varias flechas entre el mismo par de nodos.
+ */
+function uniqueEdgeId(c: Connection, existing: Edge<CloudEdgeData>[]): string {
+  const handlePart = [c.sourceHandle, c.targetHandle].filter(Boolean).join('-')
+  const base = `e_${c.source}_${c.target}${handlePart ? `_${handlePart}` : ''}`
+  const taken = new Set(existing.map((e) => e.id))
+  if (!taken.has(base)) return base
+  let i = 2
+  while (taken.has(`${base}_${i}`)) i++
+  return `${base}_${i}`
+}
 
 function updateLayoutWithReactFlow(
   layout: LayoutResult,
@@ -93,7 +112,11 @@ function updateLayoutWithReactFlow(
       return {
         ...existing,
         from: rfEdge.source,
-        to: rfEdge.target
+        to: rfEdge.target,
+        // Reconectar puede cambiar el punto de conexión: lo capturamos.
+        sourceHandle: rfEdge.sourceHandle ?? null,
+        targetHandle: rfEdge.targetHandle ?? null,
+        jumps: rfEdge.data?.jumps === true
       }
     }
     // It's a new edge
@@ -104,6 +127,9 @@ function updateLayoutWithReactFlow(
       label: rfEdge.label as string | undefined,
       style: (rfEdge.data?.style ?? 'solid') as 'solid' | 'dashed',
       direction: (rfEdge.data?.direction ?? 'forward') as 'forward' | 'back' | 'both',
+      sourceHandle: rfEdge.sourceHandle ?? null,
+      targetHandle: rfEdge.targetHandle ?? null,
+      jumps: rfEdge.data?.jumps === true,
       points: []
     }
   })
@@ -146,10 +172,19 @@ function CloudCanvasInner({ layout }: CanvasProps<LayoutResult>): React.JSX.Elem
   const { fitView, updateNodeData } = useReactFlow()
   const markDirty = useEditorStore((s) => s.markDirty)
   const updateLayout = useEditorStore((s) => s.updateLayout)
+  // Solo aumenta al cargar un layout externo (archivo / hot reload). Es lo único
+  // que dispara la re-siembra + fitView; las ediciones del usuario no lo tocan.
+  const externalRev = useEditorStore((s) => s.externalRev)
   // Marca si una reconexión tuvo éxito; si se suelta en el vacío, la borramos.
   const reconnectSucceeded = useRef(true)
   // Guías de alineación visibles durante el arrastre de un nodo.
   const [guides, setGuides] = useState<GuideLine[]>([])
+  // Layout más reciente, leído por el efecto de re-siembra sin que éste dependa
+  // del layout (así no se re-dispara con cada edición).
+  const layoutRef = useRef<LayoutResult | null>(layout)
+  useEffect(() => {
+    layoutRef.current = layout
+  }, [layout])
 
   const syncToStore = useCallback(
     (currentNodes: CloudFlowNode[], currentEdges: Edge<CloudEdgeData>[]) => {
@@ -163,36 +198,38 @@ function CloudCanvasInner({ layout }: CanvasProps<LayoutResult>): React.JSX.Elem
     [layout, updateLayout]
   )
 
-  // (Re)convierte el layout a nodos/edges de React Flow cuando se carga un
-  // archivo o llega un hot reload. La key cambia con el contenido relevante.
-  const layoutKey = layout
-    ? `${layout.name}|${layout.nodes.length}|${layout.edges.length}|${layout.clusters.length}`
-    : null
+  // (Re)convierte el layout a nodos/edges de React Flow SOLO cuando llega un
+  // layout externo (carga de archivo / hot reload), detectado por externalRev.
+  // Las ediciones del usuario (añadir/borrar/mover flechas, toggle de saltos)
+  // pasan por updateLayout, que NO toca externalRev, así el zoom se conserva.
   useEffect(() => {
-    if (!layout) {
+    const current = layoutRef.current
+    if (!current) {
       setNodes([])
       setEdges([])
       return
     }
-    const { nodes: n, edges: e } = toReactFlow(layout)
+    const { nodes: n, edges: e } = toReactFlow(current)
     setNodes(n)
     setEdges(e)
     // Encuadrar tras pintar el nuevo contenido.
     requestAnimationFrame(() => fitView({ padding: 0.15, duration: 200 }))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layoutKey])
+  }, [externalRev])
 
   // Crear arista al soltar una conexión entre handles.
   const onConnect = useCallback(
     (c: Connection) => {
-      const newEdgeId = `e_${c.source}_${c.target}`
       const newEdge: Edge<CloudEdgeData> = {
-        id: newEdgeId,
+        // Id único: incluye los handles y, si aún colisiona, un sufijo. Así se
+        // permiten varias aristas entre el mismo par de nodos (por lados
+        // distintos o repetidas).
+        id: uniqueEdgeId(c, edges),
         source: c.source,
         target: c.target,
         sourceHandle: c.sourceHandle,
         targetHandle: c.targetHandle,
-        type: 'smoothstep',
+        type: 'jump',
         markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 },
         reconnectable: true,
         data: { style: 'solid', direction: 'forward' }
@@ -204,7 +241,7 @@ function CloudCanvasInner({ layout }: CanvasProps<LayoutResult>): React.JSX.Elem
       })
       markDirty()
     },
-    [setEdges, markDirty, syncToStore, nodes]
+    [setEdges, markDirty, syncToStore, nodes, edges]
   )
 
   // Reconexión: arrastrar el extremo de una arista existente a otro nodo/lado.
@@ -314,35 +351,56 @@ function CloudCanvasInner({ layout }: CanvasProps<LayoutResult>): React.JSX.Elem
     [onEdgesChange, setEdges, syncToStore, nodes]
   )
 
+  // Toggle de saltos de la arista, invocado desde su paleta flotante. Pasa por
+  // setEdges + syncToStore para persistir el cambio y marcar dirty.
+  const toggleJumps = useCallback(
+    (edgeId: string) => {
+      setEdges((eds) => {
+        const next = eds.map((e) =>
+          e.id === edgeId ? { ...e, data: { ...e.data, jumps: !(e.data?.jumps === true) } } : e
+        ) as Edge<CloudEdgeData>[]
+        syncToStore(nodes, next)
+        return next
+      })
+      markDirty()
+    },
+    [setEdges, syncToStore, markDirty, nodes]
+  )
+
+  const edgeTools = useMemo(() => ({ toggleJumps }), [toggleJumps])
+
   if (!layout) return <div className="diagen-canvas" />
 
   return (
     <div className="diagen-canvas">
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChangeWrapped}
-        onEdgesChange={onEdgesChangeWrapped}
-        onConnect={onConnect}
-        onReconnectStart={onReconnectStart}
-        onReconnect={onReconnect}
-        onReconnectEnd={onReconnectEnd}
-        onNodeDoubleClick={onNodeDoubleClick}
-        onNodeDrag={onNodeDrag}
-        onNodeDragStop={onNodeDragStop}
-        nodeTypes={nodeTypes}
-        connectionMode={ConnectionMode.Loose}
-        deleteKeyCode={['Delete', 'Backspace']}
-        minZoom={0.1}
-        maxZoom={3}
-        fitView
-        proOptions={{ hideAttribution: true }}
-      >
-        <Background variant={BackgroundVariant.Dots} gap={24} size={1} />
-        <Controls />
-        <MiniMap pannable zoomable />
-        <AlignmentGuides guides={guides} />
-      </ReactFlow>
+      <EdgeToolsContext.Provider value={edgeTools}>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChangeWrapped}
+          onEdgesChange={onEdgesChangeWrapped}
+          onConnect={onConnect}
+          onReconnectStart={onReconnectStart}
+          onReconnect={onReconnect}
+          onReconnectEnd={onReconnectEnd}
+          onNodeDoubleClick={onNodeDoubleClick}
+          onNodeDrag={onNodeDrag}
+          onNodeDragStop={onNodeDragStop}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          connectionMode={ConnectionMode.Loose}
+          deleteKeyCode={['Delete', 'Backspace']}
+          minZoom={0.1}
+          maxZoom={3}
+          fitView
+          proOptions={{ hideAttribution: true }}
+        >
+          <Background variant={BackgroundVariant.Dots} gap={24} size={1} />
+          <Controls />
+          <MiniMap pannable zoomable />
+          <AlignmentGuides guides={guides} />
+        </ReactFlow>
+      </EdgeToolsContext.Provider>
     </div>
   )
 }

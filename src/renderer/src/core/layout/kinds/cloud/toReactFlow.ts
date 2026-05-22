@@ -20,6 +20,8 @@ export interface GroupNodeData extends Record<string, unknown> {
 export interface CloudEdgeData extends Record<string, unknown> {
   style: 'solid' | 'dashed'
   direction: 'forward' | 'back' | 'both'
+  /** true = dibuja arquitos donde cruza otras aristas (activado a mano). */
+  jumps?: boolean
 }
 
 export type ServiceNode = Node<ServiceNodeData, 'service'>
@@ -96,7 +98,7 @@ export function toReactFlow(layout: LayoutResult): {
     })
   }
 
-  // Edges. React Flow rutea (smoothstep = ortogonal con esquinas suaves).
+  // Edges. Tipo 'jump' = ortogonal con saltos sobre las aristas que cruza.
   const edges: Edge<CloudEdgeData>[] = layout.edges.map((e) => {
     const dashed = e.style === 'dashed'
     const markerEnd =
@@ -109,9 +111,13 @@ export function toReactFlow(layout: LayoutResult): {
       id: e.id,
       source: e.from,
       target: e.to,
-      type: 'smoothstep',
+      // Si se guardó un handle concreto, lo respetamos; si no, React Flow elige
+      // el más cercano (sourceHandle/targetHandle undefined).
+      ...(e.sourceHandle ? { sourceHandle: e.sourceHandle } : {}),
+      ...(e.targetHandle ? { targetHandle: e.targetHandle } : {}),
+      type: 'jump',
       label: e.label,
-      data: { style: e.style, direction: e.direction },
+      data: { style: e.style, direction: e.direction, jumps: e.jumps === true },
       markerEnd,
       markerStart,
       // Permite arrastrar cualquiera de los dos extremos para reconectar.

@@ -74,6 +74,13 @@ export interface LayoutEdge {
   direction: EdgeDirection
   points: Point[]
   labelPosition?: Point
+  /** Handle (punto de conexión) por el que la arista sale del nodo origen
+   * y entra al destino, ej. 'r', 'l1'. Si falta, React Flow elige el más
+   * cercano. Solo lo fijan las aristas creadas/editadas en el editor. */
+  sourceHandle?: string | null
+  targetHandle?: string | null
+  /** true = la arista dibuja saltos sobre las que cruza (activado a mano). */
+  jumps?: boolean
 }
 
 export interface LayoutResult {

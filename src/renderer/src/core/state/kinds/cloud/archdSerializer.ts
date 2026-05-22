@@ -36,7 +36,11 @@ export interface ArchdDocument {
     to: string
     label: string | null
     style: 'solid' | 'dashed'
+    direction: 'forward' | 'back' | 'both'
     points: { x: number; y: number }[]
+    sourceHandle: string | null
+    targetHandle: string | null
+    jumps: boolean
   }>
 }
 
@@ -73,7 +77,11 @@ export function serializeArchd(
       to: e.to,
       label: e.label ?? null,
       style: e.style,
-      points: e.points
+      direction: e.direction,
+      points: e.points,
+      sourceHandle: e.sourceHandle ?? null,
+      targetHandle: e.targetHandle ?? null,
+      jumps: e.jumps === true
     }))
   }
 }

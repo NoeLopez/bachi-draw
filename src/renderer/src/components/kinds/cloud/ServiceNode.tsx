@@ -3,10 +3,11 @@ import { getIconDataUri } from '../../../icons/registry'
 import type { ServiceNode as ServiceNodeType } from '../../../core/layout/kinds/cloud/toReactFlow'
 import NodeLabelInput from './NodeLabelInput'
 
-// Handles en los 4 lados. Con connectionMode="loose" en el lienzo, cada
-// handle sirve como origen y destino, así las aristas se conectan por el
-// lado más conveniente.
-const HANDLE_SIDES = [
+// Modelo estilo Lucid: 4 handles VISIBLES, uno centrado en cada lado (ids
+// t/r/b/l, los que ya usaban las aristas guardadas). Son los "imanes" cómodos
+// para tirar una flecha y para engancharla limpia. Con connectionMode="loose"
+// cada uno sirve como origen y destino.
+const SIDES = [
   { id: 't', position: Position.Top },
   { id: 'r', position: Position.Right },
   { id: 'b', position: Position.Bottom },
@@ -21,7 +22,7 @@ export default function ServiceNode({
   const iconHref = getIconDataUri(data.iconType)
   return (
     <div className={`diagen-rf-service ${selected ? 'is-selected' : ''}`}>
-      {HANDLE_SIDES.map((h) => (
+      {SIDES.map((h) => (
         <Handle
           key={h.id}
           id={h.id}

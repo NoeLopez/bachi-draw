@@ -15,10 +15,7 @@ import type {
  * 3. Restores edge definitions (bend points, direction, labels) and preserves custom
  *    user-drawn edges that aren't in the DSL.
  */
-export function reconcileLayoutWithArchd(
-  elkLayout: LayoutResult,
-  archd: any
-): LayoutResult {
+export function reconcileLayoutWithArchd(elkLayout: LayoutResult, archd: any): LayoutResult {
   if (!archd) return elkLayout
 
   // Create maps for fast lookup
@@ -67,7 +64,10 @@ export function reconcileLayoutWithArchd(
         label: saved.label !== undefined ? saved.label : e.label,
         style: saved.style || e.style,
         direction: saved.direction || e.direction,
-        points: saved.points || e.points
+        points: saved.points || e.points,
+        sourceHandle: saved.sourceHandle ?? e.sourceHandle,
+        targetHandle: saved.targetHandle ?? e.targetHandle,
+        jumps: saved.jumps ?? e.jumps
       }
     }
     return e
@@ -86,7 +86,10 @@ export function reconcileLayoutWithArchd(
           label: saved.label ?? undefined,
           style: saved.style || 'solid',
           direction: saved.direction || 'forward',
-          points: saved.points || []
+          points: saved.points || [],
+          sourceHandle: saved.sourceHandle ?? null,
+          targetHandle: saved.targetHandle ?? null,
+          jumps: saved.jumps ?? false
         })
       }
     }
