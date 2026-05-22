@@ -470,6 +470,25 @@
   background: var(--bg-0);
 }
 
+/* Guías de alineación (imán) durante el arrastre de nodos. Cubren todo el
+   lienzo y no capturan eventos para no interferir con el drag. */
+.diagen-rf-guides {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
+  overflow: visible;
+}
+
+.diagen-rf-guides line {
+  stroke: var(--accent);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+  opacity: 0.9;
+}
+
 .react-flow__edge-path {
   stroke: var(--edge-stroke);
   stroke-width: 1.6;

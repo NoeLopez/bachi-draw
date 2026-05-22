@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   addEdge,
   Background,
@@ -28,6 +28,8 @@ import {
   toReactFlow
 } from '../../../core/layout/kinds/cloud/toReactFlow'
 import type { LayoutResult, LayoutEdge } from '../../../core/parser/kinds/cloud/types'
+import { type GuideLine, snapToAlignment } from '../../../core/layout/kinds/cloud/alignment'
+import AlignmentGuides from './AlignmentGuides'
 import GroupNode from './GroupNode'
 import ServiceNode from './ServiceNode'
 
@@ -146,6 +148,8 @@ function CloudCanvasInner({ layout }: CanvasProps<LayoutResult>): React.JSX.Elem
   const updateLayout = useEditorStore((s) => s.updateLayout)
   // Marca si una reconexión tuvo éxito; si se suelta en el vacío, la borramos.
   const reconnectSucceeded = useRef(true)
+  // Guías de alineación visibles durante el arrastre de un nodo.
+  const [guides, setGuides] = useState<GuideLine[]>([])
 
   const syncToStore = useCallback(
     (currentNodes: CloudFlowNode[], currentEdges: Edge<CloudEdgeData>[]) => {
@@ -247,11 +251,40 @@ function CloudCanvasInner({ layout }: CanvasProps<LayoutResult>): React.JSX.Elem
     [updateNodeData]
   )
 
-  // Marcar dirty cuando el usuario mueve o borra nodos/edges.
-  const onNodeDragStop = useCallback(() => {
-    markDirty()
-    syncToStore(nodes, edges)
-  }, [markDirty, syncToStore, nodes, edges])
+  // Imán de alineación: en cada frame del arrastre, si el centro del nodo queda
+  // dentro del umbral del centro de otro nodo, lo enganchamos a esa línea recta
+  // (corrigiendo su posición) y mostramos las guías. Los grupos no se enganchan:
+  // arrastrar un cluster movería todo su contenido y el snap estorbaría.
+  const onNodeDrag = useCallback(
+    (_: React.MouseEvent, node: CloudFlowNode) => {
+      if (node.type === 'group') {
+        if (guides.length) setGuides([])
+        return
+      }
+      const { position, guides: nextGuides } = snapToAlignment(node, nodes)
+      setNodes((nds) => nds.map((n) => (n.id === node.id ? { ...n, position } : n)))
+      setGuides(nextGuides)
+    },
+    [nodes, setNodes, guides.length]
+  )
+
+  // Al soltar, React Flow emite un último cambio con la posición real del
+  // cursor (sin snap), lo que reintroduce la "grada". Reaplicamos el imán sobre
+  // la posición final y fijamos esa posición enganchada antes de sincronizar.
+  const onNodeDragStop = useCallback(
+    (_: React.MouseEvent, node: CloudFlowNode) => {
+      setGuides([])
+      let finalNodes = nodes
+      if (node.type !== 'group') {
+        const { position } = snapToAlignment(node, nodes)
+        finalNodes = nodes.map((n) => (n.id === node.id ? { ...n, position } : n))
+        setNodes(finalNodes)
+      }
+      markDirty()
+      syncToStore(finalNodes, edges)
+    },
+    [markDirty, syncToStore, setNodes, nodes, edges]
+  )
 
   const onNodesChangeWrapped = useCallback(
     (changes: NodeChange<CloudFlowNode>[]) => {
@@ -295,6 +328,7 @@ function CloudCanvasInner({ layout }: CanvasProps<LayoutResult>): React.JSX.Elem
         onReconnect={onReconnect}
         onReconnectEnd={onReconnectEnd}
         onNodeDoubleClick={onNodeDoubleClick}
+        onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
         nodeTypes={nodeTypes}
         connectionMode={ConnectionMode.Loose}
@@ -307,6 +341,7 @@ function CloudCanvasInner({ layout }: CanvasProps<LayoutResult>): React.JSX.Elem
         <Background variant={BackgroundVariant.Dots} gap={24} size={1} />
         <Controls />
         <MiniMap pannable zoomable />
+        <AlignmentGuides guides={guides} />
       </ReactFlow>
     </div>
   )
