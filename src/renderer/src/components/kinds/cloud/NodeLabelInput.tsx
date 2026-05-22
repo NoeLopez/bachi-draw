@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { useEditorStore } from '../../../core/diagram/editor/store'
 
@@ -10,9 +10,13 @@ interface NodeLabelInputProps {
 }
 
 /**
- * Input inline para editar el label de un nodo de React Flow. Confirma con
- * Enter o blur (escribe en data.label vía updateNodeData), cancela con Escape.
- * En ambos casos baja el flag data.editing.
+ * Editor inline (textarea) del label de un nodo. Soporta varias líneas:
+ *   - Enter        → confirma (escribe data.label vía updateNodeData)
+ *   - Shift+Enter  → inserta salto de línea
+ *   - Escape       → cancela
+ *   - blur         → confirma
+ * En todos los casos baja el flag data.editing. El textarea crece en alto según
+ * el contenido (auto-resize) para que las líneas extra se vean al escribir.
  */
 export default function NodeLabelInput({
   nodeId,
@@ -21,7 +25,7 @@ export default function NodeLabelInput({
   className
 }: NodeLabelInputProps): React.JSX.Element {
   const [value, setValue] = useState(initial)
-  const inputRef = useRef<HTMLInputElement | null>(null)
+  const inputRef = useRef<HTMLTextAreaElement | null>(null)
   const { updateNodeData } = useReactFlow()
   const markDirty = useEditorStore((s) => s.markDirty)
   const settledRef = useRef(false)
@@ -34,11 +38,21 @@ export default function NodeLabelInput({
     }
   }, [])
 
+  // Auto-resize: el alto del textarea sigue al contenido (multilínea).
+  useLayoutEffect(() => {
+    const el = inputRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }, [value])
+
   const settle = (action: 'commit' | 'cancel'): void => {
     if (settledRef.current) return
     settledRef.current = true
     if (action === 'commit') {
-      const trimmed = value.trim()
+      // Conserva los saltos de línea internos; solo recorta espacios sobrantes
+      // al principio/fin del conjunto.
+      const trimmed = value.replace(/^\n+|\n+$/g, '').trim()
       if (trimmed && trimmed !== initial) {
         updateNodeData(nodeId, { label: trimmed, editing: false })
         markDirty()
@@ -51,10 +65,11 @@ export default function NodeLabelInput({
   }
 
   return (
-    <input
+    <textarea
       ref={inputRef}
       className={`diagen-rf-label-input ${className ?? ''}`}
       style={{ textAlign: align }}
+      rows={1}
       value={value}
       onChange={(e) => setValue(e.target.value)}
       // Evita que React Flow capture el pointer (drag) o el teclado (delete).
@@ -62,7 +77,8 @@ export default function NodeLabelInput({
       onClick={(e) => e.stopPropagation()}
       onKeyDown={(e) => {
         e.stopPropagation()
-        if (e.key === 'Enter') {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          // Enter solo → confirmar. Shift+Enter → salto de línea (default).
           e.preventDefault()
           settle('commit')
         } else if (e.key === 'Escape') {

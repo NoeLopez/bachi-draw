@@ -387,6 +387,11 @@
   position: relative;
   width: 100%;
   height: 100%;
+  /* El contenedor no captura eventos: el espacio vacío alrededor del icono no
+     selecciona ni arrastra. Solo el icono y el label son interactuables (abajo).
+     Los handles de conexión tienen su propio pointer-events y no se ven
+     afectados por esto. */
+  pointer-events: none;
 }
 
 .diagen-rf-icon {
@@ -396,7 +401,8 @@
   left: 50%;
   top: 2px;
   transform: translateX(-50%);
-  pointer-events: none;
+  /* Interactuable: clic/arrastre del nodo se hace sobre el icono. */
+  pointer-events: auto;
   user-select: none;
 }
 
@@ -407,19 +413,56 @@
   transform: translateX(-50%);
   font-size: 12px;
   font-weight: 500;
+  line-height: 1.3;
   color: var(--text-0);
-  white-space: nowrap;
-  pointer-events: none;
+  text-align: center;
+  /* Respeta los saltos de línea del label (multilínea) sin envolver palabras
+     por su cuenta. Centrado bajo el icono. */
+  white-space: pre-line;
+  max-width: 140px;
+  /* Interactuable junto con el icono. */
+  pointer-events: auto;
 }
 
+/* Marco de selección estilo Lucid: coincide EXACTO con el borde del icono (no
+   con el label, que queda debajo). Mismas dimensiones y posición que el icono
+   (56px en top:2px), sin respiro interno; el borde se dibuja por fuera con
+   box-shadow para no comerse el contorno del icono. */
 .diagen-rf-service.is-selected::after {
   content: '';
   position: absolute;
-  inset: -4px -4px -22px -4px;
-  border: 1.5px solid var(--accent);
-  border-radius: 8px;
-  background: rgba(99, 102, 241, 0.06);
+  left: 50%;
+  top: 2px;
+  width: 56px;
+  height: 56px;
+  transform: translateX(-50%);
+  /* Borde fino por fuera (box-shadow, no resta del tamaño). Doble capa para
+     contraste: un halo sutil (1px) del color del fondo separa el marco del
+     icono, y encima la línea de acento; así destaca sea cual sea el color del
+     icono sin parecer un borde blanco grueso. */
+  box-shadow:
+    0 0 0 1px var(--bg-0),
+    0 0 0 2.5px var(--accent);
+  border-radius: 5px;
   pointer-events: none;
+}
+
+/* Capa que aloja los handles, coincidiendo exacto con el icono (56px en
+   top:2px). React Flow posiciona los handles relativos a este contenedor, así
+   quedan sobre el borde del icono / marco de selección, no sobre el recuadro
+   completo del nodo (que incluye el label). No captura eventos: cada handle
+   gestiona el suyo. */
+.diagen-rf-handle-zone {
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  width: 56px;
+  height: 56px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  /* Por encima del icono y del marco de selección (::after), si no los handles
+     quedan tapados (no se ven al hover ni al seleccionar). */
+  z-index: 2;
 }
 
 /* ── Handles de conexión estilo Lucid ──────────────────────────────────────
@@ -831,6 +874,9 @@
   left: 50%;
   transform: translateX(-50%);
   width: 120px;
+  /* El contenedor del nodo es pointer-events:none; el input de edición debe
+     capturar clics/teclado. */
+  pointer-events: auto;
 }
 
 .diagen-rf-group-label-wrap {
@@ -841,16 +887,33 @@
   max-width: 280px;
 }
 
+/* Edición inline del label estilo Lucid: el input se funde con el label (sin
+   recuadro, borde ni fondo); solo el resaltado del texto seleccionado indica la
+   edición, ciñéndose al texto y no al ancho del input. Mismas métricas que
+   .diagen-rf-label para que no haya salto visual al entrar/salir. */
 .diagen-rf-label-input {
   width: 100%;
   box-sizing: border-box;
-  padding: 1px 4px;
+  padding: 0;
   font-family: inherit;
   font-size: 12px;
   font-weight: 500;
+  line-height: 1.3;
+  text-align: center;
   color: var(--text-0);
-  background: var(--bg-1);
-  border: 1.5px solid var(--accent);
-  border-radius: 4px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
   outline: none;
+  /* textarea multilínea: sin redimensionado manual, sin scroll, ajustado al
+     contenido (el alto lo controla el auto-resize del componente). */
+  resize: none;
+  overflow: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Resaltado de la selección de texto, en acento sutil (no el gris del SO). */
+.diagen-rf-label-input::selection {
+  background: color-mix(in oklab, var(--accent) 30%, transparent);
 }

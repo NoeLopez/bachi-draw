@@ -48,37 +48,45 @@ export default function ServiceNode({
 
   return (
     <div className={`diagen-rf-service ${selected ? 'is-selected' : ''}`}>
-      {/* 4 imanes centrales */}
-      {SIDES.map((h) => (
-        <Handle
-          key={h.id}
-          id={h.id}
-          type="source"
-          position={h.position}
-          className="diagen-rf-handle"
-        />
-      ))}
-      {/* Puntos extra por lado, repartidos proporcionalmente. */}
-      {extra
-        ? EXTRA_SIDES.flatMap((side) => {
-            const count = extra[side] ?? 0
-            const meta = SIDE_META[side]
-            return extraHandlePositions(count).map((pct, i) => {
-              const style: CSSProperties =
-                meta.axis === 'x' ? { left: `${pct}%` } : { top: `${pct}%` }
-              return (
-                <Handle
-                  key={extraHandleId(side, i)}
-                  id={extraHandleId(side, i)}
-                  type="source"
-                  position={meta.position}
-                  style={style}
-                  className="diagen-rf-handle"
-                />
-              )
+      {/* Los handles van en una capa que coincide EXACTO con el icono (y con el
+          marco de selección). React Flow posiciona cada handle con top/left/etc.
+          relativos a este contenedor posicionado, así los puntos quedan sobre el
+          borde del icono y no sobre el recuadro completo del nodo (que incluye
+          el label). React Flow lee la posición real del DOM, así que las
+          conexiones enganchan donde se ven. */}
+      <div className="diagen-rf-handle-zone">
+        {/* 4 imanes centrales */}
+        {SIDES.map((h) => (
+          <Handle
+            key={h.id}
+            id={h.id}
+            type="source"
+            position={h.position}
+            className="diagen-rf-handle"
+          />
+        ))}
+        {/* Puntos extra por lado, repartidos proporcionalmente. */}
+        {extra
+          ? EXTRA_SIDES.flatMap((side) => {
+              const count = extra[side] ?? 0
+              const meta = SIDE_META[side]
+              return extraHandlePositions(count).map((pct, i) => {
+                const style: CSSProperties =
+                  meta.axis === 'x' ? { left: `${pct}%` } : { top: `${pct}%` }
+                return (
+                  <Handle
+                    key={extraHandleId(side, i)}
+                    id={extraHandleId(side, i)}
+                    type="source"
+                    position={meta.position}
+                    style={style}
+                    className="diagen-rf-handle"
+                  />
+                )
+              })
             })
-          })
-        : null}
+          : null}
+      </div>
       <img className="diagen-rf-icon" src={iconHref} alt="" draggable={false} />
       {data.editing ? (
         <div className="diagen-rf-label-wrap">
