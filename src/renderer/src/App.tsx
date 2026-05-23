@@ -179,7 +179,7 @@ function App(): React.JSX.Element {
           <Canvas layout={diagram.layout} background={background} minimapVisible={minimapVisible} />
         ) : (
           <div className="bachi-draw-canvas">
-            <EmptyState onNewDiagram={handleNewDiagram} onOpenFile={handleOpenFile} />
+            <EmptyState onNewBoard={handleNewBoard} onOpenFile={handleOpenFile} />
           </div>
         )}
       </main>
