@@ -17,7 +17,7 @@ export default function AlignmentGuides({
   if (guides.length === 0) return null
 
   return (
-    <svg className="diagen-rf-guides" aria-hidden="true">
+    <svg className="bachi-draw-rf-guides" aria-hidden="true">
       {guides.map((g, i) =>
         g.orientation === 'x' ? (
           <line

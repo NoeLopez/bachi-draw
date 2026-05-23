@@ -544,12 +544,12 @@ function CloudCanvasInner({
       ? (edges.find((e) => e.id === selectedEdgeIds[0]) ?? null)
       : null
 
-  if (!layout) return <div className="diagen-canvas" />
+  if (!layout) return <div className="bachi-draw-canvas" />
 
   return (
     // Evita el menú contextual nativo del SO: el clic derecho se usa para pan.
     <div
-      className="diagen-canvas"
+      className="bachi-draw-canvas"
       onContextMenu={(e) => e.preventDefault()}
       onDragOver={onDragOver}
       onDrop={onDrop}

@@ -25,18 +25,18 @@ export default function StatusBar({
   lastReloadMs
 }: StatusBarProps): React.JSX.Element {
   return (
-    <footer className="diagen-status-bar">
-      <div className="diagen-status-file" title={filePath ?? ''}>
+    <footer className="bachi-draw-status-bar">
+      <div className="bachi-draw-status-file" title={filePath ?? ''}>
         {filePath ?? '— Sin archivo abierto —'}
       </div>
-      <div className="diagen-status-meta">
+      <div className="bachi-draw-status-meta">
         {stats.map((stat) => (
           <span key={stat.label}>
             {stat.count} {stat.label}
           </span>
         ))}
         {typeof lastReloadMs === 'number' && <span>{lastReloadMs} ms</span>}
-        <span className={`diagen-status-pill diagen-status-${status}`}>
+        <span className={`bachi-draw-status-pill bachi-draw-status-${status}`}>
           {STATUS_LABEL[status]}
           {message ? ` · ${message}` : ''}
         </span>

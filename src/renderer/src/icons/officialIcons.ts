@@ -139,7 +139,7 @@ export function getOfficialIconUrl(type: string): string | undefined {
 }
 
 /** MIME type del dataTransfer al arrastrar un icono del panel al lienzo. */
-export const ICON_DND_TYPE = 'application/diagen-icon'
+export const ICON_DND_TYPE = 'application/bachi-draw-icon'
 
 export function listOfficialIconTypes(): string[] {
   return Array.from(officialByType.keys()).sort()

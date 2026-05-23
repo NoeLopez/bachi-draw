@@ -1,4 +1,4 @@
-# diagen
+# Bachi Draw
 
 An Electron application with React and TypeScript
 

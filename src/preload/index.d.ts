@@ -1,9 +1,9 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
-import type { DiagenApi } from './index'
+import type { BachiDrawApi } from './index'
 
 declare global {
   interface Window {
     electron: ElectronAPI
-    diagen: DiagenApi
+    bachiDraw: BachiDrawApi
   }
 }

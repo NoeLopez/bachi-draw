@@ -47,14 +47,14 @@ export default function ServiceNode({
   }, [id, extraKey, updateNodeInternals])
 
   return (
-    <div className={`diagen-rf-service ${selected ? 'is-selected' : ''}`}>
+    <div className={`bachi-draw-rf-service ${selected ? 'is-selected' : ''}`}>
       {/* Los handles van en una capa que coincide EXACTO con el icono (y con el
           marco de selección). React Flow posiciona cada handle con top/left/etc.
           relativos a este contenedor posicionado, así los puntos quedan sobre el
           borde del icono y no sobre el recuadro completo del nodo (que incluye
           el label). React Flow lee la posición real del DOM, así que las
           conexiones enganchan donde se ven. */}
-      <div className="diagen-rf-handle-zone">
+      <div className="bachi-draw-rf-handle-zone">
         {/* 4 imanes centrales */}
         {SIDES.map((h) => (
           <Handle
@@ -62,7 +62,7 @@ export default function ServiceNode({
             id={h.id}
             type="source"
             position={h.position}
-            className="diagen-rf-handle"
+            className="bachi-draw-rf-handle"
           />
         ))}
         {/* Puntos extra por lado, repartidos proporcionalmente. */}
@@ -80,20 +80,20 @@ export default function ServiceNode({
                     type="source"
                     position={meta.position}
                     style={style}
-                    className="diagen-rf-handle"
+                    className="bachi-draw-rf-handle"
                   />
                 )
               })
             })
           : null}
       </div>
-      <img className="diagen-rf-icon" src={iconHref} alt="" draggable={false} />
+      <img className="bachi-draw-rf-icon" src={iconHref} alt="" draggable={false} />
       {data.editing ? (
-        <div className="diagen-rf-label-wrap">
+        <div className="bachi-draw-rf-label-wrap">
           <NodeLabelInput nodeId={id} initial={data.label} align="center" />
         </div>
       ) : (
-        <div className="diagen-rf-label">{data.label}</div>
+        <div className="bachi-draw-rf-label">{data.label}</div>
       )}
     </div>
   )

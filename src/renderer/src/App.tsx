@@ -73,14 +73,14 @@ function App(): React.JSX.Element {
   )
 
   useEffect(() => {
-    const offChanged = window.diagen.onFileChanged(({ path, content }) => {
+    const offChanged = window.bachiDraw.onFileChanged(({ path, content }) => {
       void buildDiagram(content, path)
     })
-    const offError = window.diagen.onFileError(({ message }) => {
+    const offError = window.bachiDraw.onFileError(({ message }) => {
       setStatus('error')
       setStatusMessage(message)
     })
-    const offRemoved = window.diagen.onFileRemoved(() => {
+    const offRemoved = window.bachiDraw.onFileRemoved(() => {
       setStatus('error')
       setStatusMessage('El archivo fue eliminado')
     })
@@ -92,7 +92,7 @@ function App(): React.JSX.Element {
   }, [buildDiagram])
 
   const handleOpenFile = useCallback(async () => {
-    const opened = await window.diagen.openFile()
+    const opened = await window.bachiDraw.openFile()
     if (!opened) return
     void buildDiagram(opened.content, opened.path, opened.archd)
   }, [buildDiagram])
@@ -109,7 +109,7 @@ function App(): React.JSX.Element {
         width: diagram.bounds.width,
         height: diagram.bounds.height
       })
-      const result = await window.diagen.saveArchd(filePath, archd)
+      const result = await window.bachiDraw.saveArchd(filePath, archd)
       setStatus('ok')
       setStatusMessage(`Guardado ${result.path.split(/[/\\]/).pop()}`)
     } catch (err) {
@@ -132,7 +132,7 @@ function App(): React.JSX.Element {
   }, [diagram])
 
   return (
-    <div className="diagen-app">
+    <div className="bachi-draw-app">
       <Toolbar
         diagramName={diagram?.name ?? ''}
         theme={theme}
@@ -143,12 +143,12 @@ function App(): React.JSX.Element {
         onToggleBackground={toggleBackground}
         canSave={Boolean(filePath && diagram)}
       />
-      <main className="diagen-main">
+      <main className="bachi-draw-main">
         <FiguresPanel />
         {Canvas && diagram ? (
           <Canvas layout={diagram.layout} background={background} />
         ) : (
-          <div className="diagen-canvas">
+          <div className="bachi-draw-canvas">
             <EmptyState />
           </div>
         )}

@@ -1,5 +1,5 @@
 /**
- * Lexer reusable para los DSLs de Diagen.
+ * Lexer reusable para los DSLs de Bachi Draw.
  *
  * Produce un stream de tokens con posición (línea, columna, offset) para que
  * los parsers puedan emitir errores con contexto preciso. Es minimalista a

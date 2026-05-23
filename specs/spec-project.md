@@ -1,6 +1,6 @@
 # Software Design Document (SDD)
 
-## Diagen — AI-Native Architecture Diagram Tool
+## Bachi Draw — AI-Native Architecture Diagram Tool
 
 ### MVP v1.0
 
@@ -33,7 +33,7 @@
 
 ## 1. Visión General
 
-**Diagen** es una herramienta de escritorio local diseñada desde cero para trabajar con agentes de IA como Claude Code. Permite generar y visualizar diagramas de arquitectura de software y cloud a partir de archivos de texto simples, con hot reload en tiempo real, iconos oficiales de proveedores (AWS, GCP, Azure, OSS), y un layout engine inteligente que elimina los problemas de flechas cruzadas, nodos superpuestos y texto mal posicionado que afectan a herramientas como DrawIO cuando son usadas por IA.
+**Bachi Draw** es una herramienta de escritorio local diseñada desde cero para trabajar con agentes de IA como Claude Code. Permite generar y visualizar diagramas de arquitectura de software y cloud a partir de archivos de texto simples, con hot reload en tiempo real, iconos oficiales de proveedores (AWS, GCP, Azure, OSS), y un layout engine inteligente que elimina los problemas de flechas cruzadas, nodos superpuestos y texto mal posicionado que afectan a herramientas como DrawIO cuando son usadas por IA.
 
 **Propuesta de valor única:** La única herramienta donde un agente de IA escribe un archivo de texto y el diagrama aparece instantáneamente con iconos oficiales y layout perfecto, sin coordenadas manuales ni XML frágil.
 
@@ -199,7 +199,7 @@ Graphviz (motor de `diagrams` Python) fue diseñado en los años 90 para grafos 
 ## 7. Estructura del Proyecto
 
 ```
-Diagen/
+Bachi Draw/
 ├── electron.vite.config.ts          # Configuración de electron-vite
 ├── package.json
 ├── tsconfig.json
@@ -663,7 +663,7 @@ Los clusters reciben un padding propio (`[top=24,left=8,bottom=8,right=8]`) que 
 
 ### 11.4 Tamaños de nodos
 
-elkjs necesita conocer el tamaño de cada nodo para calcular el layout. Los nodos de Diagen tienen tamaño fijo en el MVP:
+elkjs necesita conocer el tamaño de cada nodo para calcular el layout. Los nodos de Bachi Draw tienen tamaño fijo en el MVP:
 
 ```typescript
 const NODE_SIZE = {
@@ -805,7 +805,7 @@ export function watchArchFile(filePath: string, win: BrowserWindow) {
 // preload/index.ts
 import { contextBridge, ipcRenderer } from 'electron'
 
-contextBridge.exposeInMainWorld('Diagen', {
+contextBridge.exposeInMainWorld('bachiDraw', {
   onFileChanged: (callback: (data: { path: string; content: string }) => void) => {
     ipcRenderer.on('arch-file-changed', (_, data) => callback(data))
   },
@@ -860,7 +860,7 @@ export function registerIpcHandlers(win: BrowserWindow) {
   // Abrir file picker para seleccionar .arch
   ipcMain.handle('open-file-dialog', async () => {
     const result = await dialog.showOpenDialog(win, {
-      filters: [{ name: 'Diagen Files', extensions: ['arch'] }],
+      filters: [{ name: 'Bachi Draw Files', extensions: ['arch'] }],
       properties: ['openFile']
     })
     if (!result.canceled && result.filePaths.length > 0) {
@@ -917,7 +917,7 @@ function DiagramCanvas() {
 
   // Escucha cambios del file watcher
   useEffect(() => {
-    window.Diagen.onFileChanged(async ({ content }) => {
+    window.bachiDraw.onFileChanged(async ({ content }) => {
       setIsLoading(true)
       try {
         const kind = detectKind(content)             // 'cloud'
@@ -1000,7 +1000,7 @@ Los siguientes items quedan explícitamente fuera del MVP y se documentan para v
 
 **Decisión:** Usar elkjs como motor de layout en lugar de Graphviz (via viz.js o similar).
 
-**Justificación:** Graphviz produce layouts incorrectos para diagramas con clusters anidados e iconos de tamaño variable, que es exactamente el caso de uso de Diagen. ELK fue diseñado específicamente para diagramas de software con jerarquía. El benchmark de la imagen de referencia falló con Graphviz.
+**Justificación:** Graphviz produce layouts incorrectos para diagramas con clusters anidados e iconos de tamaño variable, que es exactamente el caso de uso de Bachi Draw. ELK fue diseñado específicamente para diagramas de software con jerarquía. El benchmark de la imagen de referencia falló con Graphviz.
 
 ### 18.3 Electron sobre Tauri
 
@@ -1072,7 +1072,7 @@ POLYLINE produce el balance correcto entre limpieza visual (sin zigzags) y aspec
 
 ### v3.0 — Integración MCP
 
-- Diagen expone un servidor MCP local
+- Bachi Draw expone un servidor MCP local
 - Claude Code puede leer el estado actual del diagrama
 - Claude Code puede hacer queries: "¿qué nodos están en el cluster VPC?"
 - Loop completo: Claude genera → ve el resultado → itera
@@ -1081,7 +1081,7 @@ POLYLINE produce el balance correcto entre limpieza visual (sin zigzags) y aspec
 
 ## 20. Arquitectura Multi-Tipo
 
-Diagen está diseñado para soportar **múltiples tipos de diagrama** bajo un mismo runtime: arquitectura cloud (`arch-cloud`, implementado), procesos BPMN (`arch-bpmn`, futuro), diagramas de secuencia (`arch-sequence`, futuro), ER (`arch-erd`), C4, etc.
+Bachi Draw está diseñado para soportar **múltiples tipos de diagrama** bajo un mismo runtime: arquitectura cloud (`arch-cloud`, implementado), procesos BPMN (`arch-bpmn`, futuro), diagramas de secuencia (`arch-sequence`, futuro), ER (`arch-erd`), C4, etc.
 
 Cada tipo es un **módulo independiente** que se enchufa al pipeline central. La regla del diseño: **agregar un tipo nuevo no requiere modificar el código de los demás**.
 

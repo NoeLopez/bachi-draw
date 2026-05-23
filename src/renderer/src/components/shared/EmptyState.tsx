@@ -4,15 +4,15 @@
  */
 export default function EmptyState(): React.JSX.Element {
   return (
-    <div className="diagen-empty-state">
-      <div className="diagen-empty-state-card">
+    <div className="bachi-draw-empty-state">
+      <div className="bachi-draw-empty-state-card">
         <h2>Abre un archivo .arch</h2>
         <p>
-          Diagen renderiza diagramas de arquitectura desde archivos de texto.
+          Bachi Draw renderiza diagramas de arquitectura desde archivos de texto.
           <br />
           Usa el botón <strong>Abrir .arch…</strong> para empezar.
         </p>
-        <p className="diagen-empty-hint">
+        <p className="bachi-draw-empty-hint">
           Tip: el archivo se recarga automáticamente cuando un agente lo edita.
         </p>
       </div>

@@ -1,8 +1,8 @@
 # CLAUDE.md
 
-Guía para trabajar en **Diagen** con Claude Code. Resume la arquitectura real, las convenciones y los puntos no obvios. La documentación de diseño extensa está en [specs/spec-project.md](specs/spec-project.md), pero **ojo: el spec describe el render con SVG nativo y el editor actual migró a React Flow** (ver §"Divergencia importante").
+Guía para trabajar en **Bachi Draw** con Claude Code. Resume la arquitectura real, las convenciones y los puntos no obvios. La documentación de diseño extensa está en [specs/spec-project.md](specs/spec-project.md), pero **ojo: el spec describe el render con SVG nativo y el editor actual migró a React Flow** (ver §"Divergencia importante").
 
-## Qué es Diagen
+## Qué es Bachi Draw
 
 App de escritorio (Electron + React 19 + TypeScript) para generar diagramas de arquitectura cloud a partir de archivos de texto `.arch` (un DSL declarativo estilo Mermaid `architecture-beta`), pensada para que agentes de IA escriban el archivo y el diagrama aparezca con hot reload, iconos oficiales y layout automático. Sobre ese visor se está construyendo un **editor visual** (mover nodos, conectar, reconectar, editar labels) con React Flow.
 
@@ -36,7 +36,7 @@ Tras tocar el renderer, lo habitual es: `pnpm typecheck:web` + `npx eslint <arch
 ### Procesos Electron
 
 - `src/main/` — Node.js. Crea la ventana, observa el `.arch` con Chokidar ([fileWatcher.ts](src/main/fileWatcher.ts)), lee/escribe archivos ([fileManager.ts](src/main/fileManager.ts)) y expone IPC ([ipcHandlers.ts](src/main/ipcHandlers.ts): `open-file-dialog`, `open-file-path`, `save-archd`, `stop-watching`, `resolve-arch-name`).
-- `src/preload/` — expone `window.diagen` al renderer vía contextBridge (`onFileChanged`, `openFile`, `saveArchd`, ...).
+- `src/preload/` — expone `window.bachiDraw` al renderer vía contextBridge (`onFileChanged`, `openFile`, `saveArchd`, ...).
 - `src/renderer/` — React. Todo el pipeline de parse → layout → render vive aquí.
 
 ### Pipeline de datos
@@ -70,6 +70,7 @@ El spec ([specs/spec-project.md](specs/spec-project.md) §10, §15) describe ren
 ### Componente central: CloudCanvas
 
 [CloudCanvas.tsx](src/renderer/src/components/kinds/cloud/CloudCanvas.tsx) envuelve `<ReactFlow>` y gestiona:
+
 - Conversión `LayoutResult` ↔ nodos/edges de React Flow ([toReactFlow.ts](src/renderer/src/core/layout/kinds/cloud/toReactFlow.ts)).
 - **Crear** aristas (`onConnect`) y **reconectar** aristas existentes (`onReconnectStart`/`onReconnect`/`onReconnectEnd`; soltar en el vacío borra la arista).
 - **Imán de alineación** al arrastrar nodos ([alignment.ts](src/renderer/src/core/layout/kinds/cloud/alignment.ts) + [AlignmentGuides.tsx](src/renderer/src/components/kinds/cloud/AlignmentGuides.tsx)): si el centro del nodo cae dentro de `SNAP_THRESHOLD` (8px) del centro de otro, engancha a esa línea recta y muestra guías punteadas. Los grupos no se enganchan.
@@ -79,7 +80,7 @@ El spec ([specs/spec-project.md](specs/spec-project.md) §10, §15) describe ren
 ### Detalles no obvios de React Flow
 
 - **Coordenadas:** ELK da posiciones **absolutas**; React Flow usa posiciones **relativas al nodo padre** para anidación en clusters. Las conversiones restan/suman el offset del contenedor (ver `toReactFlow` y `alignment.ts`). Para comparar nodos de distintos clusters siempre se trabaja en absolutas.
-- **Orden de nodos:** un hijo debe ir en el array *después* de su padre; los clusters se emiten ordenados por profundidad (ancestros primero).
+- **Orden de nodos:** un hijo debe ir en el array _después_ de su padre; los clusters se emiten ordenados por profundidad (ancestros primero).
 - **`nodeTypes` se define fuera del componente** — React Flow exige referencia estable o re-renderiza todo.
 - **Routing de aristas:** lo hace React Flow (`smoothstep`), **no** se reutilizan los bend points de ELK.
 - **Snap al soltar:** React Flow emite un último cambio con la posición real del cursor (sin snap) al hacer `dragStop`. Por eso `onNodeDragStop` **reaplica** el imán sobre la posición final; si no, reaparece el efecto escalera.

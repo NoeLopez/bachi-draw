@@ -81,28 +81,28 @@ export default function Toolbar({
   // Muestra el icono del tipo AL QUE se cambiará al pulsar.
   const nextBackgroundLabel = background === 'dots' ? 'cuadrícula' : 'puntos'
   return (
-    <header className="diagen-toolbar">
-      <div className="diagen-toolbar-left">
-        <button type="button" className="diagen-btn" onClick={onOpenFile}>
+    <header className="bachi-draw-toolbar">
+      <div className="bachi-draw-toolbar-left">
+        <button type="button" className="bachi-draw-btn" onClick={onOpenFile}>
           Abrir .arch…
         </button>
-        <span className="diagen-toolbar-divider" />
-        <h1 className="diagen-toolbar-title">{diagramName || 'Diagen'}</h1>
+        <span className="bachi-draw-toolbar-divider" />
+        <h1 className="bachi-draw-toolbar-title">{diagramName || 'Bachi Draw'}</h1>
       </div>
-      <div className="diagen-toolbar-right">
+      <div className="bachi-draw-toolbar-right">
         <button
           type="button"
-          className="diagen-btn"
+          className="bachi-draw-btn"
           onClick={onSaveArchd}
           disabled={!canSave}
           title="Guardar .archd"
         >
           Guardar .archd
         </button>
-        <span className="diagen-toolbar-divider" />
+        <span className="bachi-draw-toolbar-divider" />
         <button
           type="button"
-          className="diagen-btn-icon"
+          className="bachi-draw-btn-icon"
           onClick={onToggleBackground}
           title={`Fondo: ${nextBackgroundLabel}`}
           aria-label={`Cambiar fondo a ${nextBackgroundLabel}`}
@@ -111,7 +111,7 @@ export default function Toolbar({
         </button>
         <button
           type="button"
-          className="diagen-btn-icon diagen-theme-toggle"
+          className="bachi-draw-btn-icon bachi-draw-theme-toggle"
           onClick={onToggleTheme}
           title={`Cambiar a tema ${nextThemeLabel}`}
           aria-label={`Cambiar a tema ${nextThemeLabel}`}

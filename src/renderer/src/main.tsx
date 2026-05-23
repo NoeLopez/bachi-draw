@@ -8,7 +8,7 @@ import App from './App'
 // La lógica reactiva del toggle vive en core/theme/useTheme.
 ;(function initTheme(): void {
   try {
-    const stored = window.localStorage.getItem('diagen.theme')
+    const stored = window.localStorage.getItem('bachi-draw.theme')
     if (stored === 'light' || stored === 'dark') {
       document.documentElement.setAttribute('data-theme', stored)
       return

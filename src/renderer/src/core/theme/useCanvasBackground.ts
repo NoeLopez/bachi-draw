@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import type { CanvasBackground } from '../diagram/kind'
 
-const STORAGE_KEY = 'diagen.canvasBackground'
+const STORAGE_KEY = 'bachi-draw.canvasBackground'
 
 function readStored(): CanvasBackground {
   try {

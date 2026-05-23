@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 export type Theme = 'light' | 'dark'
 
-const STORAGE_KEY = 'diagen.theme'
+const STORAGE_KEY = 'bachi-draw.theme'
 
 function readStoredTheme(): Theme | null {
   try {

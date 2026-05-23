@@ -14,13 +14,13 @@ export default function GroupNode({
   selected
 }: NodeProps<GroupNodeType>): React.JSX.Element {
   return (
-    <div className={`diagen-rf-group ${selected ? 'is-selected' : ''}`}>
+    <div className={`bachi-draw-rf-group ${selected ? 'is-selected' : ''}`}>
       {data.editing ? (
-        <div className="diagen-rf-group-label-wrap">
+        <div className="bachi-draw-rf-group-label-wrap">
           <NodeLabelInput nodeId={id} initial={data.label} align="left" />
         </div>
       ) : (
-        <div className="diagen-rf-group-label">{data.label}</div>
+        <div className="bachi-draw-rf-group-label">{data.label}</div>
       )}
     </div>
   )

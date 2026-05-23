@@ -130,7 +130,7 @@ export default function JumpEdge(props: EdgeProps): React.JSX.Element {
       {label ? (
         <EdgeLabelRenderer>
           <div
-            className="diagen-rf-edge-label"
+            className="bachi-draw-rf-edge-label"
             style={{ transform: `translate(-50%, -50%) translate(${lx}px, ${ly}px)` }}
           >
             {label}

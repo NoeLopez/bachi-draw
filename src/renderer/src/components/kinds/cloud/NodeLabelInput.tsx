@@ -67,7 +67,7 @@ export default function NodeLabelInput({
   return (
     <textarea
       ref={inputRef}
-      className={`diagen-rf-label-input ${className ?? ''}`}
+      className={`bachi-draw-rf-label-input ${className ?? ''}`}
       style={{ textAlign: align }}
       rows={1}
       value={value}

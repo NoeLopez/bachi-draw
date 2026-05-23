@@ -29,7 +29,7 @@ function on<T>(channel: string, handler: (payload: T) => void): Disposer {
   return () => ipcRenderer.removeListener(channel, listener)
 }
 
-const diagen = {
+const bachiDraw = {
   openFile: (): Promise<OpenedFile | null> => ipcRenderer.invoke('open-file-dialog'),
   openFilePath: (path: string): Promise<OpenedFile | null> =>
     ipcRenderer.invoke('open-file-path', path),
@@ -46,12 +46,12 @@ const diagen = {
     on('arch-file-removed', handler)
 }
 
-export type DiagenApi = typeof diagen
+export type BachiDrawApi = typeof bachiDraw
 
 if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI)
-    contextBridge.exposeInMainWorld('diagen', diagen)
+    contextBridge.exposeInMainWorld('bachiDraw', bachiDraw)
   } catch (error) {
     console.error(error)
   }
@@ -59,5 +59,5 @@ if (process.contextIsolated) {
   // @ts-ignore (definidos en index.d.ts)
   window.electron = electronAPI
   // @ts-ignore (definidos en index.d.ts)
-  window.diagen = diagen
+  window.bachiDraw = bachiDraw
 }

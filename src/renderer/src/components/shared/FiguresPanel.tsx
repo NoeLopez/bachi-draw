@@ -54,11 +54,11 @@ export default function FiguresPanel(): React.JSX.Element {
   const total = useMemo(() => groups.reduce((n, g) => n + g.types.length, 0), [groups])
 
   return (
-    <aside className="diagen-figures">
-      <header className="diagen-figures-head">
-        <h2 className="diagen-figures-title">Figuras</h2>
+    <aside className="bachi-draw-figures">
+      <header className="bachi-draw-figures-head">
+        <h2 className="bachi-draw-figures-title">Figuras</h2>
         <input
-          className="diagen-figures-search"
+          className="bachi-draw-figures-search"
           type="search"
           placeholder="Buscar icono…"
           value={query}
@@ -66,16 +66,16 @@ export default function FiguresPanel(): React.JSX.Element {
         />
       </header>
 
-      <div className="diagen-figures-list">
+      <div className="bachi-draw-figures-list">
         {total === 0 ? (
-          <p className="diagen-figures-empty">Sin resultados para “{query}”.</p>
+          <p className="bachi-draw-figures-empty">Sin resultados para “{query}”.</p>
         ) : (
           groups.map((g) => (
-            <section key={g.key} className="diagen-figures-group">
-              <h3 className="diagen-figures-group-title">
-                {g.label} <span className="diagen-figures-count">{g.types.length}</span>
+            <section key={g.key} className="bachi-draw-figures-group">
+              <h3 className="bachi-draw-figures-group-title">
+                {g.label} <span className="bachi-draw-figures-count">{g.types.length}</span>
               </h3>
-              <div className="diagen-figures-grid">
+              <div className="bachi-draw-figures-grid">
                 {g.types.map((type) => (
                   <FigureItem key={type} type={type} />
                 ))}
@@ -93,7 +93,7 @@ function FigureItem({ type }: { type: string }): React.JSX.Element {
   return (
     <button
       type="button"
-      className="diagen-figure"
+      className="bachi-draw-figure"
       title={label}
       draggable
       onDragStart={(e) => {
@@ -101,8 +101,8 @@ function FigureItem({ type }: { type: string }): React.JSX.Element {
         e.dataTransfer.effectAllowed = 'copy'
       }}
     >
-      <img className="diagen-figure-img" src={getIconDataUri(type)} alt="" draggable={false} />
-      <span className="diagen-figure-label">{label}</span>
+      <img className="bachi-draw-figure-img" src={getIconDataUri(type)} alt="" draggable={false} />
+      <span className="bachi-draw-figure-label">{label}</span>
     </button>
   )
 }

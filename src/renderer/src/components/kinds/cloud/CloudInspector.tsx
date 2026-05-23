@@ -94,7 +94,7 @@ export default function CloudInspector({
   if (!node && !edge) return null
 
   return (
-    <aside className="diagen-inspector">
+    <aside className="bachi-draw-inspector">
       {node ? <NodeInspector node={node} onEditConnectionPoints={onEditConnectionPoints} /> : null}
       {edge ? (
         <EdgeInspector
@@ -117,20 +117,20 @@ function NodeInspector({
 }): React.JSX.Element {
   return (
     <>
-      <header className="diagen-inspector-head">
-        <span className="diagen-inspector-kind">Nodo</span>
-        <span className="diagen-inspector-name">{node.data.label}</span>
+      <header className="bachi-draw-inspector-head">
+        <span className="bachi-draw-inspector-kind">Nodo</span>
+        <span className="bachi-draw-inspector-name">{node.data.label}</span>
       </header>
 
-      <section className="diagen-inspector-section">
-        <h4 className="diagen-inspector-title">Conexiones</h4>
+      <section className="bachi-draw-inspector-section">
+        <h4 className="bachi-draw-inspector-title">Conexiones</h4>
         <button
           type="button"
-          className="diagen-inspector-row"
+          className="bachi-draw-inspector-row"
           title="Añadir o quitar puntos de conexión del nodo"
           onClick={() => onEditConnectionPoints(node.id)}
         >
-          <span className="diagen-inspector-ico">{IconConnectionPoints}</span>
+          <span className="bachi-draw-inspector-ico">{IconConnectionPoints}</span>
           Editar puntos de conexión
         </button>
       </section>
@@ -155,14 +155,16 @@ function EdgeInspector({
 
   return (
     <>
-      <header className="diagen-inspector-head">
-        <span className="diagen-inspector-kind">Flecha</span>
-        <span className="diagen-inspector-name">{(edge.label as string) || 'sin etiqueta'}</span>
+      <header className="bachi-draw-inspector-head">
+        <span className="bachi-draw-inspector-kind">Flecha</span>
+        <span className="bachi-draw-inspector-name">
+          {(edge.label as string) || 'sin etiqueta'}
+        </span>
       </header>
 
-      <section className="diagen-inspector-section">
-        <h4 className="diagen-inspector-title">Estilo</h4>
-        <div className="diagen-inspector-segmented">
+      <section className="bachi-draw-inspector-section">
+        <h4 className="bachi-draw-inspector-title">Estilo</h4>
+        <div className="bachi-draw-inspector-segmented">
           <button
             type="button"
             className={style === 'solid' ? 'is-active' : ''}
@@ -182,9 +184,9 @@ function EdgeInspector({
         </div>
       </section>
 
-      <section className="diagen-inspector-section">
-        <h4 className="diagen-inspector-title">Dirección</h4>
-        <div className="diagen-inspector-segmented">
+      <section className="bachi-draw-inspector-section">
+        <h4 className="bachi-draw-inspector-title">Dirección</h4>
+        <div className="bachi-draw-inspector-segmented">
           <button
             type="button"
             className={direction === 'forward' ? 'is-active' : ''}
@@ -212,15 +214,15 @@ function EdgeInspector({
         </div>
       </section>
 
-      <section className="diagen-inspector-section">
-        <h4 className="diagen-inspector-title">Saltos de línea</h4>
+      <section className="bachi-draw-inspector-section">
+        <h4 className="bachi-draw-inspector-title">Saltos de línea</h4>
         <button
           type="button"
-          className={`diagen-inspector-row ${jumps ? 'is-active' : ''}`}
+          className={`bachi-draw-inspector-row ${jumps ? 'is-active' : ''}`}
           title="Dibuja un arco donde esta flecha cruza a otras"
           onClick={() => onToggleJumps(edge.id)}
         >
-          <span className="diagen-inspector-ico">{IconJump}</span>
+          <span className="bachi-draw-inspector-ico">{IconJump}</span>
           {jumps ? 'Quitar saltos' : 'Saltar las flechas que cruza'}
         </button>
       </section>

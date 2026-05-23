@@ -5,7 +5,7 @@
   flex-direction: column;
 }
 
-.diagen-app {
+.bachi-draw-app {
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -15,7 +15,7 @@
 
 /* ─────────────────────────── Toolbar ─────────────────────────── */
 
-.diagen-toolbar {
+.bachi-draw-toolbar {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
@@ -27,19 +27,19 @@
   -webkit-app-region: drag;
 }
 
-.diagen-toolbar-left,
-.diagen-toolbar-right {
+.bachi-draw-toolbar-left,
+.bachi-draw-toolbar-right {
   display: flex;
   align-items: center;
   gap: 8px;
   -webkit-app-region: no-drag;
 }
 
-.diagen-toolbar-left {
+.bachi-draw-toolbar-left {
   padding-left: 80px; /* deja sitio a los semáforos en macOS */
 }
 
-.diagen-toolbar-title {
+.bachi-draw-toolbar-title {
   font-size: 13px;
   font-weight: 600;
   margin: 0;
@@ -47,13 +47,13 @@
   letter-spacing: 0.2px;
 }
 
-.diagen-toolbar-divider {
+.bachi-draw-toolbar-divider {
   width: 1px;
   height: 18px;
   background: var(--border);
 }
 
-.diagen-btn {
+.bachi-draw-btn {
   padding: 6px 12px;
   border-radius: 6px;
   background: var(--bg-2);
@@ -64,12 +64,12 @@
     border-color 120ms ease;
 }
 
-.diagen-btn:hover:not(:disabled) {
+.bachi-draw-btn:hover:not(:disabled) {
   background: var(--bg-0);
   border-color: var(--border-strong);
 }
 
-.diagen-btn-icon {
+.bachi-draw-btn-icon {
   width: 28px;
   height: 28px;
   display: inline-flex;
@@ -83,12 +83,12 @@
   line-height: 1;
 }
 
-.diagen-btn-icon:hover {
+.bachi-draw-btn-icon:hover {
   background: var(--bg-0);
   border-color: var(--border-strong);
 }
 
-.diagen-zoom-readout {
+.bachi-draw-zoom-readout {
   min-width: 44px;
   text-align: center;
   color: var(--text-1);
@@ -97,7 +97,7 @@
 
 /* ─────────────────────────── Canvas ─────────────────────────── */
 
-.diagen-main {
+.bachi-draw-main {
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
@@ -107,7 +107,7 @@
 /* ── Panel de figuras (lateral izquierdo) ────────────────────────────────────
    Columna fija persistente: el lienzo ocupa el resto. Ancho estable, así no
    descuadra el fitView en uso normal. */
-.diagen-figures {
+.bachi-draw-figures {
   /* Ancho fijo y duro: flex-basis + width + min/max para que nunca ceda ante el
      contenido y no provoque reflow al filtrar. */
   flex: 0 0 280px;
@@ -121,7 +121,7 @@
   border-right: 1px solid var(--border);
 }
 
-.diagen-figures-head {
+.bachi-draw-figures-head {
   flex: 0 0 auto;
   display: flex;
   flex-direction: column;
@@ -130,14 +130,14 @@
   border-bottom: 1px solid var(--border);
 }
 
-.diagen-figures-title {
+.bachi-draw-figures-title {
   margin: 0;
   font-size: 14px;
   font-weight: 600;
   color: var(--text-0);
 }
 
-.diagen-figures-search {
+.bachi-draw-figures-search {
   width: 100%;
   box-sizing: border-box;
   padding: 7px 10px;
@@ -151,7 +151,7 @@
 
 /* Botón "limpiar" (X) del input search: el nativo casi no se ve en claro.
    Lo reemplazamos por una X dibujada con currentColor que sí contrasta. */
-.diagen-figures-search::-webkit-search-cancel-button {
+.bachi-draw-figures-search::-webkit-search-cancel-button {
   -webkit-appearance: none;
   appearance: none;
   width: 14px;
@@ -163,15 +163,15 @@
   mask: var(--icon-x) center / contain no-repeat;
 }
 
-.diagen-figures-search::-webkit-search-cancel-button:hover {
+.bachi-draw-figures-search::-webkit-search-cancel-button:hover {
   background-color: var(--text-0);
 }
 
-.diagen-figures-search:focus {
+.bachi-draw-figures-search:focus {
   border-color: var(--accent);
 }
 
-.diagen-figures-list {
+.bachi-draw-figures-list {
   flex: 1 1 auto;
   /* overflow-y: scroll (no auto): el track del scrollbar está SIEMPRE presente,
      así su ancho no cambia al filtrar y no hay reflow/parpadeo. */
@@ -184,22 +184,22 @@
   padding: 8px 8px 0;
 }
 
-.diagen-figures-empty {
+.bachi-draw-figures-empty {
   padding: 16px 8px;
   font-size: 12px;
   color: var(--text-2);
 }
 
-.diagen-figures-group {
+.bachi-draw-figures-group {
   margin-bottom: 12px;
 }
 
 /* El último grupo no deja margen, así la lista llega a tope con el footer. */
-.diagen-figures-group:last-child {
+.bachi-draw-figures-group:last-child {
   margin-bottom: 0;
 }
 
-.diagen-figures-group-title {
+.bachi-draw-figures-group-title {
   margin: 4px 4px 8px;
   font-size: 11px;
   font-weight: 600;
@@ -211,19 +211,19 @@
   gap: 6px;
 }
 
-.diagen-figures-count {
+.bachi-draw-figures-count {
   font-weight: 500;
   color: var(--text-2);
   opacity: 0.7;
 }
 
-.diagen-figures-grid {
+.bachi-draw-figures-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 4px;
 }
 
-.diagen-figure {
+.bachi-draw-figure {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -238,23 +238,23 @@
     border-color 100ms ease;
 }
 
-.diagen-figure:hover {
+.bachi-draw-figure:hover {
   background: var(--bg-2);
   border-color: var(--border);
 }
 
-.diagen-figure:active {
+.bachi-draw-figure:active {
   cursor: grabbing;
 }
 
-.diagen-figure-img {
+.bachi-draw-figure-img {
   width: 36px;
   height: 36px;
   object-fit: contain;
   pointer-events: none;
 }
 
-.diagen-figure-label {
+.bachi-draw-figure-label {
   font-size: 10px;
   line-height: 1.2;
   text-align: center;
@@ -269,7 +269,7 @@
 /* ── Inspector lateral derecho (panel contextual) ────────────────────────────
    Superpuesto sobre el lienzo (no reduce el tamaño del canvas de React Flow, así
    no se descuadra el zoom/fitView). Aparece solo con selección única. */
-.diagen-inspector {
+.bachi-draw-inspector {
   position: absolute;
   top: 0;
   right: 0;
@@ -286,7 +286,7 @@
   overflow-y: auto;
 }
 
-.diagen-inspector-head {
+.bachi-draw-inspector-head {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -295,7 +295,7 @@
   border-bottom: 1px solid var(--border);
 }
 
-.diagen-inspector-kind {
+.bachi-draw-inspector-kind {
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
@@ -303,7 +303,7 @@
   color: var(--text-2);
 }
 
-.diagen-inspector-name {
+.bachi-draw-inspector-name {
   font-size: 14px;
   font-weight: 600;
   color: var(--text-0);
@@ -312,14 +312,14 @@
   text-overflow: ellipsis;
 }
 
-.diagen-inspector-section {
+.bachi-draw-inspector-section {
   display: flex;
   flex-direction: column;
   gap: 6px;
   padding: 8px 0;
 }
 
-.diagen-inspector-title {
+.bachi-draw-inspector-title {
   margin: 0;
   font-size: 11px;
   font-weight: 600;
@@ -329,7 +329,7 @@
 }
 
 /* Fila de acción con icono + texto. */
-.diagen-inspector-row {
+.bachi-draw-inspector-row {
   width: 100%;
   display: flex;
   align-items: center;
@@ -347,19 +347,19 @@
     border-color 100ms ease;
 }
 
-.diagen-inspector-row:hover {
+.bachi-draw-inspector-row:hover {
   background: var(--bg-0);
   border-color: var(--border-strong);
 }
 
-.diagen-inspector-row.is-active {
+.bachi-draw-inspector-row.is-active {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
 }
 
 /* Icono dentro de una fila/segmento del inspector. */
-.diagen-inspector-ico {
+.bachi-draw-inspector-ico {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -368,12 +368,12 @@
 }
 
 /* Grupo de botones segmentado (estilo/dirección). */
-.diagen-inspector-segmented {
+.bachi-draw-inspector-segmented {
   display: flex;
   gap: 4px;
 }
 
-.diagen-inspector-segmented button {
+.bachi-draw-inspector-segmented button {
   flex: 1 1 0;
   padding: 7px 8px;
   border-radius: 6px;
@@ -387,12 +387,12 @@
     color 100ms ease;
 }
 
-.diagen-inspector-segmented button:hover {
+.bachi-draw-inspector-segmented button:hover {
   background: var(--bg-0);
   color: var(--text-0);
 }
 
-.diagen-inspector-segmented button.is-active {
+.bachi-draw-inspector-segmented button.is-active {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
@@ -400,7 +400,7 @@
 
 /* ── ModeBar flotante (estilo Excalidraw) ──────────────────── */
 
-.diagen-modebar {
+.bachi-draw-modebar {
   position: absolute;
   top: 12px;
   left: 50%;
@@ -416,7 +416,7 @@
   pointer-events: auto;
 }
 
-.diagen-modebar-btn {
+.bachi-draw-modebar-btn {
   width: 32px;
   height: 32px;
   display: inline-flex;
@@ -431,17 +431,17 @@
     color 100ms ease;
 }
 
-.diagen-modebar-btn:hover {
+.bachi-draw-modebar-btn:hover {
   background: var(--bg-2);
   color: var(--text-0);
 }
 
-.diagen-modebar-btn.is-active {
+.bachi-draw-modebar-btn.is-active {
   background: var(--accent);
   color: #fff;
 }
 
-.diagen-canvas {
+.bachi-draw-canvas {
   flex: 1 1 auto;
   position: relative;
   /* El patrón de fondo (puntos/cuadrícula) lo dibuja <Background> de React Flow,
@@ -450,7 +450,7 @@
   overflow: hidden;
 }
 
-.diagen-viewport {
+.bachi-draw-viewport {
   width: 100%;
   height: 100%;
   cursor: grab;
@@ -458,44 +458,44 @@
   touch-action: none;
 }
 
-.diagen-viewport.is-panning {
+.bachi-draw-viewport.is-panning {
   cursor: grabbing;
 }
 
-.diagen-svg {
+.bachi-draw-svg {
   display: block;
 }
 
 /* ─────────────────────────── Elementos SVG ─────────────────── */
 
-.diagen-node-label {
+.bachi-draw-node-label {
   font-size: 12px;
   fill: var(--text-0);
   font-weight: 500;
 }
 
-.diagen-edge-path {
+.bachi-draw-edge-path {
   stroke: var(--edge-stroke);
 }
 
-.diagen-edge-label-bg {
+.bachi-draw-edge-label-bg {
   fill: var(--edge-label-bg);
   stroke: var(--edge-label-border);
 }
 
-.diagen-edge-label {
+.bachi-draw-edge-label {
   font-size: 11px;
   font-weight: 500;
   fill: var(--edge-label-text);
 }
 
-.diagen-arrow-marker {
+.bachi-draw-arrow-marker {
   fill: var(--edge-stroke);
 }
 
 /* ── Selección ─────────────────────────────────────────── */
 
-.diagen-selection-outline {
+.bachi-draw-selection-outline {
   fill: rgba(99, 102, 241, 0.08);
   stroke: var(--accent);
   stroke-width: 1.5;
@@ -503,43 +503,43 @@
   pointer-events: none;
 }
 
-.diagen-node {
+.bachi-draw-node {
   cursor: pointer;
 }
 
-.diagen-edge {
+.bachi-draw-edge {
   cursor: pointer;
 }
 
-.diagen-edge.is-selected .diagen-edge-path {
+.bachi-draw-edge.is-selected .bachi-draw-edge-path {
   stroke: var(--accent);
   stroke-width: 2.4;
 }
 
-.diagen-edge.is-selected .diagen-edge-label-bg {
+.bachi-draw-edge.is-selected .bachi-draw-edge-label-bg {
   stroke: var(--accent);
 }
 
-.diagen-cluster-hit,
-.diagen-cluster-label {
+.bachi-draw-cluster-hit,
+.bachi-draw-cluster-label {
   cursor: pointer;
 }
 
-.diagen-cluster.is-selected .diagen-cluster-rect {
+.bachi-draw-cluster.is-selected .bachi-draw-cluster-rect {
   stroke: var(--accent);
   stroke-dasharray: none;
 }
 
 /* ── Editor inline de label ────────────────────────────── */
 
-.diagen-connect-outline {
+.bachi-draw-connect-outline {
   fill: rgba(16, 185, 129, 0.1);
   stroke: var(--success);
   stroke-width: 2;
   pointer-events: none;
 }
 
-.diagen-connect-preview {
+.bachi-draw-connect-preview {
   stroke: var(--success);
   stroke-width: 1.8;
   stroke-dasharray: 5 4;
@@ -547,7 +547,7 @@
   pointer-events: none;
 }
 
-.diagen-label-input {
+.bachi-draw-label-input {
   width: 100%;
   height: 100%;
   box-sizing: border-box;
@@ -562,12 +562,12 @@
   outline: none;
 }
 
-.diagen-cluster-rect {
+.bachi-draw-cluster-rect {
   fill: var(--cluster-fill);
   stroke: var(--cluster-stroke);
 }
 
-.diagen-cluster-label {
+.bachi-draw-cluster-label {
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.3px;
@@ -577,7 +577,7 @@
 
 /* ─────────────────────── Empty state ────────────────────────── */
 
-.diagen-empty-state {
+.bachi-draw-empty-state {
   position: absolute;
   inset: 0;
   display: flex;
@@ -586,7 +586,7 @@
   padding: 24px;
 }
 
-.diagen-empty-state-card {
+.bachi-draw-empty-state-card {
   text-align: center;
   max-width: 460px;
   padding: 32px 36px;
@@ -595,19 +595,19 @@
   border-radius: 12px;
 }
 
-.diagen-empty-state-card h2 {
+.bachi-draw-empty-state-card h2 {
   margin: 0 0 12px;
   font-size: 18px;
   color: var(--text-0);
 }
 
-.diagen-empty-state-card p {
+.bachi-draw-empty-state-card p {
   margin: 0 0 8px;
   color: var(--text-1);
   line-height: 1.55;
 }
 
-.diagen-empty-hint {
+.bachi-draw-empty-hint {
   margin-top: 16px !important;
   font-size: 12px;
   color: var(--text-2);
@@ -615,7 +615,7 @@
 
 /* ─────────────────────── Status bar ─────────────────────────── */
 
-.diagen-status-bar {
+.bachi-draw-status-bar {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
@@ -628,21 +628,21 @@
   color: var(--text-1);
 }
 
-.diagen-status-file {
+.bachi-draw-status-file {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   flex: 1 1 auto;
 }
 
-.diagen-status-meta {
+.bachi-draw-status-meta {
   display: flex;
   align-items: center;
   gap: 12px;
   flex: 0 0 auto;
 }
 
-.diagen-status-pill {
+.bachi-draw-status-pill {
   padding: 2px 8px;
   border-radius: 999px;
   background: var(--bg-2);
@@ -650,23 +650,23 @@
   font-weight: 500;
 }
 
-.diagen-status-pill.diagen-status-idle {
+.bachi-draw-status-pill.bachi-draw-status-idle {
   color: var(--text-2);
 }
 
-.diagen-status-pill.diagen-status-reloading {
+.bachi-draw-status-pill.bachi-draw-status-reloading {
   color: var(--warn);
   background: rgba(217, 119, 6, 0.1);
   border-color: rgba(217, 119, 6, 0.4);
 }
 
-.diagen-status-pill.diagen-status-ok {
+.bachi-draw-status-pill.bachi-draw-status-ok {
   color: var(--success);
   background: rgba(5, 150, 105, 0.1);
   border-color: rgba(5, 150, 105, 0.4);
 }
 
-.diagen-status-pill.diagen-status-error {
+.bachi-draw-status-pill.bachi-draw-status-error {
   color: var(--danger);
   background: rgba(220, 38, 38, 0.1);
   border-color: rgba(220, 38, 38, 0.45);
@@ -677,7 +677,7 @@
    ════════════════════════════════════════════════════════════ */
 
 /* Service node: icono + label */
-.diagen-rf-service {
+.bachi-draw-rf-service {
   position: relative;
   width: 100%;
   height: 100%;
@@ -688,7 +688,7 @@
   pointer-events: none;
 }
 
-.diagen-rf-icon {
+.bachi-draw-rf-icon {
   position: absolute;
   width: 56px;
   height: 56px;
@@ -700,7 +700,7 @@
   user-select: none;
 }
 
-.diagen-rf-label {
+.bachi-draw-rf-label {
   position: absolute;
   top: 62px;
   left: 50%;
@@ -722,7 +722,7 @@
    con el label, que queda debajo). Mismas dimensiones y posición que el icono
    (56px en top:2px), sin respiro interno; el borde se dibuja por fuera con
    box-shadow para no comerse el contorno del icono. */
-.diagen-rf-service.is-selected::after {
+.bachi-draw-rf-service.is-selected::after {
   content: '';
   position: absolute;
   left: 50%;
@@ -746,7 +746,7 @@
    quedan sobre el borde del icono / marco de selección, no sobre el recuadro
    completo del nodo (que incluye el label). No captura eventos: cada handle
    gestiona el suyo. */
-.diagen-rf-handle-zone {
+.bachi-draw-rf-handle-zone {
   position: absolute;
   top: 2px;
   left: 50%;
@@ -762,7 +762,7 @@
 /* ── Handles de conexión estilo Lucid ──────────────────────────────────────
    4 puntos visibles (uno por lado) que aparecen al hover/selección. Limpios,
    redondeados, crecen al apuntarlos. */
-.diagen-rf-handle {
+.bachi-draw-rf-handle {
   width: 8px;
   height: 8px;
   border-radius: 50%;
@@ -780,22 +780,22 @@
    separado). La facilidad de enganche la da connectionRadius en el lienzo, que
    engancha al handle más cercano al soltar. */
 
-.diagen-rf-service:hover .diagen-rf-handle,
-.react-flow__node.selected .diagen-rf-handle,
-.react-flow--dragging .diagen-rf-handle {
+.bachi-draw-rf-service:hover .bachi-draw-rf-handle,
+.react-flow__node.selected .bachi-draw-rf-handle,
+.react-flow--dragging .bachi-draw-rf-handle {
   opacity: 1;
 }
 
 /* Al apuntar un punto: se rellena de color para confirmar el objetivo. No
    escalamos ni movemos el punto (eso desplazaba el cursor fuera y causaba
    parpadeo/imprecisión); solo cambia el color. */
-.diagen-rf-handle:hover {
+.bachi-draw-rf-handle:hover {
   background: var(--accent);
   cursor: crosshair;
 }
 
 /* ── Modal: editor de puntos de conexión ─────────────────────────────────── */
-.diagen-cpe-overlay {
+.bachi-draw-cpe-overlay {
   position: fixed;
   inset: 0;
   z-index: 50;
@@ -805,7 +805,7 @@
   background: rgba(15, 23, 42, 0.45);
 }
 
-.diagen-cpe-modal {
+.bachi-draw-cpe-modal {
   width: 440px;
   max-width: calc(100vw - 32px);
   padding: 20px;
@@ -815,33 +815,33 @@
   box-shadow: 0 12px 40px rgba(15, 23, 42, 0.3);
 }
 
-.diagen-cpe-title {
+.bachi-draw-cpe-title {
   margin: 0 0 4px;
   font-size: 16px;
   color: var(--text-0);
 }
 
-.diagen-cpe-sub {
+.bachi-draw-cpe-sub {
   margin: 0 0 16px;
   font-size: 12px;
   color: var(--text-2);
   line-height: 1.4;
 }
 
-.diagen-cpe-body {
+.bachi-draw-cpe-body {
   display: flex;
   gap: 20px;
   align-items: center;
 }
 
-.diagen-cpe-controls {
+.bachi-draw-cpe-controls {
   display: flex;
   flex-direction: column;
   gap: 14px;
   flex: 1 1 auto;
 }
 
-.diagen-cpe-field {
+.bachi-draw-cpe-field {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -849,7 +849,7 @@
   color: var(--text-1);
 }
 
-.diagen-cpe-field select {
+.bachi-draw-cpe-field select {
   padding: 6px 8px;
   border-radius: 6px;
   border: 1px solid var(--border);
@@ -858,13 +858,13 @@
   font-size: 13px;
 }
 
-.diagen-cpe-stepper {
+.bachi-draw-cpe-stepper {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.diagen-cpe-stepper button {
+.bachi-draw-cpe-stepper button {
   width: 30px;
   height: 30px;
   border-radius: 6px;
@@ -876,17 +876,17 @@
   cursor: pointer;
 }
 
-.diagen-cpe-stepper button:hover:not(:disabled) {
+.bachi-draw-cpe-stepper button:hover:not(:disabled) {
   background: var(--bg-0);
   border-color: var(--border-strong);
 }
 
-.diagen-cpe-stepper button:disabled {
+.bachi-draw-cpe-stepper button:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
 
-.diagen-cpe-count {
+.bachi-draw-cpe-count {
   min-width: 22px;
   text-align: center;
   font-size: 15px;
@@ -895,7 +895,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-.diagen-cpe-preview {
+.bachi-draw-cpe-preview {
   flex: 0 0 auto;
   position: relative;
   display: flex;
@@ -908,7 +908,7 @@
   border-radius: 8px;
 }
 
-.diagen-cpe-node {
+.bachi-draw-cpe-node {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -919,20 +919,20 @@
   border-radius: 6px;
 }
 
-.diagen-cpe-node-icon {
+.bachi-draw-cpe-node-icon {
   width: 56%;
   height: 56%;
   object-fit: contain;
   pointer-events: none;
 }
 
-.diagen-cpe-node-label {
+.bachi-draw-cpe-node-label {
   font-size: 9px;
   color: var(--text-1);
   margin-top: 2px;
 }
 
-.diagen-cpe-dot {
+.bachi-draw-cpe-dot {
   position: absolute;
   width: 8px;
   height: 8px;
@@ -942,30 +942,30 @@
   transform: translate(-50%, -50%);
 }
 
-.diagen-cpe-dot.is-center {
+.bachi-draw-cpe-dot.is-center {
   background: var(--bg-1);
   border-color: var(--accent);
 }
 
-.diagen-cpe-actions {
+.bachi-draw-cpe-actions {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
   margin-top: 20px;
 }
 
-.diagen-btn-primary {
+.bachi-draw-btn-primary {
   background: var(--accent);
   color: #fff;
   border-color: var(--accent);
 }
 
-.diagen-btn-primary:hover:not(:disabled) {
+.bachi-draw-btn-primary:hover:not(:disabled) {
   filter: brightness(1.08);
 }
 
 /* Group node: contenedor de cluster */
-.diagen-rf-group {
+.bachi-draw-rf-group {
   width: 100%;
   height: 100%;
   box-sizing: border-box;
@@ -974,12 +974,12 @@
   background: var(--cluster-fill);
 }
 
-.diagen-rf-group.is-selected {
+.bachi-draw-rf-group.is-selected {
   border-style: solid;
   border-color: var(--accent);
 }
 
-.diagen-rf-group-label {
+.bachi-draw-rf-group-label {
   position: absolute;
   top: 12px;
   left: 14px;
@@ -998,7 +998,7 @@
 
 /* Guías de alineación (imán) durante el arrastre de nodos. Cubren todo el
    lienzo y no capturan eventos para no interferir con el drag. */
-.diagen-rf-guides {
+.bachi-draw-rf-guides {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -1008,7 +1008,7 @@
   overflow: visible;
 }
 
-.diagen-rf-guides line {
+.bachi-draw-rf-guides line {
   stroke: var(--accent);
   stroke-width: 1;
   stroke-dasharray: 4 3;
@@ -1036,7 +1036,7 @@
 }
 
 /* Label de arista renderizado como HTML (EdgeLabelRenderer) por JumpEdge. */
-.diagen-rf-edge-label {
+.bachi-draw-rf-edge-label {
   position: absolute;
   pointer-events: none;
   padding: 1px 5px;
@@ -1087,7 +1087,7 @@
 }
 
 /* Input inline de label en nodos React Flow */
-.diagen-rf-label-wrap {
+.bachi-draw-rf-label-wrap {
   position: absolute;
   top: 60px;
   left: 50%;
@@ -1098,7 +1098,7 @@
   pointer-events: auto;
 }
 
-.diagen-rf-group-label-wrap {
+.bachi-draw-rf-group-label-wrap {
   position: absolute;
   top: 8px;
   left: 12px;
@@ -1109,8 +1109,8 @@
 /* Edición inline del label estilo Lucid: el input se funde con el label (sin
    recuadro, borde ni fondo); solo el resaltado del texto seleccionado indica la
    edición, ciñéndose al texto y no al ancho del input. Mismas métricas que
-   .diagen-rf-label para que no haya salto visual al entrar/salir. */
-.diagen-rf-label-input {
+   .bachi-draw-rf-label para que no haya salto visual al entrar/salir. */
+.bachi-draw-rf-label-input {
   width: 100%;
   box-sizing: border-box;
   padding: 0;
@@ -1133,6 +1133,6 @@
 }
 
 /* Resaltado de la selección de texto, en acento sutil (no el gris del SO). */
-.diagen-rf-label-input::selection {
+.bachi-draw-rf-label-input::selection {
   background: color-mix(in oklab, var(--accent) 30%, transparent);
 }
