@@ -93,6 +93,18 @@ function App(): React.JSX.Element {
     }
   }, [buildDiagram])
 
+  const handleNewFile = useCallback(async () => {
+    try {
+      const opened = await window.bachiDraw.newFile()
+      if (!opened) return
+      void buildDiagram(opened.content, opened.path, opened.archd)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      setStatus('error')
+      setStatusMessage(message)
+    }
+  }, [buildDiagram])
+
   const handleOpenFile = useCallback(async () => {
     const opened = await window.bachiDraw.openFile()
     if (!opened) return
@@ -140,6 +152,7 @@ function App(): React.JSX.Element {
         theme={theme}
         background={background}
         minimapVisible={minimapVisible}
+        onNewFile={handleNewFile}
         onOpenFile={handleOpenFile}
         onSaveArchd={handleSaveArchd}
         onToggleTheme={toggleTheme}
@@ -153,7 +166,7 @@ function App(): React.JSX.Element {
           <Canvas layout={diagram.layout} background={background} minimapVisible={minimapVisible} />
         ) : (
           <div className="bachi-draw-canvas">
-            <EmptyState />
+            <EmptyState onNewFile={handleNewFile} onOpenFile={handleOpenFile} />
           </div>
         )}
       </main>

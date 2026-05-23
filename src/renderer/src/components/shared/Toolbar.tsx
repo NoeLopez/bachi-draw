@@ -6,6 +6,7 @@ interface ToolbarProps {
   theme: Theme
   background: CanvasBackground
   minimapVisible: boolean
+  onNewFile: () => void
   onOpenFile: () => void
   onSaveArchd: () => void
   onToggleTheme: () => void
@@ -90,6 +91,7 @@ export default function Toolbar({
   theme,
   background,
   minimapVisible,
+  onNewFile,
   onOpenFile,
   onSaveArchd,
   onToggleTheme,
@@ -103,8 +105,11 @@ export default function Toolbar({
   return (
     <header className="bachi-draw-toolbar">
       <div className="bachi-draw-toolbar-left">
+        <button type="button" className="bachi-draw-btn" onClick={onNewFile}>
+          Nuevo
+        </button>
         <button type="button" className="bachi-draw-btn" onClick={onOpenFile}>
-          Abrir .bachi…
+          Abrir…
         </button>
         <span className="bachi-draw-toolbar-divider" />
         <h1 className="bachi-draw-toolbar-title">{diagramName || 'Bachi Draw'}</h1>

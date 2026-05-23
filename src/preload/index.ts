@@ -30,6 +30,7 @@ function on<T>(channel: string, handler: (payload: T) => void): Disposer {
 }
 
 const bachiDraw = {
+  newFile: (): Promise<OpenedFile | null> => ipcRenderer.invoke('new-file'),
   openFile: (): Promise<OpenedFile | null> => ipcRenderer.invoke('open-file-dialog'),
   openFilePath: (path: string): Promise<OpenedFile | null> =>
     ipcRenderer.invoke('open-file-path', path),

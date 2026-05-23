@@ -646,6 +646,26 @@
   line-height: 1.55;
 }
 
+.bachi-draw-empty-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin: 20px 0 4px;
+}
+
+.bachi-draw-btn--primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: transparent;
+}
+
+/* Doble clase para superar la especificidad de .bachi-draw-btn:hover:not(:disabled) */
+.bachi-draw-btn.bachi-draw-btn--primary:hover:not(:disabled) {
+  background: var(--accent);
+  border-color: transparent;
+  opacity: 0.85;
+}
+
 .bachi-draw-empty-hint {
   margin-top: 16px !important;
   font-size: 12px;

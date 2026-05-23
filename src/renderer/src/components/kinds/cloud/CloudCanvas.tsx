@@ -308,8 +308,14 @@ function CloudCanvasInner({
     const { nodes: n, edges: e } = toReactFlow(current)
     setNodes(n)
     setEdges(e)
-    // Encuadrar tras pintar el nuevo contenido.
-    requestAnimationFrame(() => fitView({ padding: 0.15, duration: 200 }))
+    // Solo encuadrar si hay contenido. Con canvas vacío no hay nada que
+    // encuadrar y además el RAF podría dispararse justo después de que el
+    // usuario suelte el primer nodo, haciendo zoom sobre ese único elemento.
+    if (n.length === 0 && e.length === 0) return
+    // Cancelamos el RAF anterior si el efecto se vuelve a ejecutar antes de
+    // que haya disparado (evita fitView sobre estado intermedio).
+    const rafId = requestAnimationFrame(() => fitView({ padding: 0.15, duration: 200 }))
+    return () => cancelAnimationFrame(rafId)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [externalRev])
 
@@ -675,7 +681,6 @@ function CloudCanvasInner({
         zoomActivationKeyCode={['Control', 'Meta']}
         minZoom={0.1}
         maxZoom={3}
-        fitView
         proOptions={{ hideAttribution: true }}
       >
         <Background
