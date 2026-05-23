@@ -1,5 +1,6 @@
 import { type Edge, MarkerType, type Node } from '@xyflow/react'
 import type { ExtraHandles, LayoutResult } from '../../../parser/kinds/cloud/types'
+import { type ShapeType, SHAPE_PREFIX } from './shapes'
 
 // ── Tipos de data de los nodos custom ───────────────────────────────────────
 
@@ -19,6 +20,16 @@ export interface GroupNodeData extends Record<string, unknown> {
   editing?: boolean
 }
 
+export interface ShapeNodeData extends Record<string, unknown> {
+  label: string
+  shapeType: ShapeType
+  fillColor: string
+  strokeColor: string
+  strokeWidth: number
+  /** true mientras se edita el label inline. */
+  editing?: boolean
+}
+
 export interface CloudEdgeData extends Record<string, unknown> {
   style: 'solid' | 'dashed'
   direction: 'forward' | 'back' | 'both'
@@ -28,7 +39,8 @@ export interface CloudEdgeData extends Record<string, unknown> {
 
 export type ServiceNode = Node<ServiceNodeData, 'service'>
 export type GroupNode = Node<GroupNodeData, 'group'>
-export type CloudFlowNode = ServiceNode | GroupNode
+export type ShapeNode = Node<ShapeNodeData, 'shape'>
+export type CloudFlowNode = ServiceNode | GroupNode | ShapeNode
 
 /**
  * Apariencia de una arista (markers y dasharray) derivada de su estilo y
@@ -106,19 +118,37 @@ export function toReactFlow(layout: LayoutResult): {
     })
   }
 
-  // Service nodes.
+  // Service y shape nodes.
   for (const n of layout.nodes) {
     const base = parentAbs(n.clusterId)
-    nodes.push({
+    const pos = { x: n.x - base.x, y: n.y - base.y }
+    const common = {
       id: n.id,
-      type: 'service',
-      position: { x: n.x - base.x, y: n.y - base.y },
-      data: { label: n.label, iconType: n.type, extraHandles: n.extraHandles },
+      position: pos,
       width: n.width,
       height: n.height,
       ...(n.clusterId ? { parentId: n.clusterId } : {}),
       zIndex: 1
-    })
+    }
+    if (n.type.startsWith(SHAPE_PREFIX)) {
+      nodes.push({
+        ...common,
+        type: 'shape',
+        data: {
+          label: n.label,
+          shapeType: n.type.slice(SHAPE_PREFIX.length) as ShapeType,
+          fillColor: n.fillColor ?? '#ffffff',
+          strokeColor: n.strokeColor ?? '#334155',
+          strokeWidth: n.strokeWidth ?? 2
+        }
+      } as ShapeNode)
+    } else {
+      nodes.push({
+        ...common,
+        type: 'service',
+        data: { label: n.label, iconType: n.type, extraHandles: n.extraHandles }
+      } as ServiceNode)
+    }
   }
 
   // Edges. Tipo 'jump' = ortogonal con saltos sobre las aristas que cruza.

@@ -28,6 +28,7 @@ import { useEditorStore } from '../../../core/diagram/editor/store'
 import {
   type CloudEdgeData,
   type CloudFlowNode,
+  type ShapeNode as ShapeFlowNode,
   edgeVisuals,
   toReactFlow
 } from '../../../core/layout/kinds/cloud/toReactFlow'
@@ -35,15 +36,21 @@ import type { ExtraHandles, LayoutResult, LayoutEdge } from '../../../core/parse
 import { type GuideLine, snapToAlignment } from '../../../core/layout/kinds/cloud/alignment'
 import { allExtraHandleIds } from '../../../core/layout/kinds/cloud/connectionHandles'
 import { humanizeIconType, ICON_DND_TYPE } from '../../../icons/officialIcons'
+import {
+  defaultShapeSize,
+  fromShapeNodeType,
+  toShapeNodeType
+} from '../../../core/layout/kinds/cloud/shapes'
 import AlignmentGuides from './AlignmentGuides'
 import CloudInspector from './CloudInspector'
 import ConnectionPointsEditor from './ConnectionPointsEditor'
 import GroupNode from './GroupNode'
 import JumpEdge from './JumpEdge'
 import ServiceNode from './ServiceNode'
+import ShapeNode from './ShapeNode'
 
 // Definidos fuera del componente: React Flow exige referencias estables.
-const nodeTypes = { service: ServiceNode, group: GroupNode }
+const nodeTypes = { service: ServiceNode, group: GroupNode, shape: ShapeNode }
 const edgeTypes = { jump: JumpEdge }
 
 /**
@@ -96,35 +103,67 @@ function updateLayoutWithReactFlow(
   // Update layout nodes with new positions and labels
   const updatedNodes = layout.nodes.map((n) => {
     const rfNode = nodesMap.get(n.id)
-    if (!rfNode || rfNode.type !== 'service') return n
+    if (!rfNode) return n
     const absPos = getAbsolutePosition(n.id)
-    return {
-      ...n,
-      x: absPos.x,
-      y: absPos.y,
-      label: rfNode.data.label,
-      extraHandles: rfNode.data.extraHandles
+    if (rfNode.type === 'service') {
+      return {
+        ...n,
+        x: absPos.x,
+        y: absPos.y,
+        label: rfNode.data.label,
+        extraHandles: rfNode.data.extraHandles
+      }
     }
+    if (rfNode.type === 'shape') {
+      const sn = rfNode as ShapeFlowNode
+      return {
+        ...n,
+        x: absPos.x,
+        y: absPos.y,
+        width: sn.width ?? n.width,
+        height: sn.height ?? n.height,
+        label: sn.data.label,
+        fillColor: sn.data.fillColor,
+        strokeColor: sn.data.strokeColor,
+        strokeWidth: sn.data.strokeWidth
+      }
+    }
+    return n
   })
 
-  // Anexa nodos service que existen en React Flow pero no en el layout (creados
-  // al arrastrar un icono del panel). Sin esto el sync los ignoraría y no se
-  // guardarían en el .bachid.
+  // Anexa nodos service/shape que existen en React Flow pero no en el layout
+  // (creados al arrastrar del panel). Sin esto el sync los ignoraría.
   const existingIds = new Set(layout.nodes.map((n) => n.id))
   for (const rfNode of rfNodes) {
-    if (rfNode.type !== 'service' || existingIds.has(rfNode.id)) continue
+    if (existingIds.has(rfNode.id)) continue
     const absPos = getAbsolutePosition(rfNode.id)
-    updatedNodes.push({
-      id: rfNode.id,
-      type: rfNode.data.iconType,
-      label: rfNode.data.label,
-      x: absPos.x,
-      y: absPos.y,
-      width: rfNode.width ?? 80,
-      height: rfNode.height ?? 80,
-      ...(rfNode.parentId ? { clusterId: rfNode.parentId } : {}),
-      extraHandles: rfNode.data.extraHandles
-    })
+    if (rfNode.type === 'service') {
+      updatedNodes.push({
+        id: rfNode.id,
+        type: rfNode.data.iconType,
+        label: rfNode.data.label,
+        x: absPos.x,
+        y: absPos.y,
+        width: rfNode.width ?? 80,
+        height: rfNode.height ?? 80,
+        ...(rfNode.parentId ? { clusterId: rfNode.parentId } : {}),
+        extraHandles: rfNode.data.extraHandles
+      })
+    } else if (rfNode.type === 'shape') {
+      const sn = rfNode as ShapeFlowNode
+      updatedNodes.push({
+        id: sn.id,
+        type: toShapeNodeType(sn.data.shapeType),
+        label: sn.data.label,
+        x: absPos.x,
+        y: absPos.y,
+        width: sn.width ?? 160,
+        height: sn.height ?? 80,
+        fillColor: sn.data.fillColor,
+        strokeColor: sn.data.strokeColor,
+        strokeWidth: sn.data.strokeWidth
+      })
+    }
   }
 
   // Update layout clusters with new positions and labels
@@ -313,24 +352,52 @@ function CloudCanvasInner({
       const iconType = e.dataTransfer.getData(ICON_DND_TYPE)
       if (!iconType) return
       e.preventDefault()
-      // Posición en coordenadas del lienzo (respeta zoom/pan); centrar el nodo
-      // 80x80 en el cursor restando la mitad.
       const p = screenToFlowPosition({ x: e.clientX, y: e.clientY })
-      const position = { x: p.x - 40, y: p.y - 40 }
-      setNodes((nds) => {
-        const newNode: CloudFlowNode = {
-          id: uniqueNodeId(iconType, nds),
-          type: 'service',
-          position,
-          data: { label: humanizeIconType(iconType), iconType },
-          width: 80,
-          height: 80,
-          zIndex: 1
-        }
-        const next = [...nds, newNode]
-        syncToStore(next, edges)
-        return next
-      })
+
+      // Figura básica (prefijo oss/shapes/) → ShapeNode; el resto → ServiceNode.
+      const shapeType = fromShapeNodeType(iconType)
+      if (shapeType) {
+        const { width, height } = defaultShapeSize(shapeType)
+        const position = { x: p.x - width / 2, y: p.y - height / 2 }
+        setNodes((nds) => {
+          const slug = shapeType.replace(/-/g, '')
+          const newNode: CloudFlowNode = {
+            id: uniqueNodeId(slug, nds),
+            type: 'shape',
+            position,
+            data: {
+              label: humanizeIconType(iconType),
+              shapeType: shapeType as ShapeFlowNode['data']['shapeType'],
+              fillColor: '#ffffff',
+              strokeColor: '#334155',
+              strokeWidth: 2
+            },
+            width,
+            height,
+            zIndex: 1
+          }
+          const next = [...nds, newNode]
+          syncToStore(next, edges)
+          return next
+        })
+      } else {
+        // Icono cloud normal (80×80), centrado en el cursor.
+        const position = { x: p.x - 40, y: p.y - 40 }
+        setNodes((nds) => {
+          const newNode: CloudFlowNode = {
+            id: uniqueNodeId(iconType, nds),
+            type: 'service',
+            position,
+            data: { label: humanizeIconType(iconType), iconType },
+            width: 80,
+            height: 80,
+            zIndex: 1
+          }
+          const next = [...nds, newNode]
+          syncToStore(next, edges)
+          return next
+        })
+      }
       markDirty()
     },
     [screenToFlowPosition, setNodes, syncToStore, markDirty, edges]
@@ -532,14 +599,32 @@ function CloudCanvasInner({
     [setNodes, setEdges, syncToStore, markDirty]
   )
 
-  // Elemento para el inspector: solo con selección única (un nodo de servicio o
-  // una arista). Con 0 o múltiples seleccionados, el panel no se muestra.
+  // Fija propiedades visuales de un nodo shape (fill, stroke, strokeWidth).
+  const setShapeData = useCallback(
+    (nodeId: string, patch: Partial<ShapeFlowNode['data']>) => {
+      setNodes((nds) => {
+        const next = nds.map((n) =>
+          n.id === nodeId && n.type === 'shape'
+            ? ({ ...n, data: { ...n.data, ...patch } } as CloudFlowNode)
+            : n
+        )
+        syncToStore(next, edges)
+        return next
+      })
+      markDirty()
+    },
+    [setNodes, syncToStore, markDirty, edges]
+  )
+
+  // Elemento para el inspector: solo con selección única (un nodo o una arista).
+  // Con 0 o múltiples seleccionados, el panel no se muestra.
   const single = selectedNodeIds.length + selectedEdgeIds.length === 1
   const selectedNode =
     single && selectedNodeIds.length === 1
       ? (nodes.find((n) => n.id === selectedNodeIds[0]) ?? null)
       : null
-  const inspectorNode = selectedNode?.type === 'service' ? selectedNode : null
+  const inspectorServiceNode = selectedNode?.type === 'service' ? selectedNode : null
+  const inspectorShapeNode = selectedNode?.type === 'shape' ? (selectedNode as ShapeFlowNode) : null
   const inspectorEdge =
     single && selectedEdgeIds.length === 1
       ? (edges.find((e) => e.id === selectedEdgeIds[0]) ?? null)
@@ -617,12 +702,14 @@ function CloudCanvasInner({
 
       {/* Panel inspector contextual (superpuesto a la derecha). */}
       <CloudInspector
-        node={inspectorNode}
+        serviceNode={inspectorServiceNode}
+        shapeNode={inspectorShapeNode}
         edge={inspectorEdge}
         onEditConnectionPoints={(id) => setEditorNodeId(id)}
         onToggleJumps={toggleJumps}
         onSetEdgeStyle={(id, style) => setEdgeData(id, { style })}
         onSetEdgeDirection={(id, direction) => setEdgeData(id, { direction })}
+        onSetShapeData={setShapeData}
       />
 
       {/* Modal de edición de puntos de conexión. */}

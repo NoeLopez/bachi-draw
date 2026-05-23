@@ -1,4 +1,10 @@
-import type { CloudEdgeData, CloudFlowNode } from '../../../core/layout/kinds/cloud/toReactFlow'
+import type {
+  CloudEdgeData,
+  ServiceNode,
+  ShapeNode,
+  ShapeNodeData
+} from '../../../core/layout/kinds/cloud/toReactFlow'
+import { SHAPE_LABEL } from '../../../core/layout/kinds/cloud/shapes'
 import type { Edge } from '@xyflow/react'
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -11,12 +17,14 @@ type EdgeStyle = 'solid' | 'dashed'
 type EdgeDirection = 'forward' | 'back' | 'both'
 
 interface Props {
-  node: CloudFlowNode | null
+  serviceNode: ServiceNode | null
+  shapeNode: ShapeNode | null
   edge: Edge<CloudEdgeData> | null
   onEditConnectionPoints: (nodeId: string) => void
   onToggleJumps: (edgeId: string) => void
   onSetEdgeStyle: (edgeId: string, style: EdgeStyle) => void
   onSetEdgeDirection: (edgeId: string, direction: EdgeDirection) => void
+  onSetShapeData: (nodeId: string, patch: Partial<ShapeNodeData>) => void
 }
 
 // ── Iconos ──────────────────────────────────────────────────────────────────
@@ -84,18 +92,23 @@ const IconDashed = (
 )
 
 export default function CloudInspector({
-  node,
+  serviceNode,
+  shapeNode,
   edge,
   onEditConnectionPoints,
   onToggleJumps,
   onSetEdgeStyle,
-  onSetEdgeDirection
+  onSetEdgeDirection,
+  onSetShapeData
 }: Props): React.JSX.Element | null {
-  if (!node && !edge) return null
+  if (!serviceNode && !shapeNode && !edge) return null
 
   return (
     <aside className="bachi-draw-inspector">
-      {node ? <NodeInspector node={node} onEditConnectionPoints={onEditConnectionPoints} /> : null}
+      {serviceNode ? (
+        <ServiceNodeInspector node={serviceNode} onEditConnectionPoints={onEditConnectionPoints} />
+      ) : null}
+      {shapeNode ? <ShapeInspector node={shapeNode} onSetShapeData={onSetShapeData} /> : null}
       {edge ? (
         <EdgeInspector
           edge={edge}
@@ -108,11 +121,11 @@ export default function CloudInspector({
   )
 }
 
-function NodeInspector({
+function ServiceNodeInspector({
   node,
   onEditConnectionPoints
 }: {
-  node: CloudFlowNode
+  node: ServiceNode
   onEditConnectionPoints: (nodeId: string) => void
 }): React.JSX.Element {
   return (
@@ -133,6 +146,64 @@ function NodeInspector({
           <span className="bachi-draw-inspector-ico">{IconConnectionPoints}</span>
           Editar puntos de conexión
         </button>
+      </section>
+    </>
+  )
+}
+
+function ShapeInspector({
+  node,
+  onSetShapeData
+}: {
+  node: ShapeNode
+  onSetShapeData: (nodeId: string, patch: Partial<ShapeNodeData>) => void
+}): React.JSX.Element {
+  const { shapeType, fillColor, strokeColor, strokeWidth } = node.data
+  const shapeLabel = SHAPE_LABEL[shapeType] ?? shapeType
+  return (
+    <>
+      <header className="bachi-draw-inspector-head">
+        <span className="bachi-draw-inspector-kind">Figura</span>
+        <span className="bachi-draw-inspector-name">{shapeLabel}</span>
+      </header>
+
+      <section className="bachi-draw-inspector-section">
+        <h4 className="bachi-draw-inspector-title">Relleno</h4>
+        <label className="bachi-draw-inspector-color-row">
+          <input
+            type="color"
+            className="bachi-draw-inspector-color"
+            value={fillColor}
+            onChange={(e) => onSetShapeData(node.id, { fillColor: e.target.value })}
+          />
+          <span className="bachi-draw-inspector-color-label">{fillColor}</span>
+        </label>
+      </section>
+
+      <section className="bachi-draw-inspector-section">
+        <h4 className="bachi-draw-inspector-title">Borde</h4>
+        <label className="bachi-draw-inspector-color-row">
+          <input
+            type="color"
+            className="bachi-draw-inspector-color"
+            value={strokeColor}
+            onChange={(e) => onSetShapeData(node.id, { strokeColor: e.target.value })}
+          />
+          <span className="bachi-draw-inspector-color-label">{strokeColor}</span>
+        </label>
+        <div className="bachi-draw-inspector-slider-row">
+          <span className="bachi-draw-inspector-slider-label">Grosor</span>
+          <input
+            type="range"
+            min={1}
+            max={8}
+            step={1}
+            value={strokeWidth}
+            className="bachi-draw-inspector-slider"
+            onChange={(e) => onSetShapeData(node.id, { strokeWidth: Number(e.target.value) })}
+          />
+          <span className="bachi-draw-inspector-slider-value">{strokeWidth}px</span>
+        </div>
       </section>
     </>
   )

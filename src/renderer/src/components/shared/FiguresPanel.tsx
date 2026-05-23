@@ -7,14 +7,10 @@ import {
 } from '../../icons/officialIcons'
 import { getIconDataUri } from '../../icons/registry'
 
-// ──────────────────────────────────────────────────────────────────────────
-// Panel lateral izquierdo de figuras: buscador + iconos agrupados por CATEGORÍA
-// (Compute, Storage, Database...). Cada icono se arrastra al lienzo para crear
-// un nodo (el tipo viaja en el dataTransfer; el drop lo maneja CloudCanvas).
-// ──────────────────────────────────────────────────────────────────────────
+// Panel lateral izquierdo de figuras: buscador + iconos agrupados por categoria.
+// Incluye figuras basicas (oss/shapes/*) y servicios cloud.
+// Cada elemento se arrastra al lienzo; el drop lo gestiona CloudCanvas.
 
-// Etiqueta legible de una categoría kebab (ej. "app-integration" → "App
-// Integration").
 function categoryLabel(cat: string): string {
   return cat
     .split('-')
@@ -30,7 +26,7 @@ interface Group {
 
 function buildGroups(query: string): Group[] {
   const q = query.trim().toLowerCase()
-  // Excluye los iconos de grupo (bordes de cluster), no son servicios.
+  // Excluye los iconos de grupo (bordes de cluster), no son arrastables como nodos.
   const all = listOfficialIconTypes().filter((t) => !t.includes('/groups/'))
   const byCategory = new Map<string, string[]>()
   for (const type of all) {
@@ -42,7 +38,6 @@ function buildGroups(query: string): Group[] {
     arr.push(type)
     byCategory.set(cat, arr)
   }
-  // Categorías ordenadas alfabéticamente por su etiqueta.
   return Array.from(byCategory.entries())
     .map(([key, types]) => ({ key, label: categoryLabel(key), types }))
     .sort((a, b) => a.label.localeCompare(b.label))
@@ -60,7 +55,7 @@ export default function FiguresPanel(): React.JSX.Element {
         <input
           className="bachi-draw-figures-search"
           type="search"
-          placeholder="Buscar icono…"
+          placeholder="Buscar figura o icono..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
@@ -68,7 +63,7 @@ export default function FiguresPanel(): React.JSX.Element {
 
       <div className="bachi-draw-figures-list">
         {total === 0 ? (
-          <p className="bachi-draw-figures-empty">Sin resultados para “{query}”.</p>
+          <p className="bachi-draw-figures-empty">Sin resultados.</p>
         ) : (
           groups.map((g) => (
             <section key={g.key} className="bachi-draw-figures-group">

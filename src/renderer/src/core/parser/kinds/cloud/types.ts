@@ -63,6 +63,12 @@ export interface LayoutNode {
   height: number
   clusterId?: string
   extraHandles?: ExtraHandles
+  /** Solo para nodos shape/: color de relleno CSS (ej. "#ffffff"). */
+  fillColor?: string
+  /** Solo para nodos shape/: color de borde CSS. */
+  strokeColor?: string
+  /** Solo para nodos shape/: grosor del borde en píxeles. */
+  strokeWidth?: number
 }
 
 export interface LayoutCluster {

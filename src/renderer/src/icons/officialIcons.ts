@@ -100,6 +100,12 @@ for (const [path, url] of Object.entries(SVG_MODULES)) {
   if (sub === 'groups') {
     // Bordes de cluster: conservan el path en el tipo (aws/groups/vpc).
     officialByType.set(`${provider}/groups/${name}`, url)
+  } else if (sub === 'shapes') {
+    // Figuras básicas: conservan el path completo (oss/shapes/rectangle) y
+    // llevan categoría 'shapes' para agruparse en el panel.
+    const type = `${provider}/shapes/${name}`
+    officialByType.set(type, url)
+    categoryByType.set(type, sub)
   } else {
     // Servicio organizado por categoría: tipo plano + categoría como metadato.
     const type = `${provider}/${name}`
