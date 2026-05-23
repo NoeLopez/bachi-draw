@@ -10,7 +10,7 @@ export default function EmptyState(): React.JSX.Element {
         <p>
           Bachi Draw renderiza diagramas de arquitectura desde archivos de texto.
           <br />
-          Usa el botón <strong>Abrir .bachi…</strong> para empezar.
+          Usa el botón <strong>Abrir</strong> del header para empezar.
         </p>
         <p className="bachi-draw-empty-hint">
           Tip: el archivo se recarga automáticamente cuando un agente lo edita.
