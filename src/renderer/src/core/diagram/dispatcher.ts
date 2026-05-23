@@ -19,7 +19,7 @@ export function detectKind(source: string): DiagramKind {
   const match = firstSignificant?.match(HEADER_RE)
   if (!match) {
     throw new Error(
-      'archivo .arch sin header válido: la primera línea debe ser "arch-<tipo>" (ej. "arch-cloud lr")'
+      'archivo .bachi sin header válido: la primera línea debe ser "arch-<tipo>" (ej. "arch-cloud lr")'
     )
   }
   const candidate = match[1]

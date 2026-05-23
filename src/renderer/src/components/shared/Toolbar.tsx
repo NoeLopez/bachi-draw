@@ -84,7 +84,7 @@ export default function Toolbar({
     <header className="bachi-draw-toolbar">
       <div className="bachi-draw-toolbar-left">
         <button type="button" className="bachi-draw-btn" onClick={onOpenFile}>
-          Abrir .arch…
+          Abrir .bachi…
         </button>
         <span className="bachi-draw-toolbar-divider" />
         <h1 className="bachi-draw-toolbar-title">{diagramName || 'Bachi Draw'}</h1>
@@ -95,9 +95,9 @@ export default function Toolbar({
           className="bachi-draw-btn"
           onClick={onSaveArchd}
           disabled={!canSave}
-          title="Guardar .archd"
+          title="Guardar .bachid"
         >
-          Guardar .archd
+          Guardar .bachid
         </button>
         <span className="bachi-draw-toolbar-divider" />
         <button

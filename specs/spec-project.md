@@ -15,8 +15,8 @@
 5. [Arquitectura del Sistema](#5-arquitectura-del-sistema)
 6. [Stack Tecnológico](#6-stack-tecnológico)
 7. [Estructura del Proyecto](#7-estructura-del-proyecto)
-8. [Formato de Archivo `.arch`](#8-formato-de-archivo-arch)
-9. [Formato de Archivo `.archd`](#9-formato-de-archivo-archd)
+8. [Formato de Archivo `.bachi`](#8-formato-de-archivo-bachi)
+9. [Formato de Archivo `.bachid`](#9-formato-de-archivo-bachid)
 10. [Pipeline de Renderizado](#10-pipeline-de-renderizado)
 11. [Motor de Layout — elkjs](#11-motor-de-layout--elkjs)
 12. [Sistema de Iconos Oficiales](#12-sistema-de-iconos-oficiales)
@@ -78,7 +78,7 @@ No existe a la fecha (Mayo 2026) una herramienta que combine:
 
 ## 3. Objetivos del MVP
 
-1. **Formato legible para IA** — Claude Code puede generar y editar el archivo `.arch` (DSL Mermaid-style) sin conocer coordenadas ni IDs internos
+1. **Formato legible para IA** — Claude Code puede generar y editar el archivo `.bachi` (DSL Mermaid-style) sin conocer coordenadas ni IDs internos
 2. **Layout automático correcto** — Flechas que conectan exactamente donde deben, sin cruces innecesarios, clusters bien delimitados
 3. **Iconos oficiales** — AWS, GCP, Azure y tecnologías OSS comunes (Nginx, Postgres, Redis, Prometheus, Grafana, Kafka, etc.)
 4. **Hot reload en tiempo real** — El diagrama se actualiza en menos de 500ms desde que Claude Code guarda el archivo
@@ -91,7 +91,7 @@ No existe a la fecha (Mayo 2026) una herramienta que combine:
 
 ### Incluido
 
-- Abrir y monitorear un archivo `.arch` (DSL `arch-cloud`)
+- Abrir y monitorear un archivo `.bachi` (DSL `arch-cloud`)
 - Parsear el DSL y transformarlo al formato elkjs
 - Calcular layout con elkjs (algoritmo `layered`)
 - Renderizar el diagrama como SVG en el canvas
@@ -100,7 +100,7 @@ No existe a la fecha (Mayo 2026) una herramienta que combine:
 - Soporte de labels en flechas (edges)
 - Soporte de dirección del diagrama: LR (left-right), TB (top-bottom)
 - Hot reload automático al detectar cambios en el archivo
-- Guardar estado con posiciones en `.archd` (JSON)
+- Guardar estado con posiciones en `.bachid` (JSON)
 - Zoom in/out con rueda del mouse
 - Pan (arrastrar el canvas)
 - Ventana de app desktop con Electron
@@ -149,7 +149,7 @@ No existe a la fecha (Mayo 2026) una herramienta que combine:
          │                                    │
   ┌──────┴──────┐                    ┌────────┴────────┐
   │ archivo     │                    │  Claude Code /  │
-  │ .arch       │                    │  cualquier      │
+  │ .bachi       │                    │  cualquier      │
   │ (DSL)       │                    │  agente IA      │
   └─────────────┘                    └─────────────────┘
 ```
@@ -157,7 +157,7 @@ No existe a la fecha (Mayo 2026) una herramienta que combine:
 ### Flujo de datos completo
 
 ```
- 1. Claude Code escribe/edita archivo.arch (DSL arch-cloud)
+ 1. Claude Code escribe/edita archivo.bachi (DSL arch-cloud)
  2. Chokidar detecta cambio en filesystem (< 50ms)
  3. Main Process lee el archivo y lo envía via ipcMain
  4. Renderer Process recibe el contenido del DSL
@@ -167,7 +167,7 @@ No existe a la fecha (Mayo 2026) una herramienta que combine:
  8. elkjs.layout() calcula posiciones x,y de nodos y rutas de flechas
  9. SVGRenderer (CloudCanvas) genera el SVG con posiciones + iconos
 10. App actualiza el DOM — el usuario ve el cambio
-11. StateManager guarda el resultado en .archd (JSON, regenerable)
+11. StateManager guarda el resultado en .bachid (JSON, regenerable)
 ```
 
 ---
@@ -209,7 +209,7 @@ Bachi Draw/
 │   │   ├── index.ts                 # Entry point, crea BrowserWindow
 │   │   ├── fileWatcher.ts           # Chokidar watcher, emite eventos IPC
 │   │   ├── ipcHandlers.ts           # Registra handlers ipcMain
-│   │   └── fileManager.ts           # Lectura/escritura de .arch y .archd
+│   │   └── fileManager.ts           # Lectura/escritura de .bachi y .bachid
 │   │
 │   ├── preload/                     # Electron Preload Script
 │   │   └── index.ts                 # Expone API segura al renderer via contextBridge
@@ -223,7 +223,7 @@ Bachi Draw/
 │       │   │   ├── SVGViewport.tsx  # Wrapper con zoom + pan
 │       │   │   ├── Toolbar.tsx      # Controles de zoom, abrir archivo, tema
 │       │   │   ├── StatusBar.tsx    # Stats genéricos del diagrama
-│       │   │   └── EmptyState.tsx   # Pantalla "abre un .arch"
+│       │   │   └── EmptyState.tsx   # Pantalla "abre un .bachi"
 │       │   │
 │       │   └── kinds/cloud/         # Componentes específicos de arch-cloud
 │       │       ├── CloudCanvas.tsx  # Canvas del tipo cloud (implementa CanvasProps)
@@ -254,7 +254,7 @@ Bachi Draw/
 │       │   │
 │       │   ├── state/
 │       │   │   └── kinds/cloud/
-│       │   │       └── archdSerializer.ts # LayoutResult → .archd JSON
+│       │   │       └── archdSerializer.ts # LayoutResult → .bachid JSON
 │       │   │
 │       │   └── theme/
 │       │       └── useTheme.ts      # Toggle dark/light + persistencia
@@ -274,9 +274,9 @@ Bachi Draw/
 
 ---
 
-## 8. Formato de Archivo `.arch`
+## 8. Formato de Archivo `.bachi`
 
-El `.arch` es un **DSL declarativo inspirado en Mermaid `architecture-beta`**. Cada archivo declara su tipo de diagrama en la primera línea (`arch-cloud` para arquitecturas cloud; en el futuro `arch-bpmn`, `arch-sequence`, etc. — ver §20). El formato está diseñado para ser:
+El `.bachi` es un **DSL declarativo inspirado en Mermaid `architecture-beta`**. Cada archivo declara su tipo de diagrama en la primera línea (`arch-cloud` para arquitecturas cloud; en el futuro `arch-bpmn`, `arch-sequence`, etc. — ver §20). El formato está diseñado para ser:
 
 - Escrito por IA sin conocer coordenadas
 - Sin sensibilidad a indentación (a diferencia de YAML)
@@ -376,7 +376,7 @@ prometheus --> grafana
 
 ### 8.2.1 Header para que la IA infiera la gramática
 
-Para que un agente pueda generar `.arch` sin un system prompt explícito, cada archivo lleva una primera línea de comentario con la gramática mínima. La IA aprende todo lo que necesita del propio archivo:
+Para que un agente pueda generar `.bachi` sin un system prompt explícito, cada archivo lleva una primera línea de comentario con la gramática mínima. La IA aprende todo lo que necesita del propio archivo:
 
 ```
 # arch-cloud v1 · header: "arch-cloud [lr|tb]" · group <id>[<label>] [in <parent>] ·
@@ -465,16 +465,16 @@ arch-cloud lr
 
 ---
 
-## 9. Formato de Archivo `.archd`
+## 9. Formato de Archivo `.bachid`
 
-El archivo `.archd` es el formato de documento guardado. Lo escribe y lee la aplicación. Contiene toda la información necesaria para restaurar el estado visual exacto del diagrama, incluyendo posiciones calculadas por elkjs o ajustadas manualmente en el futuro.
+El archivo `.bachid` es el formato de documento guardado. Lo escribe y lee la aplicación. Contiene toda la información necesaria para restaurar el estado visual exacto del diagrama, incluyendo posiciones calculadas por elkjs o ajustadas manualmente en el futuro.
 
-**Regla importante:** El archivo `.arch` (DSL) es la fuente de verdad de la topología. El `.archd` es el estado visual derivado y regenerable. Si existe un `.archd` para el `.arch` abierto, la app usa las posiciones del `.archd`. Si no existe, calcula el layout desde cero con elkjs.
+**Regla importante:** El archivo `.bachi` (DSL) es la fuente de verdad de la topología. El `.bachid` es el estado visual derivado y regenerable. Si existe un `.bachid` para el `.bachi` abierto, la app usa las posiciones del `.bachid`. Si no existe, calcula el layout desde cero con elkjs.
 
 ```json
 {
   "version": "1.0",
-  "source": "arquitectura-microservicios.arch",
+  "source": "arquitectura-microservicios.bachi",
   "generatedAt": "2026-05-18T21:00:00Z",
   "canvas": {
     "zoom": 1.0,
@@ -755,7 +755,7 @@ function NodeElement({ node }: { node: LayoutNode }) {
 ### 13.1 Flujo de eventos
 
 ```
-filesystem (Claude Code guarda archivo.arch)
+filesystem (Claude Code guarda archivo.bachi)
     ↓
 Chokidar detecta evento 'change'
     ↓
@@ -857,7 +857,7 @@ app.whenReady().then(createWindow)
 ```typescript
 // main/ipcHandlers.ts
 export function registerIpcHandlers(win: BrowserWindow) {
-  // Abrir file picker para seleccionar .arch
+  // Abrir file picker para seleccionar .bachi
   ipcMain.handle('open-file-dialog', async () => {
     const result = await dialog.showOpenDialog(win, {
       filters: [{ name: 'Bachi Draw Files', extensions: ['arch'] }],
@@ -872,9 +872,9 @@ export function registerIpcHandlers(win: BrowserWindow) {
     return null
   })
 
-  // Guardar .archd
+  // Guardar .bachid
   ipcMain.handle('save-archd', async (_, { path, data }) => {
-    const archdPath = path.replace('.arch', '.archd')
+    const archdPath = path.replace('.bachi', '.bachid')
     await fs.writeFile(archdPath, JSON.stringify(data, null, 2), 'utf-8')
   })
 }
@@ -990,7 +990,7 @@ Los siguientes items quedan explícitamente fuera del MVP y se documentan para v
 
 ## 18. Decisiones de Diseño y Justificaciones
 
-### 18.1 Dos formatos de archivo (`.arch` y `.archd`)
+### 18.1 Dos formatos de archivo (`.bachi` y `.bachid`)
 
 **Decisión:** Separar el formato de autoría (DSL declarativo) del formato de documento (JSON con posiciones).
 
@@ -1020,10 +1020,10 @@ Los siguientes items quedan explícitamente fuera del MVP y se documentan para v
 
 **Justificación:**
 
-1. **Densidad de tokens**: el DSL queda en ~60% menos tokens que YAML equivalente (`aws-deployment.arch` pasó de 134 a 50 líneas). En un agente con contexto limitado o que genera muchos diagramas por sesión, esto importa.
+1. **Densidad de tokens**: el DSL queda en ~60% menos tokens que YAML equivalente (`aws-deployment.bachi` pasó de 134 a 50 líneas). En un agente con contexto limitado o que genera muchos diagramas por sesión, esto importa.
 2. **Robustez**: YAML es sensible a indentación. Un espacio de más rompe el archivo silenciosamente. El DSL usa palabras clave + delimitadores explícitos (`group`, `service`, `[...]`, `-->`, etc.), así que la IA no rompe el archivo por desliz.
 3. **Familiaridad para la IA**: Mermaid `architecture-beta` está en el training data masivo. Claude lo genera nativamente. No requiere system prompt extra para enseñárselo.
-4. **Comentario auto-explicativo**: cada `.arch` lleva un comentario inicial de ~80 tokens con la gramática mínima. La IA infiere todo el lenguaje del archivo mismo (ver §8.2.1).
+4. **Comentario auto-explicativo**: cada `.bachi` lleva un comentario inicial de ~80 tokens con la gramática mínima. La IA infiere todo el lenguaje del archivo mismo (ver §8.2.1).
 
 YAML quedó descartado tras prototipar ambos: la IA generaba YAML correctamente pero el archivo era 2.5× más verbose y los errores de indentación reaparecían al editar parcialmente.
 
@@ -1048,8 +1048,8 @@ POLYLINE produce el balance correcto entre limpieza visual (sin zigzags) y aspec
 ### v1.1 — Edición visual básica
 
 - Drag & drop de nodos
-- El `.archd` se actualiza con las nuevas posiciones
-- El `.arch` no se modifica al editar visualmente
+- El `.bachid` se actualiza con las nuevas posiciones
+- El `.bachi` no se modifica al editar visualmente
 
 ### v1.2 — Export
 

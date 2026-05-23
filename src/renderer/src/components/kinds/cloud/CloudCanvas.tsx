@@ -109,7 +109,7 @@ function updateLayoutWithReactFlow(
 
   // Anexa nodos service que existen en React Flow pero no en el layout (creados
   // al arrastrar un icono del panel). Sin esto el sync los ignoraría y no se
-  // guardarían en el .archd.
+  // guardarían en el .bachid.
   const existingIds = new Set(layout.nodes.map((n) => n.id))
   for (const rfNode of rfNodes) {
     if (rfNode.type !== 'service' || existingIds.has(rfNode.id)) continue

@@ -3,7 +3,7 @@ import type { CloudCluster, CloudEdge, CloudGraph, CloudNode } from './types'
 // ──────────────────────────────────────────────────────────────────────────
 // Serializador CloudGraph → DSL `arch-cloud`
 //
-// Reconstruye texto del DSL a partir del modelo. Útil para persistir el .arch
+// Reconstruye texto del DSL a partir del modelo. Útil para persistir el .bachi
 // tras editar el diagrama visualmente. No preserva los comentarios ni el orden
 // original del archivo (regenera limpio); sí respeta la jerarquía de clusters.
 // ──────────────────────────────────────────────────────────────────────────

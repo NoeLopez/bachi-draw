@@ -14,8 +14,8 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     const win = getWindow()
     if (!win) return null
     const result = await dialog.showOpenDialog(win, {
-      title: 'Abrir archivo .arch',
-      filters: [{ name: 'Bachi Draw', extensions: ['arch'] }],
+      title: 'Abrir archivo .bachi',
+      filters: [{ name: 'Bachi Draw', extensions: ['bachi'] }],
       properties: ['openFile']
     })
     if (result.canceled || result.filePaths.length === 0) return null

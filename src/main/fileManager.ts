@@ -4,7 +4,7 @@ import path from 'path'
 export function archdPathFor(archPath: string): string {
   const dir = path.dirname(archPath)
   const base = path.basename(archPath, path.extname(archPath))
-  return path.join(dir, `${base}.archd`)
+  return path.join(dir, `${base}.bachid`)
 }
 
 export async function readText(filePath: string): Promise<string> {

@@ -5,8 +5,8 @@ out
 .eslintcache
 *.log*
 
-# Archivos generados por la app (estado visual derivado del .arch)
-*.archd
+# Archivos generados por la app (estado visual derivado del .bachi)
+*.bachid
 
 # Carpeta temporal para procesar packs de iconos antes de reorganizarlos
 _incoming/

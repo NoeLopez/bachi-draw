@@ -66,7 +66,7 @@ export interface DiagramKindDef<Model = unknown, Layout = unknown> {
   /** Conteos para la barra de estado (nodos/edges/clusters en cloud,
    * tasks/gateways/lanes en BPMN, etc.). */
   getStats: (layout: Layout) => DiagramStat[]
-  /** Serializa el resultado a JSON persistible (`.archd` o equivalente). */
+  /** Serializa el resultado a JSON persistible (`.bachid` o equivalente). */
   serialize: (fileName: string, layout: Layout, canvas: ArchdCanvas) => unknown
 }
 

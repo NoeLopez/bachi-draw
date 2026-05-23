@@ -6,7 +6,7 @@ import type {
 } from '../../../parser/kinds/cloud/types'
 
 /**
- * Reconciles the newly computed ELK layout with positions/edges from a saved `.archd` file
+ * Reconciles the newly computed ELK layout with positions/edges from a saved `.bachid` file
  * or the current in-memory layout state.
  *
  * It preserves manual modifications:

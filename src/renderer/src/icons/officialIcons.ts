@@ -19,7 +19,7 @@
 //   - No hace falta tocar nada al añadir un .svg: el glob los detecta en build.
 //   - Si un archivo no existe ni alias, se usa el placeholder del IconRegistry.
 
-// Aliases del proveedor: el .arch puede usar el nombre corto (k8s) o el largo
+// Aliases del proveedor: el .bachi puede usar el nombre corto (k8s) o el largo
 // (kubernetes); ambos resuelven a la misma carpeta.
 const PROVIDER_ALIASES: Record<string, string> = {
   k8s: 'kubernetes'
@@ -27,7 +27,7 @@ const PROVIDER_ALIASES: Record<string, string> = {
 
 // Aliases de servicio dentro de un proveedor. La heurística de extracción del
 // pack oficial de AWS produce los nombres largos (`elastic-load-balancing`),
-// pero los `.arch` típicamente usan los acrónimos conocidos (`alb`). Este mapa
+// pero los `.bachi` típicamente usan los acrónimos conocidos (`alb`). Este mapa
 // resuelve esos acrónimos al archivo real.
 const SERVICE_ALIASES: Record<string, Record<string, string>> = {
   aws: {
@@ -63,7 +63,7 @@ const SERVICE_ALIASES: Record<string, Record<string, string>> = {
 // Estructura en disco (definitiva): los iconos de servicio se organizan por
 // CATEGORÍA en subcarpetas — ./aws/<categoria>/<servicio>.svg — pero el TIPO
 // lógico es plano (aws/<servicio>): la categoría es solo metadato para agrupar
-// en el panel, no parte de la identidad del icono. Así los .arch y los aliases
+// en el panel, no parte de la identidad del icono. Así los .bachi y los aliases
 // no dependen de la categoría. Mismo patrón aplicará a gcp/azure cuando lleguen.
 //
 // Excepción: ./aws/groups/<x>.svg son bordes de cluster y conservan el tipo

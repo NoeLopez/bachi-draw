@@ -4,7 +4,7 @@ Guía para trabajar en **Bachi Draw** con Claude Code. Resume la arquitectura re
 
 ## Qué es Bachi Draw
 
-App de escritorio (Electron + React 19 + TypeScript) para generar diagramas de arquitectura cloud a partir de archivos de texto `.arch` (un DSL declarativo estilo Mermaid `architecture-beta`), pensada para que agentes de IA escriban el archivo y el diagrama aparezca con hot reload, iconos oficiales y layout automático. Sobre ese visor hay un **editor visual** (React Flow) ya bastante completo: mover nodos, conectar/reconectar aristas, puntos de conexión configurables, editar labels (multilínea), saltos de línea en aristas, panel de figuras con drag&drop para añadir nodos, e inspector contextual de propiedades.
+App de escritorio (Electron + React 19 + TypeScript) para generar diagramas de arquitectura cloud a partir de archivos de texto `.bachi` (un DSL declarativo estilo Mermaid `architecture-beta`), pensada para que agentes de IA escriban el archivo y el diagrama aparezca con hot reload, iconos oficiales y layout automático. Sobre ese visor hay un **editor visual** (React Flow) ya bastante completo: mover nodos, conectar/reconectar aristas, puntos de conexión configurables, editar labels (multilínea), saltos de línea en aristas, panel de figuras con drag&drop para añadir nodos, e inspector contextual de propiedades.
 
 ## Comandos
 
@@ -35,18 +35,18 @@ Tras tocar el renderer, lo habitual es: `pnpm typecheck:web` + `npx eslint <arch
 
 ### Procesos Electron
 
-- `src/main/` — Node.js. Crea la ventana, observa el `.arch` con Chokidar ([fileWatcher.ts](src/main/fileWatcher.ts)), lee/escribe archivos ([fileManager.ts](src/main/fileManager.ts)) y expone IPC ([ipcHandlers.ts](src/main/ipcHandlers.ts): `open-file-dialog`, `open-file-path`, `save-archd`, `stop-watching`, `resolve-arch-name`).
+- `src/main/` — Node.js. Crea la ventana, observa el `.bachi` con Chokidar ([fileWatcher.ts](src/main/fileWatcher.ts)), lee/escribe archivos ([fileManager.ts](src/main/fileManager.ts)) y expone IPC ([ipcHandlers.ts](src/main/ipcHandlers.ts): `open-file-dialog`, `open-file-path`, `save-archd`, `stop-watching`, `resolve-arch-name`).
 - `src/preload/` — expone `window.bachiDraw` al renderer vía contextBridge (`onFileChanged`, `openFile`, `saveArchd`, ...).
 - `src/renderer/` — React. Todo el pipeline de parse → layout → render vive aquí.
 
 ### Pipeline de datos
 
 ```
-archivo .arch (DSL)
+archivo .bachi (DSL)
   → detectKind()            core/diagram/dispatcher.ts — lee header "arch-<kind>"
   → def.parse()             parser (lexer + recursive descent) → CloudGraph (modelo)
   → def.layout()            elkjs (layered) → LayoutResult (coords ABSOLUTAS)
-  → reconcileLayoutWithArchd()  fusiona posiciones guardadas (.archd o estado en memoria)
+  → reconcileLayoutWithArchd()  fusiona posiciones guardadas (.bachid o estado en memoria)
   → toReactFlow()           LayoutResult → nodos/edges de React Flow (coords RELATIVAS al padre)
   → <ReactFlow>             render + interacción (CloudCanvas.tsx)
 ```
@@ -57,8 +57,8 @@ Cada "tipo de diagrama" (hoy solo `cloud`) implementa `DiagramKindDef` ([core/di
 
 ### Dos formatos de archivo
 
-- `.arch` — DSL, **fuente de verdad de la topología**. Lo escribe la IA o el humano.
-- `.archd` — JSON con posiciones, **estado visual derivado y regenerable**. Lo escribe la app. Si existe junto al `.arch`, sus posiciones se reconcilian sobre el layout de ELK para preservar ediciones manuales.
+- `.bachi` — DSL, **fuente de verdad de la topología**. Lo escribe la IA o el humano.
+- `.bachid` — JSON con posiciones, **estado visual derivado y regenerable**. Lo escribe la app. Si existe junto al `.bachi`, sus posiciones se reconcilian sobre el layout de ELK para preservar ediciones manuales.
 
 ## Divergencia importante: SVG → React Flow
 
@@ -100,7 +100,7 @@ El spec ([specs/spec-project.md](specs/spec-project.md) §10, §15) describe ren
 
 - [icons/registry.ts](src/renderer/src/icons/registry.ts) genera **placeholders SVG** (badge con color+texto por tipo, ej. `aws/ec2`).
 - [icons/officialIcons.ts](src/renderer/src/icons/officialIcons.ts) auto-descubre los **SVG oficiales** con `import.meta.glob`. `getIconDataUri()` prefiere el oficial sobre el placeholder.
-- **307 iconos oficiales de AWS** organizados por **categoría** en subcarpetas: `icons/aws/<categoria>/<servicio>.svg` (ej. `aws/compute/ec2.svg`). **Detalle clave:** el path es solo organización física; el **tipo lógico es plano** (`aws/ec2`, ignora la categoría), así los `.arch` y los aliases no dependen de la categoría. `getIconCategory(type)` da la categoría (metadato para agrupar el panel). Excepción: `aws/groups/*` (bordes de cluster) conservan el path en el tipo.
+- **307 iconos oficiales de AWS** organizados por **categoría** en subcarpetas: `icons/aws/<categoria>/<servicio>.svg` (ej. `aws/compute/ec2.svg`). **Detalle clave:** el path es solo organización física; el **tipo lógico es plano** (`aws/ec2`, ignora la categoría), así los `.bachi` y los aliases no dependen de la categoría. `getIconCategory(type)` da la categoría (metadato para agrupar el panel). Excepción: `aws/groups/*` (bordes de cluster) conservan el path en el tipo.
 - Mismo patrón aplicará a `gcp/`, `azure/`, etc. cuando se añadan (hoy vacíos).
 - **Ojo con Vite:** los SVG <4KB se inlinean como data-uri (no generan archivo físico en el bundle) y los mayores se emiten como archivo hasheado. Contar archivos `.svg` en `out/` engaña: ambas formas son válidas y todos los tipos están en el map.
 
@@ -109,16 +109,16 @@ El spec ([specs/spec-project.md](specs/spec-project.md) §10, §15) describe ren
 - **Comentarios y mensajes de commit en español.** Identificadores y términos técnicos en su forma original.
 - Indentación de 2 espacios, sin punto y coma final (config de Prettier del repo). Correr `pnpm format` si hay dudas.
 - Imports tipo: `import { type Foo }` o `import type { Foo }`.
-- Ejemplos `.arch` de referencia en [resources/](resources/): `example.arch`, `aws-deployment.arch`, `enterprise-saas.arch` (71 nodos, 19 clusters, 98 edges — el caso grande).
+- Ejemplos `.bachi` de referencia en [resources/](resources/): `example.bachi`, `aws-deployment.bachi`, `enterprise-saas.bachi` (71 nodos, 19 clusters, 98 edges — el caso grande).
 
 ## Estado actual y cabos sueltos
 
 El editor visual está bastante completo (todo en `master`): selección/caja, pan, conexión por puntos con editor, reconexión, saltos de línea, imán de alineación, edición inline multilínea, marco de selección estilo Lucid, inspector lateral, fondo configurable (puntos/cuadrícula), y panel de figuras con iconos AWS por categoría + drag&drop. Cabos sueltos:
 
-- **No se escribe al `.arch` todavía.** Las ediciones visuales se guardan en el `.archd` (JSON), no en el DSL. **`serializeCloud` ([serialize.ts](src/renderer/src/core/parser/kinds/cloud/serialize.ts)) está escrito pero no conectado** (reconstruye el `.arch` desde un `CloudGraph`, pero nada lo importa). `App.tsx`/`handleSaveArchd` usa `def.serialize` → `serializeArchd` (el `.archd`), que es **otro** serializador. Conectarlo requeriría reconstruir el `model` (CloudGraph) desde el estado editado de React Flow (hoy `updateLayoutWithReactFlow` solo actualiza el `LayoutResult`, no el `model`).
-- **Labels multilínea y `.arch`:** al conectar `serializeCloud`, los `\n` de un label dentro de `[...]` romperían la sintaxis del DSL — habrá que escaparlos.
+- **No se escribe al `.bachi` todavía.** Las ediciones visuales se guardan en el `.bachid` (JSON), no en el DSL. **`serializeCloud` ([serialize.ts](src/renderer/src/core/parser/kinds/cloud/serialize.ts)) está escrito pero no conectado** (reconstruye el `.bachi` desde un `CloudGraph`, pero nada lo importa). `App.tsx`/`handleSaveArchd` usa `def.serialize` → `serializeArchd` (el `.bachid`), que es **otro** serializador. Conectarlo requeriría reconstruir el `model` (CloudGraph) desde el estado editado de React Flow (hoy `updateLayoutWithReactFlow` solo actualiza el `LayoutResult`, no el `model`).
+- **Labels multilínea y `.bachi`:** al conectar `serializeCloud`, los `\n` de un label dentro de `[...]` romperían la sintaxis del DSL — habrá que escaparlos.
 - **Drop dentro de un cluster:** un nodo soltado "dentro" de un grupo se crea top-level (no se le asigna `clusterId`).
 
 ## Verificación
 
-No hay infraestructura E2E (ni Playwright ni driver de Electron). El `.arch` se abre con un diálogo nativo modal. Para verificar cambios de UI en runtime hay que lanzar `pnpm dev` y probar a mano; un build limpio no prueba comportamiento.
+No hay infraestructura E2E (ni Playwright ni driver de Electron). El `.bachi` se abre con un diálogo nativo modal. Para verificar cambios de UI en runtime hay que lanzar `pnpm dev` y probar a mano; un build limpio no prueba comportamiento.
