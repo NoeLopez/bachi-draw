@@ -312,6 +312,9 @@ function CloudCanvasInner({
     // encuadrar y además el RAF podría dispararse justo después de que el
     // usuario suelte el primer nodo, haciendo zoom sobre ese único elemento.
     if (n.length === 0 && e.length === 0) return
+    // Edición en vivo desde el editor de código: re-sembramos los nodos del
+    // nuevo DSL pero NO reencuadramos, para no dar saltos de zoom en cada tecla.
+    if (!useEditorStore.getState().fitOnSeed) return
     // Cancelamos el RAF anterior si el efecto se vuelve a ejecutar antes de
     // que haya disparado (evita fitView sobre estado intermedio).
     const rafId = requestAnimationFrame(() => fitView({ padding: 0.15, duration: 200 }))

@@ -5,6 +5,17 @@ import { readText } from './fileManager'
 let activeWatcher: FSWatcher | null = null
 let watchedPath: string | null = null
 
+// Ventana temporal durante la cual se ignoran los eventos `change`. La activa
+// la propia app al auto-guardar el .bachi desde el editor de código, para que
+// la escritura no rebote como si fuera una edición externa (evita el doble
+// render y el reencuadre).
+let muteUntil = 0
+
+/** Silencia el watcher durante `ms` para no detectar nuestro propio guardado. */
+export function muteWatcher(ms = 600): void {
+  muteUntil = Date.now() + ms
+}
+
 export function watchedFile(): string | null {
   return watchedPath
 }
@@ -30,6 +41,8 @@ export async function watchArchFile(filePath: string, win: BrowserWindow): Promi
   })
 
   watcher.on('change', async (changedPath) => {
+    // Cambio provocado por nuestro propio auto-guardado: lo ignoramos.
+    if (Date.now() < muteUntil) return
     try {
       const content = await readText(changedPath)
       if (!win.isDestroyed()) {
