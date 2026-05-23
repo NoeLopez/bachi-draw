@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/diagen.iml" filepath="$PROJECT_DIR$/.idea/diagen.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/bachi-draw.iml" filepath="$PROJECT_DIR$/.idea/bachi-draw.iml" />
     </modules>
   </component>
 </project>
