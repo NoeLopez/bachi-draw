@@ -1,23 +1,29 @@
 import { useMemo, useState } from 'react'
-import { humanizeIconType, ICON_DND_TYPE, listOfficialIconTypes } from '../../icons/officialIcons'
+import {
+  getIconCategory,
+  humanizeIconType,
+  ICON_DND_TYPE,
+  listOfficialIconTypes
+} from '../../icons/officialIcons'
 import { getIconDataUri } from '../../icons/registry'
 
 // ──────────────────────────────────────────────────────────────────────────
-// Panel lateral izquierdo de figuras: buscador + iconos agrupados por
-// proveedor. Cada icono se arrastra al lienzo para crear un nodo (el tipo viaja
-// en el dataTransfer; el drop lo maneja CloudCanvas).
+// Panel lateral izquierdo de figuras: buscador + iconos agrupados por CATEGORÍA
+// (Compute, Storage, Database...). Cada icono se arrastra al lienzo para crear
+// un nodo (el tipo viaja en el dataTransfer; el drop lo maneja CloudCanvas).
 // ──────────────────────────────────────────────────────────────────────────
 
-const PROVIDER_LABEL: Record<string, string> = {
-  aws: 'AWS',
-  azure: 'Azure',
-  gcp: 'Google Cloud',
-  k8s: 'Kubernetes',
-  oss: 'Open Source'
+// Etiqueta legible de una categoría kebab (ej. "app-integration" → "App
+// Integration").
+function categoryLabel(cat: string): string {
+  return cat
+    .split('-')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ')
 }
 
 interface Group {
-  provider: string
+  key: string
   label: string
   types: string[]
 }
@@ -26,21 +32,20 @@ function buildGroups(query: string): Group[] {
   const q = query.trim().toLowerCase()
   // Excluye los iconos de grupo (bordes de cluster), no son servicios.
   const all = listOfficialIconTypes().filter((t) => !t.includes('/groups/'))
-  const byProvider = new Map<string, string[]>()
+  const byCategory = new Map<string, string[]>()
   for (const type of all) {
     if (q && !type.toLowerCase().includes(q) && !humanizeIconType(type).toLowerCase().includes(q)) {
       continue
     }
-    const provider = type.slice(0, type.indexOf('/'))
-    const arr = byProvider.get(provider) ?? []
+    const cat = getIconCategory(type) ?? 'otros'
+    const arr = byCategory.get(cat) ?? []
     arr.push(type)
-    byProvider.set(provider, arr)
+    byCategory.set(cat, arr)
   }
-  return Array.from(byProvider.entries()).map(([provider, types]) => ({
-    provider,
-    label: PROVIDER_LABEL[provider] ?? provider,
-    types
-  }))
+  // Categorías ordenadas alfabéticamente por su etiqueta.
+  return Array.from(byCategory.entries())
+    .map(([key, types]) => ({ key, label: categoryLabel(key), types }))
+    .sort((a, b) => a.label.localeCompare(b.label))
 }
 
 export default function FiguresPanel(): React.JSX.Element {
@@ -66,7 +71,7 @@ export default function FiguresPanel(): React.JSX.Element {
           <p className="diagen-figures-empty">Sin resultados para “{query}”.</p>
         ) : (
           groups.map((g) => (
-            <section key={g.provider} className="diagen-figures-group">
+            <section key={g.key} className="diagen-figures-group">
               <h3 className="diagen-figures-group-title">
                 {g.label} <span className="diagen-figures-count">{g.types.length}</span>
               </h3>

@@ -58,36 +58,54 @@ const SERVICE_ALIASES: Record<string, Record<string, string>> = {
   }
 }
 
-// import.meta.glob es resuelto por Vite en build-time. Incluimos los SVGs
-// del nivel raíz de cada proveedor más las subcarpetas conocidas.
-const SVG_MODULES = import.meta.glob(
-  [
-    './aws/*.svg',
-    './aws/groups/*.svg',
-    './gcp/*.svg',
-    './azure/*.svg',
-    './kubernetes/*.svg',
-    './oss/*.svg'
-  ],
-  {
-    query: '?url',
-    import: 'default',
-    eager: true
-  }
-) as Record<string, string>
+// import.meta.glob es resuelto por Vite en build-time.
+//
+// Estructura en disco (definitiva): los iconos de servicio se organizan por
+// CATEGORÍA en subcarpetas — ./aws/<categoria>/<servicio>.svg — pero el TIPO
+// lógico es plano (aws/<servicio>): la categoría es solo metadato para agrupar
+// en el panel, no parte de la identidad del icono. Así los .arch y los aliases
+// no dependen de la categoría. Mismo patrón aplicará a gcp/azure cuando lleguen.
+//
+// Excepción: ./aws/groups/<x>.svg son bordes de cluster y conservan el tipo
+// aws/groups/<x> (no son servicios).
+// Glob recursivo (**): captura tanto los planos (oss/nginx.svg) como los
+// anidados por categoría (aws/compute/ec2.svg). El glob `**` resuelve de forma
+// consistente en build; el desglose de provider/categoría/servicio se hace
+// abajo a partir del path.
+const SVG_MODULES = import.meta.glob(['./*/*.svg', './*/*/*.svg'], {
+  query: '?url',
+  import: 'default',
+  eager: true
+}) as Record<string, string>
 
 const officialByType = new Map<string, string>()
+// Tipo de icono -> categoría (para agrupar en el panel). Solo servicios.
+const categoryByType = new Map<string, string>()
 
 for (const [path, url] of Object.entries(SVG_MODULES)) {
-  // Posibles formas:
-  //   ./aws/ec2.svg                       -> provider=aws, key=ec2
-  //   ./aws/groups/vpc.svg                -> provider=aws, key=groups/vpc
-  //   ./kubernetes/pod.svg                -> provider=k8s, key=pod
+  // path: ./<folder>/<...rest>.svg
   const match = path.match(/^\.\/([^/]+)\/(.+)\.svg$/)
   if (!match) continue
   const [, folder, rest] = match
   const provider = folder === 'kubernetes' ? 'k8s' : folder
-  officialByType.set(`${provider}/${rest}`, url)
+
+  const slash = rest.indexOf('/')
+  if (slash === -1) {
+    // Plano (oss/nginx.svg, k8s/pod.svg): el tipo es provider/nombre.
+    officialByType.set(`${provider}/${rest}`, url)
+    continue
+  }
+  const sub = rest.slice(0, slash) // categoría o "groups"
+  const name = rest.slice(slash + 1)
+  if (sub === 'groups') {
+    // Bordes de cluster: conservan el path en el tipo (aws/groups/vpc).
+    officialByType.set(`${provider}/groups/${name}`, url)
+  } else {
+    // Servicio organizado por categoría: tipo plano + categoría como metadato.
+    const type = `${provider}/${name}`
+    officialByType.set(type, url)
+    categoryByType.set(type, sub)
+  }
 }
 
 function resolveAlias(provider: string, name: string): string | undefined {
@@ -125,6 +143,12 @@ export const ICON_DND_TYPE = 'application/diagen-icon'
 
 export function listOfficialIconTypes(): string[] {
   return Array.from(officialByType.keys()).sort()
+}
+
+/** Categoría de un tipo de icono (ej. aws/ec2 → compute), o undefined si no la
+ * tiene (servicios sin categoría, bordes de grupo, placeholders). */
+export function getIconCategory(type: string): string | undefined {
+  return categoryByType.get(type)
 }
 
 /**

@@ -1,5 +1,7 @@
 :root {
   color-scheme: light dark;
+  /* Icono X (para máscaras CSS, p. ej. el botón limpiar del buscador). */
+  --icon-x: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3e%3cpath d='M2 2l8 8M10 2l-8 8' stroke='black' stroke-width='1.8' stroke-linecap='round'/%3e%3c/svg%3e");
   --bg-0: #f7f8fa;
   --bg-1: #ffffff;
   --bg-2: #eef0f4;
