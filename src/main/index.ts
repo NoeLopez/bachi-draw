@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, nativeImage, shell } from 'electron'
 import { join } from 'path'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -48,6 +48,13 @@ function createWindow(): void {
 
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.bachidraw')
+
+  // En macOS el icono del .app empaquetado lo da build/icon.icns, pero en dev el
+  // dock muestra el de Electron. Forzamos el logo en el dock para verlo también
+  // en desarrollo. (En el .app final macOS usa el .icns, no esto.)
+  if (process.platform === 'darwin') {
+    app.dock?.setIcon(nativeImage.createFromPath(icon))
+  }
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
