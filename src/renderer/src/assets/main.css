@@ -13,45 +13,243 @@
   background: var(--bg-0);
 }
 
-/* ─────────────────────────── Toolbar ─────────────────────────── */
+/* ─────────────────────────── Header ─────────────────────────── */
 
-.bachi-draw-toolbar {
-  flex: 0 0 auto;
+.bachi-draw-header {
+  position: relative;
+  flex: 0 0 44px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 8px 12px;
   background: var(--bg-1);
   border-bottom: 1px solid var(--border);
   -webkit-app-region: drag;
+  /* Sutil gradiente para dar profundidad sin saturar */
+  background-image: linear-gradient(
+    to bottom,
+    color-mix(in oklab, var(--bg-1) 100%, transparent),
+    color-mix(in oklab, var(--bg-1) 96%, var(--bg-0))
+  );
 }
 
-.bachi-draw-toolbar-left,
-.bachi-draw-toolbar-right {
+/* Acciones de archivo: izquierda, con espacio para los semáforos de macOS */
+.bachi-draw-header-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  padding-left: calc(80px + 8px);
   -webkit-app-region: no-drag;
 }
 
-.bachi-draw-toolbar-left {
-  padding-left: 80px; /* deja sitio a los semáforos en macOS */
+/* Controles de vista: derecha */
+.bachi-draw-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 12px;
+  margin-left: auto;
+  -webkit-app-region: no-drag;
 }
 
-.bachi-draw-toolbar-title {
+/* Título del diagrama: absolutamente centrado en el header */
+.bachi-draw-header-title-area {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  /* No captura eventos: los botones a ambos lados siguen funcionando */
+}
+
+.bachi-draw-header-title {
   font-size: 13px;
   font-weight: 600;
-  margin: 0;
   color: var(--text-0);
-  letter-spacing: 0.2px;
+  letter-spacing: -0.1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 380px;
 }
 
-.bachi-draw-toolbar-divider {
+/* ── Separador vertical entre grupos de acciones ── */
+
+.bachi-draw-header-vsep {
   width: 1px;
-  height: 18px;
+  height: 16px;
   background: var(--border);
+  flex-shrink: 0;
 }
+
+/* ── Botones de acción del header (Nuevo, Abrir, Guardar) ── */
+
+.bachi-draw-hbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  color: var(--text-0);
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: 0.1px;
+  transition:
+    background 100ms ease,
+    border-color 100ms ease;
+}
+
+.bachi-draw-hbtn:hover:not(:disabled) {
+  background: var(--bg-0);
+  border-color: var(--border-strong);
+}
+
+.bachi-draw-hbtn.is-open {
+  background: var(--bg-0);
+  border-color: var(--border-strong);
+}
+
+.bachi-draw-hbtn svg {
+  flex-shrink: 0;
+  color: var(--text-1);
+  transition: color 100ms ease;
+}
+
+.bachi-draw-hbtn:hover:not(:disabled) svg,
+.bachi-draw-hbtn.is-open svg {
+  color: var(--text-0);
+}
+
+/* ── Dropdown "Nuevo" ── */
+
+.bachi-draw-hmenu-wrap {
+  position: relative;
+}
+
+/* El botón Nuevo tiene el chevron con menos gap */
+.bachi-draw-hbtn-nuevo {
+  gap: 4px;
+}
+
+.bachi-draw-hmenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 200;
+  min-width: 220px;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.14),
+    0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+[data-theme='dark'] .bachi-draw-hmenu {
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 2px 8px rgba(0, 0, 0, 0.28);
+}
+
+.bachi-draw-hmenu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 7px;
+  text-align: left;
+  color: var(--text-0);
+  transition: background 80ms ease;
+}
+
+.bachi-draw-hmenu-item:hover {
+  background: color-mix(in oklab, var(--accent) 8%, var(--bg-2));
+}
+
+.bachi-draw-hmenu-item > svg {
+  flex-shrink: 0;
+  color: var(--text-1);
+}
+
+.bachi-draw-hmenu-item-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bachi-draw-hmenu-item-label {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.bachi-draw-hmenu-item-hint {
+  font-size: 11px;
+  color: var(--text-2);
+  line-height: 1.2;
+}
+
+.bachi-draw-hmenu-sep {
+  height: 1px;
+  background: var(--border);
+  margin: 3px 6px;
+}
+
+/* ── Control segmentado de vista (fondo / minimapa / tema) ── */
+
+.bachi-draw-seg {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg-2);
+}
+
+.bachi-draw-seg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 28px;
+  border: none;
+  border-left: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-1);
+  transition:
+    background 100ms ease,
+    color 100ms ease;
+}
+
+.bachi-draw-seg-btn:first-child {
+  border-left: none;
+}
+
+.bachi-draw-seg-btn:hover {
+  background: color-mix(in oklab, var(--bg-0) 80%, transparent);
+  color: var(--text-0);
+}
+
+.bachi-draw-seg-btn.is-on {
+  background: var(--accent);
+  color: #fff;
+  border-left-color: transparent;
+}
+
+.bachi-draw-seg-btn.is-on + .bachi-draw-seg-btn {
+  border-left-color: transparent;
+}
+
+/* ── Botones genéricos (usados en inspector, editor de puntos, etc.) ── */
 
 .bachi-draw-btn {
   padding: 6px 12px;
@@ -675,16 +873,16 @@
 /* ─────────────────────── Status bar ─────────────────────────── */
 
 .bachi-draw-status-bar {
-  flex: 0 0 auto;
+  flex: 0 0 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 6px 12px;
+  padding: 0 12px;
   background: var(--bg-1);
   border-top: 1px solid var(--border);
-  font-size: 12px;
-  color: var(--text-1);
+  font-size: 11px;
+  color: var(--text-2);
+  gap: 12px;
 }
 
 .bachi-draw-status-file {
@@ -692,44 +890,48 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   flex: 1 1 auto;
+  min-width: 0;
 }
 
 .bachi-draw-status-meta {
   display: flex;
   align-items: center;
-  gap: 12px;
-  flex: 0 0 auto;
+  gap: 6px;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
 }
 
-.bachi-draw-status-pill {
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--bg-2);
-  border: 1px solid var(--border);
-  font-weight: 500;
+.bachi-draw-status-sep {
+  color: var(--border-strong);
+  user-select: none;
 }
 
-.bachi-draw-status-pill.bachi-draw-status-idle {
-  color: var(--text-2);
+/* Punto de estado: círculo de color sólido, sin borde */
+.bachi-draw-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background 300ms ease;
 }
 
-.bachi-draw-status-pill.bachi-draw-status-reloading {
-  color: var(--warn);
-  background: rgba(217, 119, 6, 0.1);
-  border-color: rgba(217, 119, 6, 0.4);
+.bachi-draw-status-dot-idle    { background: var(--text-2); }
+.bachi-draw-status-dot-ok      { background: var(--success); }
+.bachi-draw-status-dot-error   { background: var(--danger); }
+.bachi-draw-status-dot-reloading {
+  background: var(--warn);
+  animation: bachi-status-pulse 1s ease-in-out infinite;
 }
 
-.bachi-draw-status-pill.bachi-draw-status-ok {
-  color: var(--success);
-  background: rgba(5, 150, 105, 0.1);
-  border-color: rgba(5, 150, 105, 0.4);
+@keyframes bachi-status-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
 }
 
-.bachi-draw-status-pill.bachi-draw-status-error {
-  color: var(--danger);
-  background: rgba(220, 38, 38, 0.1);
-  border-color: rgba(220, 38, 38, 0.45);
-}
+.bachi-draw-status-state { color: var(--text-2); }
+.bachi-draw-status-state-ok      { color: var(--success); }
+.bachi-draw-status-state-error   { color: var(--danger); }
+.bachi-draw-status-state-reloading { color: var(--warn); }
 
 /* ════════════════════════════════════════════════════════════
    React Flow — nodos custom y tema

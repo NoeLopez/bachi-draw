@@ -1,5 +1,5 @@
 interface EmptyStateProps {
-  onNewFile: () => void
+  onNewDiagram: () => void
   onOpenFile: () => void
 }
 
@@ -7,14 +7,21 @@ interface EmptyStateProps {
  * Pantalla de bienvenida cuando no hay diagrama cargado.
  * Ofrece crear uno nuevo o abrir uno existente.
  */
-export default function EmptyState({ onNewFile, onOpenFile }: EmptyStateProps): React.JSX.Element {
+export default function EmptyState({
+  onNewDiagram,
+  onOpenFile
+}: EmptyStateProps): React.JSX.Element {
   return (
     <div className="bachi-draw-empty-state">
       <div className="bachi-draw-empty-state-card">
         <h2>Bachi Draw</h2>
         <p>Diagramas de arquitectura desde archivos de texto.</p>
         <div className="bachi-draw-empty-actions">
-          <button type="button" className="bachi-draw-btn bachi-draw-btn--primary" onClick={onNewFile}>
+          <button
+            type="button"
+            className="bachi-draw-btn bachi-draw-btn--primary"
+            onClick={onNewDiagram}
+          >
             Nuevo diagrama
           </button>
           <button type="button" className="bachi-draw-btn" onClick={onOpenFile}>

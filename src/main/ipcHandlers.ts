@@ -40,17 +40,29 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     }
   )
 
-  ipcMain.handle('new-file', async (): Promise<OpenedFilePayload | null> => {
+  ipcMain.handle('new-diagram', async (): Promise<OpenedFilePayload | null> => {
     const win = getWindow()
     if (!win) return null
     const result = await dialog.showSaveDialog(win, {
-      title: 'Nuevo diagrama .bachi',
+      title: 'Nuevo diagrama',
       defaultPath: 'diagrama.bachi',
       filters: [{ name: 'Bachi Draw', extensions: ['bachi'] }]
     })
     if (result.canceled || !result.filePath) return null
-    const template = 'arch-cloud lr\n\n'
-    await writeText(result.filePath, template)
+    await writeText(result.filePath, 'arch-cloud lr\n\n')
+    return loadFile(result.filePath, win)
+  })
+
+  ipcMain.handle('new-board', async (): Promise<OpenedFilePayload | null> => {
+    const win = getWindow()
+    if (!win) return null
+    const result = await dialog.showSaveDialog(win, {
+      title: 'Nueva pizarra',
+      defaultPath: 'pizarra.bachi',
+      filters: [{ name: 'Bachi Draw', extensions: ['bachi'] }]
+    })
+    if (result.canceled || !result.filePath) return null
+    await writeText(result.filePath, 'arch-cloud lr\n\n')
     return loadFile(result.filePath, win)
   })
 
