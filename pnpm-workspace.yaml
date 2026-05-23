@@ -1,0 +1,15 @@
+# Config de pnpm a nivel de proyecto (pnpm 10+ lee los settings desde aquí,
+# ya no desde el campo "pnpm" de package.json). Versionado a propósito para
+# que todo el equipo apruebe los mismos build scripts al clonar.
+
+# pnpm 11: mapa paquete -> bool de scripts de instalación permitidos.
+allowBuilds:
+  electron: true
+  electron-winstaller: true
+  esbuild: true
+
+# pnpm 10: misma intención en formato lista (compat hacia atrás).
+onlyBuiltDependencies:
+  - electron
+  - esbuild
+  - electron-winstaller
