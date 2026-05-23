@@ -93,6 +93,18 @@ function App(): React.JSX.Element {
     }
   }, [buildDiagram])
 
+  const handleNewDiagram = useCallback(async () => {
+    const opened = await window.bachiDraw.newDiagram()
+    if (!opened) return
+    void buildDiagram(opened.content, opened.path, opened.archd)
+  }, [buildDiagram])
+
+  const handleNewBoard = useCallback(async () => {
+    const opened = await window.bachiDraw.newBoard()
+    if (!opened) return
+    void buildDiagram(opened.content, opened.path, opened.archd)
+  }, [buildDiagram])
+
   const handleOpenFile = useCallback(async () => {
     const opened = await window.bachiDraw.openFile()
     if (!opened) return
@@ -140,6 +152,8 @@ function App(): React.JSX.Element {
         theme={theme}
         background={background}
         minimapVisible={minimapVisible}
+        onNewDiagram={handleNewDiagram}
+        onNewBoard={handleNewBoard}
         onOpenFile={handleOpenFile}
         onSaveArchd={handleSaveArchd}
         onToggleTheme={toggleTheme}

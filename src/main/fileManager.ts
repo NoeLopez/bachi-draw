@@ -11,6 +11,10 @@ export async function readText(filePath: string): Promise<string> {
   return fs.readFile(filePath, 'utf-8')
 }
 
+export async function writeText(filePath: string, content: string): Promise<void> {
+  await fs.writeFile(filePath, content, 'utf-8')
+}
+
 export async function writeJson(filePath: string, data: unknown): Promise<void> {
   await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8')
 }

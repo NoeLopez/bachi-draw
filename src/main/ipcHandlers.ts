@@ -1,6 +1,6 @@
 import { BrowserWindow, dialog, ipcMain } from 'electron'
 import path from 'path'
-import { archdPathFor, readJsonIfExists, readText, writeJson } from './fileManager'
+import { archdPathFor, readJsonIfExists, readText, writeJson, writeText } from './fileManager'
 import { stopWatching, watchArchFile } from './fileWatcher'
 
 export interface OpenedFilePayload {
@@ -39,6 +39,32 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
       return { path: archd }
     }
   )
+
+  ipcMain.handle('new-diagram', async (): Promise<OpenedFilePayload | null> => {
+    const win = getWindow()
+    if (!win) return null
+    const result = await dialog.showSaveDialog(win, {
+      title: 'Nuevo diagrama',
+      defaultPath: 'diagrama.bachi',
+      filters: [{ name: 'Bachi Draw', extensions: ['bachi'] }]
+    })
+    if (result.canceled || !result.filePath) return null
+    await writeText(result.filePath, 'arch cloud\n')
+    return loadFile(result.filePath, win)
+  })
+
+  ipcMain.handle('new-board', async (): Promise<OpenedFilePayload | null> => {
+    const win = getWindow()
+    if (!win) return null
+    const result = await dialog.showSaveDialog(win, {
+      title: 'Nueva pizarra',
+      defaultPath: 'pizarra.bachi',
+      filters: [{ name: 'Bachi Draw', extensions: ['bachi'] }]
+    })
+    if (result.canceled || !result.filePath) return null
+    await writeText(result.filePath, 'arch cloud\n')
+    return loadFile(result.filePath, win)
+  })
 
   ipcMain.handle('stop-watching', async (): Promise<void> => {
     await stopWatching()

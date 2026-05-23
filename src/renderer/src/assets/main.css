@@ -72,7 +72,16 @@
   max-width: 380px;
 }
 
-/* ── Botones de acción del header (Abrir, Guardar) ── */
+/* ── Separador vertical entre grupos de acciones ── */
+
+.bachi-draw-header-vsep {
+  width: 1px;
+  height: 16px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+/* ── Botones de acción del header (Nuevo, Abrir, Guardar) ── */
 
 .bachi-draw-hbtn {
   display: inline-flex;
@@ -97,14 +106,101 @@
   border-color: var(--border-strong);
 }
 
+.bachi-draw-hbtn.is-open {
+  background: var(--bg-0);
+  border-color: var(--border-strong);
+}
+
 .bachi-draw-hbtn svg {
   flex-shrink: 0;
   color: var(--text-1);
   transition: color 100ms ease;
 }
 
-.bachi-draw-hbtn:hover:not(:disabled) svg {
+.bachi-draw-hbtn:hover:not(:disabled) svg,
+.bachi-draw-hbtn.is-open svg {
   color: var(--text-0);
+}
+
+/* ── Dropdown "Nuevo" ── */
+
+.bachi-draw-hmenu-wrap {
+  position: relative;
+}
+
+/* El botón Nuevo tiene el chevron con menos gap */
+.bachi-draw-hbtn-nuevo {
+  gap: 4px;
+}
+
+.bachi-draw-hmenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 200;
+  min-width: 220px;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.14),
+    0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+[data-theme='dark'] .bachi-draw-hmenu {
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 2px 8px rgba(0, 0, 0, 0.28);
+}
+
+.bachi-draw-hmenu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 7px;
+  text-align: left;
+  color: var(--text-0);
+  transition: background 80ms ease;
+}
+
+.bachi-draw-hmenu-item:hover {
+  background: color-mix(in oklab, var(--accent) 8%, var(--bg-2));
+}
+
+.bachi-draw-hmenu-item > svg {
+  flex-shrink: 0;
+  color: var(--text-1);
+}
+
+.bachi-draw-hmenu-item-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bachi-draw-hmenu-item-label {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.bachi-draw-hmenu-item-hint {
+  font-size: 11px;
+  color: var(--text-2);
+  line-height: 1.2;
+}
+
+.bachi-draw-hmenu-sep {
+  height: 1px;
+  background: var(--border);
+  margin: 3px 6px;
 }
 
 /* ── Control segmentado de vista (fondo / minimapa / tema) ── */

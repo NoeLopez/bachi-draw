@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import type { Theme } from '../../core/theme/useTheme'
 import type { CanvasBackground } from '../../core/diagram/kind'
 
@@ -6,6 +7,8 @@ interface ToolbarProps {
   theme: Theme
   background: CanvasBackground
   minimapVisible: boolean
+  onNewDiagram: () => void
+  onNewBoard: () => void
   onOpenFile: () => void
   onSaveArchd: () => void
   onToggleTheme: () => void
@@ -13,6 +16,36 @@ interface ToolbarProps {
   onToggleMinimap: () => void
   canSave: boolean
 }
+
+/* ── Iconos ─────────────────────────────────────────────────────────────── */
+
+const CHEVRON_DOWN = (
+  <svg viewBox="0 0 12 12" width="10" height="10" fill="none" aria-hidden focusable="false">
+    <path
+      d="M2.5 4.5L6 8l3.5-3.5"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+)
+
+const DIAGRAM_ICON = (
+  <svg viewBox="0 0 20 20" width="16" height="16" fill="none" aria-hidden focusable="false">
+    <rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" strokeWidth="1.3" />
+    <path d="M3 7.5h14" stroke="currentColor" strokeWidth="1.3" />
+    <circle cx="7" cy="5.25" r="1" fill="currentColor" />
+    <circle cx="10" cy="5.25" r="1" fill="currentColor" />
+  </svg>
+)
+
+const BOARD_ICON = (
+  <svg viewBox="0 0 20 20" width="16" height="16" fill="none" aria-hidden focusable="false">
+    <rect x="2" y="2" width="16" height="16" rx="2.5" stroke="currentColor" strokeWidth="1.3" />
+    <path d="M6 7h8M6 10h5M6 13h3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+  </svg>
+)
 
 const FOLDER_ICON = (
   <svg viewBox="0 0 20 20" width="15" height="15" fill="none" aria-hidden focusable="false">
@@ -94,11 +127,15 @@ const MOON_ICON = (
   </svg>
 )
 
+/* ── Componente ─────────────────────────────────────────────────────────── */
+
 export default function Toolbar({
   diagramName,
   theme,
   background,
   minimapVisible,
+  onNewDiagram,
+  onNewBoard,
   onOpenFile,
   onSaveArchd,
   onToggleTheme,
@@ -106,18 +143,98 @@ export default function Toolbar({
   onToggleMinimap,
   canSave
 }: ToolbarProps): React.JSX.Element {
+  const [newMenuOpen, setNewMenuOpen] = useState(false)
+  const newMenuRef = useRef<HTMLDivElement>(null)
+
   const nextThemeLabel = theme === 'dark' ? 'claro' : 'oscuro'
   const nextBackgroundLabel = background === 'dots' ? 'cuadrícula' : 'puntos'
+
+  // Cierra el menú al hacer clic fuera de él.
+  useEffect(() => {
+    if (!newMenuOpen) return
+    const handler = (e: MouseEvent): void => {
+      if (newMenuRef.current && !newMenuRef.current.contains(e.target as Node)) {
+        setNewMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [newMenuOpen])
+
+  // Cierra el menú al pulsar Escape.
+  useEffect(() => {
+    if (!newMenuOpen) return
+    const handler = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') setNewMenuOpen(false)
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [newMenuOpen])
 
   return (
     <header className="bachi-draw-header">
       {/* Acciones de archivo — izquierda */}
       <div className="bachi-draw-header-left">
+        {/* Dropdown "Nuevo" */}
+        <div ref={newMenuRef} className="bachi-draw-hmenu-wrap">
+          <button
+            type="button"
+            className={`bachi-draw-hbtn bachi-draw-hbtn-nuevo${newMenuOpen ? ' is-open' : ''}`}
+            onClick={() => setNewMenuOpen((o) => !o)}
+            aria-haspopup="menu"
+            aria-expanded={newMenuOpen}
+            title="Crear nuevo archivo"
+          >
+            Nuevo
+            {CHEVRON_DOWN}
+          </button>
+
+          {newMenuOpen && (
+            <div className="bachi-draw-hmenu" role="menu">
+              <button
+                type="button"
+                role="menuitem"
+                className="bachi-draw-hmenu-item"
+                onClick={() => {
+                  setNewMenuOpen(false)
+                  onNewDiagram()
+                }}
+              >
+                {DIAGRAM_ICON}
+                <span className="bachi-draw-hmenu-item-body">
+                  <span className="bachi-draw-hmenu-item-label">Nuevo diagrama</span>
+                  <span className="bachi-draw-hmenu-item-hint">.bachi — arquitectura cloud</span>
+                </span>
+              </button>
+
+              <div className="bachi-draw-hmenu-sep" role="separator" />
+
+              <button
+                type="button"
+                role="menuitem"
+                className="bachi-draw-hmenu-item"
+                onClick={() => {
+                  setNewMenuOpen(false)
+                  onNewBoard()
+                }}
+              >
+                {BOARD_ICON}
+                <span className="bachi-draw-hmenu-item-body">
+                  <span className="bachi-draw-hmenu-item-label">Nueva pizarra</span>
+                  <span className="bachi-draw-hmenu-item-hint">Lienzo libre de figuras</span>
+                </span>
+              </button>
+            </div>
+          )}
+        </div>
+
+        <span className="bachi-draw-header-vsep" />
+
         <button
           type="button"
           className="bachi-draw-hbtn"
           onClick={onOpenFile}
-          title="Abrir archivo .bachi"
+          title="Abrir archivo .bachi existente"
         >
           {FOLDER_ICON}
           Abrir
@@ -134,7 +251,7 @@ export default function Toolbar({
         </button>
       </div>
 
-      {/* Título centrado — solo lectura, no interactivo */}
+      {/* Título centrado — no interactivo */}
       <div className="bachi-draw-header-title-area" aria-hidden>
         <span className="bachi-draw-header-title">{diagramName || 'Bachi Draw'}</span>
       </div>
