@@ -19,7 +19,7 @@ const PROVIDER_LABELS: Record<string, string> = {
   gcp: 'GCP',
   azure: 'Azure',
   k8s: 'K8s',
-  oss: 'General',
+  oss: 'General'
 }
 
 function providerLabel(p: string): string {
@@ -109,7 +109,10 @@ export default function FiguresPanel(): React.JSX.Element {
               role="tab"
               aria-selected={p === provider}
               className={`bachi-draw-figures-tab${p === provider ? ' is-active' : ''}`}
-              onClick={() => { setProvider(p); setQuery('') }}
+              onClick={() => {
+                setProvider(p)
+                setQuery('')
+              }}
             >
               {providerLabel(p)}
             </button>
@@ -126,7 +129,7 @@ export default function FiguresPanel(): React.JSX.Element {
 
       <div className="bachi-draw-figures-list">
         {total === 0 ? (
-          <p className="bachi-draw-figures-empty">Sin resultados para "{query}".</p>
+          <p className="bachi-draw-figures-empty">Sin resultados para &ldquo;{query}&rdquo;.</p>
         ) : (
           groups.map((g) => (
             <section key={g.key} className="bachi-draw-figures-group">

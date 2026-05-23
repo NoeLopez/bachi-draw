@@ -71,6 +71,7 @@ const SERVICE_ALIASES: Record<string, Record<string, string>> = {
 //   - legacy: variantes legacy de GCP (gcp/legacy/cloud-run). El nombre
 //     "legacy" queda explícito en el tipo para que los .bachi siempre
 //     reflejen qué variante de icono están usando.
+//   - shapes: figuras geométricas básicas (oss/shapes/rectangle).
 //
 // Glob recursivo (**): captura tanto los planos (oss/nginx.svg) como los
 // anidados por categoría (aws/compute/ec2.svg). El glob `**` resuelve de forma
@@ -99,13 +100,19 @@ for (const [path, url] of Object.entries(SVG_MODULES)) {
     officialByType.set(`${provider}/${rest}`, url)
     continue
   }
-  const sub = rest.slice(0, slash) // categoría, "groups" o "legacy"
+  const sub = rest.slice(0, slash) // categoría, "groups", "legacy" o "shapes"
   const name = rest.slice(slash + 1)
   if (sub === 'groups' || sub === 'legacy') {
     // Sub-carpetas que conservan el path en el tipo:
     //   groups: bordes de cluster (aws/groups/vpc, gcp/groups/compute)
     //   legacy: variantes legacy de GCP (gcp/legacy/cloud-run)
     officialByType.set(`${provider}/${sub}/${name}`, url)
+  } else if (sub === 'shapes') {
+    // Figuras básicas: conservan el path completo (oss/shapes/rectangle) y
+    // llevan categoría 'shapes' para agruparse en el panel.
+    const type = `${provider}/shapes/${name}`
+    officialByType.set(type, url)
+    categoryByType.set(type, sub)
   } else {
     // Servicio organizado por categoría: tipo plano + categoría como metadato.
     const type = `${provider}/${name}`
