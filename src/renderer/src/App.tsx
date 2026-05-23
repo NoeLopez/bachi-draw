@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import EmptyState from './components/shared/EmptyState'
+import FiguresPanel from './components/shared/FiguresPanel'
 import StatusBar, { ReloadStatus } from './components/shared/StatusBar'
 import Toolbar from './components/shared/Toolbar'
 import { detectKind } from './core/diagram/dispatcher'
@@ -143,6 +144,7 @@ function App(): React.JSX.Element {
         canSave={Boolean(filePath && diagram)}
       />
       <main className="diagen-main">
+        <FiguresPanel />
         {Canvas && diagram ? (
           <Canvas layout={diagram.layout} background={background} />
         ) : (

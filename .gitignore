@@ -7,3 +7,6 @@ out
 
 # Archivos generados por la app (estado visual derivado del .arch)
 *.archd
+
+# Carpeta temporal para procesar packs de iconos antes de reorganizarlos
+_incoming/

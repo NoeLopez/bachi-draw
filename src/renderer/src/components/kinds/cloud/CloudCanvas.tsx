@@ -34,6 +34,7 @@ import {
 import type { ExtraHandles, LayoutResult, LayoutEdge } from '../../../core/parser/kinds/cloud/types'
 import { type GuideLine, snapToAlignment } from '../../../core/layout/kinds/cloud/alignment'
 import { allExtraHandleIds } from '../../../core/layout/kinds/cloud/connectionHandles'
+import { humanizeIconType, ICON_DND_TYPE } from '../../../icons/officialIcons'
 import AlignmentGuides from './AlignmentGuides'
 import CloudInspector from './CloudInspector'
 import ConnectionPointsEditor from './ConnectionPointsEditor'
@@ -59,6 +60,16 @@ function uniqueEdgeId(c: Connection, existing: Edge<CloudEdgeData>[]): string {
   let i = 2
   while (taken.has(`${base}_${i}`)) i++
   return `${base}_${i}`
+}
+
+/** Id de nodo único. Base derivada del tipo de icono (ej. aws/ec2 → ec2) más un
+ * sufijo incremental. Comprueba contra TODOS los nodos (service y group). */
+function uniqueNodeId(iconType: string, existing: CloudFlowNode[]): string {
+  const slug = (iconType.split('/').pop() ?? 'node').replace(/[^a-z0-9-]/gi, '') || 'node'
+  const taken = new Set(existing.map((n) => n.id))
+  let i = 1
+  while (taken.has(`${slug}_${i}`)) i++
+  return `${slug}_${i}`
 }
 
 function updateLayoutWithReactFlow(
@@ -95,6 +106,26 @@ function updateLayoutWithReactFlow(
       extraHandles: rfNode.data.extraHandles
     }
   })
+
+  // Anexa nodos service que existen en React Flow pero no en el layout (creados
+  // al arrastrar un icono del panel). Sin esto el sync los ignoraría y no se
+  // guardarían en el .archd.
+  const existingIds = new Set(layout.nodes.map((n) => n.id))
+  for (const rfNode of rfNodes) {
+    if (rfNode.type !== 'service' || existingIds.has(rfNode.id)) continue
+    const absPos = getAbsolutePosition(rfNode.id)
+    updatedNodes.push({
+      id: rfNode.id,
+      type: rfNode.data.iconType,
+      label: rfNode.data.label,
+      x: absPos.x,
+      y: absPos.y,
+      width: rfNode.width ?? 80,
+      height: rfNode.height ?? 80,
+      ...(rfNode.parentId ? { clusterId: rfNode.parentId } : {}),
+      extraHandles: rfNode.data.extraHandles
+    })
+  }
 
   // Update layout clusters with new positions and labels
   const updatedClusters = layout.clusters.map((c) => {
@@ -179,7 +210,7 @@ function CloudCanvasInner({
 }: CanvasProps<LayoutResult>): React.JSX.Element {
   const [nodes, setNodes, onNodesChange] = useNodesState<CloudFlowNode>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge<CloudEdgeData>>([])
-  const { fitView, updateNodeData } = useReactFlow()
+  const { fitView, updateNodeData, screenToFlowPosition } = useReactFlow()
   const markDirty = useEditorStore((s) => s.markDirty)
   const updateLayout = useEditorStore((s) => s.updateLayout)
   // Solo aumenta al cargar un layout externo (archivo / hot reload). Es lo único
@@ -267,6 +298,41 @@ function CloudCanvasInner({
       markDirty()
     },
     [setEdges, markDirty, syncToStore, nodes, edges]
+  )
+
+  // Drag & drop desde el panel de figuras: crear un nodo nuevo donde se suelta.
+  const onDragOver = useCallback((e: React.DragEvent) => {
+    if (!e.dataTransfer.types.includes(ICON_DND_TYPE)) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'copy'
+  }, [])
+
+  const onDrop = useCallback(
+    (e: React.DragEvent) => {
+      const iconType = e.dataTransfer.getData(ICON_DND_TYPE)
+      if (!iconType) return
+      e.preventDefault()
+      // Posición en coordenadas del lienzo (respeta zoom/pan); centrar el nodo
+      // 80x80 en el cursor restando la mitad.
+      const p = screenToFlowPosition({ x: e.clientX, y: e.clientY })
+      const position = { x: p.x - 40, y: p.y - 40 }
+      setNodes((nds) => {
+        const newNode: CloudFlowNode = {
+          id: uniqueNodeId(iconType, nds),
+          type: 'service',
+          position,
+          data: { label: humanizeIconType(iconType), iconType },
+          width: 80,
+          height: 80,
+          zIndex: 1
+        }
+        const next = [...nds, newNode]
+        syncToStore(next, edges)
+        return next
+      })
+      markDirty()
+    },
+    [screenToFlowPosition, setNodes, syncToStore, markDirty, edges]
   )
 
   // Reconexión: arrastrar el extremo de una arista existente a otro nodo/lado.
@@ -482,7 +548,12 @@ function CloudCanvasInner({
 
   return (
     // Evita el menú contextual nativo del SO: el clic derecho se usa para pan.
-    <div className="diagen-canvas" onContextMenu={(e) => e.preventDefault()}>
+    <div
+      className="diagen-canvas"
+      onContextMenu={(e) => e.preventDefault()}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+    >
       <ReactFlow
         nodes={nodes}
         edges={edges}

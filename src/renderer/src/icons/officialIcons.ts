@@ -120,6 +120,25 @@ export function getOfficialIconUrl(type: string): string | undefined {
   return undefined
 }
 
+/** MIME type del dataTransfer al arrastrar un icono del panel al lienzo. */
+export const ICON_DND_TYPE = 'application/diagen-icon'
+
 export function listOfficialIconTypes(): string[] {
   return Array.from(officialByType.keys()).sort()
+}
+
+/**
+ * Etiqueta legible a partir de un tipo de icono.
+ *   aws/ec2                     -> EC2
+ *   aws/simple-storage-service  -> Simple Storage Service
+ * Acrónimos cortos (≤4 chars, sin guiones) van en mayúsculas; el resto en
+ * Title Case con espacios.
+ */
+export function humanizeIconType(type: string): string {
+  const name = type.split('/').pop() ?? type
+  if (!name.includes('-') && name.length <= 4) return name.toUpperCase()
+  return name
+    .split('-')
+    .map((w) => (w.length <= 3 ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1)))
+    .join(' ')
 }

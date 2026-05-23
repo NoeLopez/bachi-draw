@@ -104,6 +104,133 @@
   position: relative;
 }
 
+/* ── Panel de figuras (lateral izquierdo) ────────────────────────────────────
+   Columna fija persistente: el lienzo ocupa el resto. Ancho estable, así no
+   descuadra el fitView en uso normal. */
+.diagen-figures {
+  flex: 0 0 240px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--bg-1);
+  border-right: 1px solid var(--border);
+}
+
+.diagen-figures-head {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.diagen-figures-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-0);
+}
+
+.diagen-figures-search {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 10px;
+  font-size: 13px;
+  color: var(--text-0);
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  outline: none;
+}
+
+.diagen-figures-search:focus {
+  border-color: var(--accent);
+}
+
+.diagen-figures-list {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.diagen-figures-empty {
+  padding: 16px 8px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.diagen-figures-group {
+  margin-bottom: 12px;
+}
+
+.diagen-figures-group-title {
+  margin: 4px 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.diagen-figures-count {
+  font-weight: 500;
+  color: var(--text-2);
+  opacity: 0.7;
+}
+
+.diagen-figures-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.diagen-figure {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  cursor: grab;
+  transition:
+    background 100ms ease,
+    border-color 100ms ease;
+}
+
+.diagen-figure:hover {
+  background: var(--bg-2);
+  border-color: var(--border);
+}
+
+.diagen-figure:active {
+  cursor: grabbing;
+}
+
+.diagen-figure-img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.diagen-figure-label {
+  font-size: 10px;
+  line-height: 1.2;
+  text-align: center;
+  color: var(--text-1);
+  /* Trunca a 2 líneas para nombres largos. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 /* ── Inspector lateral derecho (panel contextual) ────────────────────────────
    Superpuesto sobre el lienzo (no reduce el tamaño del canvas de React Flow, así
    no se descuadra el zoom/fitView). Aparece solo con selección única. */

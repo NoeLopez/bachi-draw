@@ -55,6 +55,40 @@ button:disabled {
   opacity: 0.45;
 }
 
+/* Scrollbar sutil y fino, consistente en toda la app (panel de figuras,
+   inspector, etc.). Pulgar discreto que resalta levemente al pasar el ratón. */
+* {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  /* border transparente + background-clip da el efecto de pulgar fino con aire
+     alrededor, en vez de una barra gruesa pegada al borde. */
+  background: var(--border-strong);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-2);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 [data-theme='dark'] {
   color-scheme: dark;
   --bg-0: #0f1115;
