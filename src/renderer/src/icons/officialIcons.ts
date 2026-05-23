@@ -64,10 +64,14 @@ const SERVICE_ALIASES: Record<string, Record<string, string>> = {
 // CATEGORÍA en subcarpetas — ./aws/<categoria>/<servicio>.svg — pero el TIPO
 // lógico es plano (aws/<servicio>): la categoría es solo metadato para agrupar
 // en el panel, no parte de la identidad del icono. Así los .bachi y los aliases
-// no dependen de la categoría. Mismo patrón aplicará a gcp/azure cuando lleguen.
+// no dependen de la categoría.
 //
-// Excepción: ./aws/groups/<x>.svg son bordes de cluster y conservan el tipo
-// aws/groups/<x> (no son servicios).
+// Sub-carpetas que preservan el path completo en el tipo (no son servicios):
+//   - groups: bordes de cluster (aws/groups/vpc, gcp/groups/compute)
+//   - legacy: variantes legacy de GCP (gcp/legacy/cloud-run). El nombre
+//     "legacy" queda explícito en el tipo para que los .bachi siempre
+//     reflejen qué variante de icono están usando.
+//
 // Glob recursivo (**): captura tanto los planos (oss/nginx.svg) como los
 // anidados por categoría (aws/compute/ec2.svg). El glob `**` resuelve de forma
 // consistente en build; el desglose de provider/categoría/servicio se hace
@@ -95,11 +99,13 @@ for (const [path, url] of Object.entries(SVG_MODULES)) {
     officialByType.set(`${provider}/${rest}`, url)
     continue
   }
-  const sub = rest.slice(0, slash) // categoría o "groups"
+  const sub = rest.slice(0, slash) // categoría, "groups" o "legacy"
   const name = rest.slice(slash + 1)
-  if (sub === 'groups') {
-    // Bordes de cluster: conservan el path en el tipo (aws/groups/vpc).
-    officialByType.set(`${provider}/groups/${name}`, url)
+  if (sub === 'groups' || sub === 'legacy') {
+    // Sub-carpetas que conservan el path en el tipo:
+    //   groups: bordes de cluster (aws/groups/vpc, gcp/groups/compute)
+    //   legacy: variantes legacy de GCP (gcp/legacy/cloud-run)
+    officialByType.set(`${provider}/${sub}/${name}`, url)
   } else {
     // Servicio organizado por categoría: tipo plano + categoría como metadato.
     const type = `${provider}/${name}`

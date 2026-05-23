@@ -143,6 +143,39 @@
   color: var(--text-0);
 }
 
+.bachi-draw-figures-tabs {
+  display: flex;
+  gap: 2px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 2px;
+}
+
+.bachi-draw-figures-tab {
+  flex: 1;
+  padding: 4px 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+  background: transparent;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 100ms ease, color 100ms ease;
+}
+
+.bachi-draw-figures-tab:hover {
+  color: var(--text-0);
+}
+
+.bachi-draw-figures-tab.is-active {
+  background: var(--bg-0);
+  color: var(--text-0);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+
 .bachi-draw-figures-search {
   width: 100%;
   box-sizing: border-box;
