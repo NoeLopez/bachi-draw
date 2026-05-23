@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useSyncExternalStore } from 'react'
+import { useEffect, useMemo, useSyncExternalStore } from 'react'
 import { BaseEdge, type EdgeProps, EdgeLabelRenderer, getSmoothStepPath } from '@xyflow/react'
 import {
   buildPathWithJumps,
@@ -7,7 +7,6 @@ import {
   type Pt,
   segmentsOf
 } from '../../../core/layout/kinds/cloud/edgeJumps'
-import { EdgeToolsContext } from './edgeTools'
 
 // ──────────────────────────────────────────────────────────────────────────
 // Edge ortogonal con "saltos" (line hops) OPCIONALES.
@@ -71,12 +70,10 @@ export default function JumpEdge(props: EdgeProps): React.JSX.Element {
     markerStart,
     style,
     label,
-    selected,
     data
   } = props
 
   const jumps = data?.jumps === true
-  const tools = useContext(EdgeToolsContext)
 
   // Dos paths del mismo trazado:
   //  - geomPath (radio 0): vértices rectos, base para detectar cruces.
@@ -137,34 +134,6 @@ export default function JumpEdge(props: EdgeProps): React.JSX.Element {
             style={{ transform: `translate(-50%, -50%) translate(${lx}px, ${ly}px)` }}
           >
             {label}
-          </div>
-        </EdgeLabelRenderer>
-      ) : null}
-      {selected ? (
-        <EdgeLabelRenderer>
-          {/* Paleta flotante de la arista seleccionada. nodrag/nopan evita que
-              el clic se interprete como interacción del lienzo. */}
-          <div
-            className="diagen-rf-edge-toolbar nodrag nopan"
-            style={{ transform: `translate(-50%, -150%) translate(${lx}px, ${ly}px)` }}
-          >
-            <button
-              type="button"
-              className={`diagen-rf-edge-tool ${jumps ? 'is-active' : ''}`}
-              title={jumps ? 'Quitar saltos de línea' : 'Saltar las flechas que cruza'}
-              onClick={() => tools?.toggleJumps(id)}
-            >
-              {/* Icono: una línea con joroba (representa el salto). */}
-              <svg width="18" height="12" viewBox="0 0 18 12" aria-hidden="true">
-                <path
-                  d="M1 9 H6 A3 3 0 0 1 12 9 H17"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </button>
           </div>
         </EdgeLabelRenderer>
       ) : null}

@@ -31,6 +31,27 @@ export type GroupNode = Node<GroupNodeData, 'group'>
 export type CloudFlowNode = ServiceNode | GroupNode
 
 /**
+ * Apariencia de una arista (markers y dasharray) derivada de su estilo y
+ * dirección. Fuente única para toReactFlow (al construir) y JumpEdge (al
+ * renderizar), de modo que cambiar style/direction en vivo se refleje.
+ */
+export function edgeVisuals(
+  style: 'solid' | 'dashed',
+  direction: 'forward' | 'back' | 'both'
+): {
+  markerEnd: { type: MarkerType; width: number; height: number } | undefined
+  markerStart: { type: MarkerType; width: number; height: number } | undefined
+  strokeDasharray: string | undefined
+} {
+  const arrow = { type: MarkerType.ArrowClosed, width: 18, height: 18 }
+  return {
+    markerEnd: direction === 'back' ? undefined : arrow,
+    markerStart: direction === 'back' || direction === 'both' ? arrow : undefined,
+    strokeDasharray: style === 'dashed' ? '6 4' : undefined
+  }
+}
+
+/**
  * Convierte el LayoutResult (coordenadas absolutas calculadas por ELK) al
  * modelo de React Flow.
  *
@@ -102,13 +123,7 @@ export function toReactFlow(layout: LayoutResult): {
 
   // Edges. Tipo 'jump' = ortogonal con saltos sobre las aristas que cruza.
   const edges: Edge<CloudEdgeData>[] = layout.edges.map((e) => {
-    const dashed = e.style === 'dashed'
-    const markerEnd =
-      e.direction === 'back' ? undefined : { type: MarkerType.ArrowClosed, width: 18, height: 18 }
-    const markerStart =
-      e.direction === 'back' || e.direction === 'both'
-        ? { type: MarkerType.ArrowClosed, width: 18, height: 18 }
-        : undefined
+    const { markerEnd, markerStart, strokeDasharray } = edgeVisuals(e.style, e.direction)
     return {
       id: e.id,
       source: e.from,
@@ -124,7 +139,7 @@ export function toReactFlow(layout: LayoutResult): {
       markerStart,
       // Permite arrastrar cualquiera de los dos extremos para reconectar.
       reconnectable: true,
-      style: dashed ? { strokeDasharray: '6 4' } : undefined
+      style: strokeDasharray ? { strokeDasharray } : undefined
     }
   })
 

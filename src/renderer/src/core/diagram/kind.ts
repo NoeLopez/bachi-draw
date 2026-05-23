@@ -70,11 +70,16 @@ export interface DiagramKindDef<Model = unknown, Layout = unknown> {
   serialize: (fileName: string, layout: Layout, canvas: ArchdCanvas) => unknown
 }
 
+/** Patrón de fondo del lienzo, preferencia de vista común a cualquier kind. */
+export type CanvasBackground = 'dots' | 'lines'
+
 /**
  * Props comunes que recibe cualquier Canvas de cualquier tipo de diagrama.
  * El viewport (zoom/pan/fit) lo gestiona internamente el renderer (React Flow),
- * por eso el contrato es mínimo: solo el layout a dibujar.
+ * por eso el contrato es mínimo: el layout a dibujar y la preferencia de fondo.
  */
 export interface CanvasProps<Layout> {
   layout: Layout | null
+  /** Patrón de fondo del lienzo. Default: 'dots'. */
+  background?: CanvasBackground
 }

@@ -6,6 +6,7 @@ import { detectKind } from './core/diagram/dispatcher'
 import { useEditorStore } from './core/diagram/editor/store'
 import { getKindDef } from './core/diagram/registry'
 import { useTheme } from './core/theme/useTheme'
+import { useCanvasBackground } from './core/theme/useCanvasBackground'
 import { reconcileLayoutWithArchd } from './core/layout/kinds/cloud/reconcile'
 
 function filenameWithoutExt(path: string): string {
@@ -20,6 +21,7 @@ function App(): React.JSX.Element {
   const [lastReloadMs, setLastReloadMs] = useState<number | undefined>()
   const runIdRef = useRef(0)
   const { theme, toggleTheme } = useTheme()
+  const { background, toggleBackground } = useCanvasBackground()
 
   // El estado del diagrama vive en el store. El viewport (zoom/pan/fit) lo
   // gestiona React Flow internamente, así que aquí ya no lo manejamos.
@@ -133,14 +135,16 @@ function App(): React.JSX.Element {
       <Toolbar
         diagramName={diagram?.name ?? ''}
         theme={theme}
+        background={background}
         onOpenFile={handleOpenFile}
         onSaveArchd={handleSaveArchd}
         onToggleTheme={toggleTheme}
+        onToggleBackground={toggleBackground}
         canSave={Boolean(filePath && diagram)}
       />
       <main className="diagen-main">
         {Canvas && diagram ? (
-          <Canvas layout={diagram.layout} />
+          <Canvas layout={diagram.layout} background={background} />
         ) : (
           <div className="diagen-canvas">
             <EmptyState />

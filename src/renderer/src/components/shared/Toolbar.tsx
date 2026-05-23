@@ -1,11 +1,14 @@
 import type { Theme } from '../../core/theme/useTheme'
+import type { CanvasBackground } from '../../core/diagram/kind'
 
 interface ToolbarProps {
   diagramName: string
   theme: Theme
+  background: CanvasBackground
   onOpenFile: () => void
   onSaveArchd: () => void
   onToggleTheme: () => void
+  onToggleBackground: () => void
   canSave: boolean
 }
 
@@ -37,15 +40,46 @@ const MOON_ICON = (
   </svg>
 )
 
+const DOTS_ICON = (
+  <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden focusable="false">
+    <g fill="currentColor">
+      <circle cx="6" cy="6" r="1.6" />
+      <circle cx="12" cy="6" r="1.6" />
+      <circle cx="18" cy="6" r="1.6" />
+      <circle cx="6" cy="12" r="1.6" />
+      <circle cx="12" cy="12" r="1.6" />
+      <circle cx="18" cy="12" r="1.6" />
+      <circle cx="6" cy="18" r="1.6" />
+      <circle cx="12" cy="18" r="1.6" />
+      <circle cx="18" cy="18" r="1.6" />
+    </g>
+  </svg>
+)
+
+const GRID_ICON = (
+  <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden focusable="false">
+    <g stroke="currentColor" strokeWidth="1.6">
+      <line x1="9" y1="3" x2="9" y2="21" />
+      <line x1="15" y1="3" x2="15" y2="21" />
+      <line x1="3" y1="9" x2="21" y2="9" />
+      <line x1="3" y1="15" x2="21" y2="15" />
+    </g>
+  </svg>
+)
+
 export default function Toolbar({
   diagramName,
   theme,
+  background,
   onOpenFile,
   onSaveArchd,
   onToggleTheme,
+  onToggleBackground,
   canSave
 }: ToolbarProps): React.JSX.Element {
   const nextThemeLabel = theme === 'dark' ? 'claro' : 'oscuro'
+  // Muestra el icono del tipo AL QUE se cambiará al pulsar.
+  const nextBackgroundLabel = background === 'dots' ? 'cuadrícula' : 'puntos'
   return (
     <header className="diagen-toolbar">
       <div className="diagen-toolbar-left">
@@ -66,6 +100,15 @@ export default function Toolbar({
           Guardar .archd
         </button>
         <span className="diagen-toolbar-divider" />
+        <button
+          type="button"
+          className="diagen-btn-icon"
+          onClick={onToggleBackground}
+          title={`Fondo: ${nextBackgroundLabel}`}
+          aria-label={`Cambiar fondo a ${nextBackgroundLabel}`}
+        >
+          {background === 'dots' ? GRID_ICON : DOTS_ICON}
+        </button>
         <button
           type="button"
           className="diagen-btn-icon diagen-theme-toggle"

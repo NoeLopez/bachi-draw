@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   addEdge,
   Background,
@@ -17,25 +17,28 @@ import {
   useEdgesState,
   useNodesState,
   useReactFlow,
+  useStore,
   type NodeChange,
   type EdgeChange
 } from '@xyflow/react'
+import { shallow } from 'zustand/shallow'
 import '@xyflow/react/dist/style.css'
 import type { CanvasProps } from '../../../core/diagram/kind'
 import { useEditorStore } from '../../../core/diagram/editor/store'
 import {
   type CloudEdgeData,
   type CloudFlowNode,
+  edgeVisuals,
   toReactFlow
 } from '../../../core/layout/kinds/cloud/toReactFlow'
 import type { ExtraHandles, LayoutResult, LayoutEdge } from '../../../core/parser/kinds/cloud/types'
 import { type GuideLine, snapToAlignment } from '../../../core/layout/kinds/cloud/alignment'
 import { allExtraHandleIds } from '../../../core/layout/kinds/cloud/connectionHandles'
 import AlignmentGuides from './AlignmentGuides'
+import CloudInspector from './CloudInspector'
 import ConnectionPointsEditor from './ConnectionPointsEditor'
 import GroupNode from './GroupNode'
 import JumpEdge from './JumpEdge'
-import { EdgeToolsContext, NodeToolsContext } from './edgeTools'
 import ServiceNode from './ServiceNode'
 
 // Definidos fuera del componente: React Flow exige referencias estables.
@@ -170,7 +173,10 @@ function getLayoutBounds(layout: LayoutResult): { width: number; height: number 
   return { width, height }
 }
 
-function CloudCanvasInner({ layout }: CanvasProps<LayoutResult>): React.JSX.Element {
+function CloudCanvasInner({
+  layout,
+  background = 'dots'
+}: CanvasProps<LayoutResult>): React.JSX.Element {
   const [nodes, setNodes, onNodesChange] = useNodesState<CloudFlowNode>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge<CloudEdgeData>>([])
   const { fitView, updateNodeData } = useReactFlow()
@@ -185,6 +191,19 @@ function CloudCanvasInner({ layout }: CanvasProps<LayoutResult>): React.JSX.Elem
   const [guides, setGuides] = useState<GuideLine[]>([])
   // Nodo cuyo editor de puntos de conexión está abierto (modal).
   const [editorNodeId, setEditorNodeId] = useState<string | null>(null)
+  // Ids seleccionados (leídos de React Flow). Devolvemos arrays para que el
+  // inspector solo aparezca con selección única; shallow evita renders de más.
+  const { selectedNodeIds, selectedEdgeIds } = useStore(
+    (s) => ({
+      selectedNodeIds: Array.from(s.nodeLookup.values())
+        .filter((n) => n.selected)
+        .map((n) => n.id),
+      selectedEdgeIds: Array.from(s.edgeLookup.values())
+        .filter((e) => e.selected)
+        .map((e) => e.id)
+    }),
+    shallow
+  )
   // Layout más reciente, leído por el efecto de re-siembra sin que éste dependa
   // del layout (así no se re-dispara con cada edición).
   const layoutRef = useRef<LayoutResult | null>(layout)
@@ -373,6 +392,38 @@ function CloudCanvasInner({ layout }: CanvasProps<LayoutResult>): React.JSX.Elem
     [setEdges, syncToStore, markDirty, nodes]
   )
 
+  // Fija una propiedad del data de una arista (estilo, dirección...). Igual que
+  // toggleJumps: pasa por setEdges + syncToStore + markDirty (no toca externalRev).
+  // Si cambia style/direction, recalcula también los visuales del Edge (markers y
+  // dasharray), que es lo que React Flow dibuja, para que el cambio se vea.
+  const setEdgeData = useCallback(
+    (edgeId: string, patch: Partial<CloudEdgeData>) => {
+      setEdges((eds) => {
+        const next = eds.map((e) => {
+          if (e.id !== edgeId) return e
+          const data = { ...e.data, ...patch } as CloudEdgeData
+          const { markerEnd, markerStart, strokeDasharray } = edgeVisuals(
+            data.style,
+            data.direction
+          )
+          return {
+            ...e,
+            data,
+            markerEnd,
+            markerStart,
+            style: strokeDasharray
+              ? { ...e.style, strokeDasharray }
+              : { ...e.style, strokeDasharray: undefined }
+          } as Edge<CloudEdgeData>
+        })
+        syncToStore(nodes, next)
+        return next
+      })
+      markDirty()
+    },
+    [setEdges, syncToStore, markDirty, nodes]
+  )
+
   // Aplica los puntos extra al nodo. Pasa por setNodes/setEdges + syncToStore
   // (no toca externalRev, así el zoom se conserva). Las aristas que apuntaban a
   // un punto extra que ya no existe se resetean a null (React Flow reengancha al
@@ -414,59 +465,82 @@ function CloudCanvasInner({ layout }: CanvasProps<LayoutResult>): React.JSX.Elem
     [setNodes, setEdges, syncToStore, markDirty]
   )
 
-  const edgeTools = useMemo(() => ({ toggleJumps }), [toggleJumps])
-  const nodeTools = useMemo(
-    () => ({ editConnectionPoints: (id: string) => setEditorNodeId(id) }),
-    []
-  )
+  // Elemento para el inspector: solo con selección única (un nodo de servicio o
+  // una arista). Con 0 o múltiples seleccionados, el panel no se muestra.
+  const single = selectedNodeIds.length + selectedEdgeIds.length === 1
+  const selectedNode =
+    single && selectedNodeIds.length === 1
+      ? (nodes.find((n) => n.id === selectedNodeIds[0]) ?? null)
+      : null
+  const inspectorNode = selectedNode?.type === 'service' ? selectedNode : null
+  const inspectorEdge =
+    single && selectedEdgeIds.length === 1
+      ? (edges.find((e) => e.id === selectedEdgeIds[0]) ?? null)
+      : null
 
   if (!layout) return <div className="diagen-canvas" />
 
   return (
     // Evita el menú contextual nativo del SO: el clic derecho se usa para pan.
     <div className="diagen-canvas" onContextMenu={(e) => e.preventDefault()}>
-      <EdgeToolsContext.Provider value={edgeTools}>
-        <NodeToolsContext.Provider value={nodeTools}>
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChangeWrapped}
-            onEdgesChange={onEdgesChangeWrapped}
-            onConnect={onConnect}
-            onReconnectStart={onReconnectStart}
-            onReconnect={onReconnect}
-            onReconnectEnd={onReconnectEnd}
-            onNodeDoubleClick={onNodeDoubleClick}
-            onNodeDrag={onNodeDrag}
-            onNodeDragStop={onNodeDragStop}
-            nodeTypes={nodeTypes}
-            edgeTypes={edgeTypes}
-            connectionMode={ConnectionMode.Loose}
-            // Radio amplio: al soltar una conexión, React Flow engancha al handle
-            // más cercano dentro de este radio. 60px cubre desde el centro de un
-            // nodo (80px) a cualquiera de sus 4 puntos, así soltar en cualquier
-            // parte de la figura ancla la flecha por el lado más próximo (Lucid).
-            connectionRadius={60}
-            deleteKeyCode={['Delete', 'Backspace']}
-            // Interacción estilo Figma/Lucid:
-            //  - Botón izquierdo arrastrando en vacío → caja de selección grupal.
-            //  - Botón derecho (código 2) arrastrando → pan del lienzo (la manito).
-            //  - Selección parcial: la caja selecciona todo lo que toca.
-            panOnDrag={[2]}
-            selectionOnDrag
-            selectionMode={SelectionMode.Partial}
-            minZoom={0.1}
-            maxZoom={3}
-            fitView
-            proOptions={{ hideAttribution: true }}
-          >
-            <Background variant={BackgroundVariant.Dots} gap={24} size={1} />
-            <Controls />
-            <MiniMap pannable zoomable />
-            <AlignmentGuides guides={guides} />
-          </ReactFlow>
-        </NodeToolsContext.Provider>
-      </EdgeToolsContext.Provider>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChangeWrapped}
+        onEdgesChange={onEdgesChangeWrapped}
+        onConnect={onConnect}
+        onReconnectStart={onReconnectStart}
+        onReconnect={onReconnect}
+        onReconnectEnd={onReconnectEnd}
+        onNodeDoubleClick={onNodeDoubleClick}
+        onNodeDrag={onNodeDrag}
+        onNodeDragStop={onNodeDragStop}
+        nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
+        connectionMode={ConnectionMode.Loose}
+        // Radio amplio: al soltar una conexión, React Flow engancha al handle
+        // más cercano dentro de este radio. 60px cubre desde el centro de un
+        // nodo (80px) a cualquiera de sus 4 puntos, así soltar en cualquier
+        // parte de la figura ancla la flecha por el lado más próximo (Lucid).
+        connectionRadius={60}
+        deleteKeyCode={['Delete', 'Backspace']}
+        // Interacción estilo Figma/Lucid:
+        //  - Botón izquierdo arrastrando en vacío → caja de selección grupal.
+        //  - Botón derecho (código 2) arrastrando → pan del lienzo (la manito).
+        //  - Selección parcial: la caja selecciona todo lo que toca.
+        panOnDrag={[2]}
+        selectionOnDrag
+        selectionMode={SelectionMode.Partial}
+        minZoom={0.1}
+        maxZoom={3}
+        fitView
+        proOptions={{ hideAttribution: true }}
+      >
+        <Background
+          variant={background === 'lines' ? BackgroundVariant.Lines : BackgroundVariant.Dots}
+          gap={24}
+          size={1}
+        />
+        <Controls />
+        {/* Con el inspector abierto, el minimapa va a la izquierda para no
+                quedar tapado por el panel (que está a la derecha). */}
+        <MiniMap
+          pannable
+          zoomable
+          position={inspectorNode || inspectorEdge ? 'bottom-left' : 'bottom-right'}
+        />
+        <AlignmentGuides guides={guides} />
+      </ReactFlow>
+
+      {/* Panel inspector contextual (superpuesto a la derecha). */}
+      <CloudInspector
+        node={inspectorNode}
+        edge={inspectorEdge}
+        onEditConnectionPoints={(id) => setEditorNodeId(id)}
+        onToggleJumps={toggleJumps}
+        onSetEdgeStyle={(id, style) => setEdgeData(id, { style })}
+        onSetEdgeDirection={(id, direction) => setEdgeData(id, { direction })}
+      />
 
       {/* Modal de edición de puntos de conexión. */}
       {editorNodeId
