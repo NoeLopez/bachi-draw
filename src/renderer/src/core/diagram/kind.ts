@@ -82,4 +82,6 @@ export interface CanvasProps<Layout> {
   layout: Layout | null
   /** Patrón de fondo del lienzo. Default: 'dots'. */
   background?: CanvasBackground
+  /** Si se muestra el minimapa. Default: false (oculto). */
+  minimapVisible?: boolean
 }

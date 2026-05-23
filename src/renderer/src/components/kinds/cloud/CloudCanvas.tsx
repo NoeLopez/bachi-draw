@@ -206,7 +206,8 @@ function getLayoutBounds(layout: LayoutResult): { width: number; height: number 
 
 function CloudCanvasInner({
   layout,
-  background = 'dots'
+  background = 'dots',
+  minimapVisible = false
 }: CanvasProps<LayoutResult>): React.JSX.Element {
   const [nodes, setNodes, onNodesChange] = useNodesState<CloudFlowNode>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge<CloudEdgeData>>([])
@@ -582,6 +583,11 @@ function CloudCanvasInner({
         panOnDrag={[2]}
         selectionOnDrag
         selectionMode={SelectionMode.Partial}
+        // Rueda del ratón → desplazar el lienzo (pan vertical/horizontal), no zoom.
+        // Ctrl/Cmd + rueda → zoom (estilo Figma/Lucid). El pinch del trackpad
+        // sigue haciendo zoom vía zoomOnPinch (activo por defecto).
+        panOnScroll
+        zoomActivationKeyCode={['Control', 'Meta']}
         minZoom={0.1}
         maxZoom={3}
         fitView
@@ -593,13 +599,19 @@ function CloudCanvasInner({
           size={1}
         />
         <Controls />
-        {/* Con el inspector abierto, el minimapa va a la izquierda para no
-                quedar tapado por el panel (que está a la derecha). */}
-        <MiniMap
-          pannable
-          zoomable
-          position={inspectorNode || inspectorEdge ? 'bottom-left' : 'bottom-right'}
-        />
+        {/* Minimapa opcional (preferencia persistente). Abajo-izquierda, justo a
+            la derecha de los Controls (anulamos el margen y lo desplazamos con
+            left para que queden uno al lado del otro sin solaparse). Como el
+            inspector ocupa todo el borde derecho, aquí nunca queda tapado ni
+            salta al abrir el panel. */}
+        {minimapVisible ? (
+          <MiniMap
+            pannable
+            zoomable
+            position="bottom-left"
+            style={{ width: 160, height: 110, margin: 0, left: 56, bottom: 14 }}
+          />
+        ) : null}
         <AlignmentGuides guides={guides} />
       </ReactFlow>
 

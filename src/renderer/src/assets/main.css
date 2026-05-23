@@ -88,6 +88,12 @@
   border-color: var(--border-strong);
 }
 
+.bachi-draw-btn-icon.is-active {
+  background: var(--accent, #2563eb);
+  border-color: var(--accent, #2563eb);
+  color: #fff;
+}
+
 .bachi-draw-zoom-readout {
   min-width: 44px;
   text-align: center;

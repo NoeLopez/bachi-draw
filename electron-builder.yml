@@ -1,5 +1,5 @@
-appId: com.electron.app
-productName: bachi-draw
+appId: com.bachidraw
+productName: Bachi Draw
 directories:
   buildResources: build
 files:

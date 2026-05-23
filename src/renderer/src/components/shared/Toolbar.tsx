@@ -5,10 +5,12 @@ interface ToolbarProps {
   diagramName: string
   theme: Theme
   background: CanvasBackground
+  minimapVisible: boolean
   onOpenFile: () => void
   onSaveArchd: () => void
   onToggleTheme: () => void
   onToggleBackground: () => void
+  onToggleMinimap: () => void
   canSave: boolean
 }
 
@@ -67,14 +69,32 @@ const GRID_ICON = (
   </svg>
 )
 
+const MAP_ICON = (
+  <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden focusable="false">
+    <rect
+      x="3"
+      y="4"
+      width="18"
+      height="16"
+      rx="2"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+    />
+    <rect x="13" y="12" width="6" height="6" rx="1" fill="currentColor" />
+  </svg>
+)
+
 export default function Toolbar({
   diagramName,
   theme,
   background,
+  minimapVisible,
   onOpenFile,
   onSaveArchd,
   onToggleTheme,
   onToggleBackground,
+  onToggleMinimap,
   canSave
 }: ToolbarProps): React.JSX.Element {
   const nextThemeLabel = theme === 'dark' ? 'claro' : 'oscuro'
@@ -108,6 +128,16 @@ export default function Toolbar({
           aria-label={`Cambiar fondo a ${nextBackgroundLabel}`}
         >
           {background === 'dots' ? GRID_ICON : DOTS_ICON}
+        </button>
+        <button
+          type="button"
+          className={`bachi-draw-btn-icon${minimapVisible ? ' is-active' : ''}`}
+          onClick={onToggleMinimap}
+          title={minimapVisible ? 'Ocultar minimapa' : 'Mostrar minimapa'}
+          aria-label={minimapVisible ? 'Ocultar minimapa' : 'Mostrar minimapa'}
+          aria-pressed={minimapVisible}
+        >
+          {MAP_ICON}
         </button>
         <button
           type="button"

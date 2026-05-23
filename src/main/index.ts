@@ -5,6 +5,12 @@ import icon from '../../resources/icon.png?asset'
 import { registerIpcHandlers } from './ipcHandlers'
 import { stopWatching } from './fileWatcher'
 
+// El primer ítem del menú de macOS (y el nombre del dock / "Acerca de") toma el
+// nombre de la app. Lo fijamos a nivel de módulo, antes de whenReady, para que
+// el menú no muestre "Electron". En la app empaquetada manda productName del
+// electron-builder.yml; esto cubre además el modo desarrollo.
+app.setName('Bachi Draw')
+
 let mainWindow: BrowserWindow | null = null
 
 function createWindow(): void {

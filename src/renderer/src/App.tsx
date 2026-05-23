@@ -8,6 +8,7 @@ import { useEditorStore } from './core/diagram/editor/store'
 import { getKindDef } from './core/diagram/registry'
 import { useTheme } from './core/theme/useTheme'
 import { useCanvasBackground } from './core/theme/useCanvasBackground'
+import { useMinimapVisible } from './core/theme/useMinimapVisible'
 import { reconcileLayoutWithArchd } from './core/layout/kinds/cloud/reconcile'
 
 function filenameWithoutExt(path: string): string {
@@ -23,6 +24,7 @@ function App(): React.JSX.Element {
   const runIdRef = useRef(0)
   const { theme, toggleTheme } = useTheme()
   const { background, toggleBackground } = useCanvasBackground()
+  const { minimapVisible, toggleMinimap } = useMinimapVisible()
 
   // El estado del diagrama vive en el store. El viewport (zoom/pan/fit) lo
   // gestiona React Flow internamente, así que aquí ya no lo manejamos.
@@ -137,16 +139,18 @@ function App(): React.JSX.Element {
         diagramName={diagram?.name ?? ''}
         theme={theme}
         background={background}
+        minimapVisible={minimapVisible}
         onOpenFile={handleOpenFile}
         onSaveArchd={handleSaveArchd}
         onToggleTheme={toggleTheme}
         onToggleBackground={toggleBackground}
+        onToggleMinimap={toggleMinimap}
         canSave={Boolean(filePath && diagram)}
       />
       <main className="bachi-draw-main">
         <FiguresPanel />
         {Canvas && diagram ? (
-          <Canvas layout={diagram.layout} background={background} />
+          <Canvas layout={diagram.layout} background={background} minimapVisible={minimapVisible} />
         ) : (
           <div className="bachi-draw-canvas">
             <EmptyState />
