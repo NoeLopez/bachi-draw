@@ -42,6 +42,15 @@ export function useTheme(): UseThemeResult {
     applyTheme(theme)
   }, [theme])
 
+  // Sincroniza la apariencia NATIVA de la ventana con el tema. macOS dibuja los
+  // semáforos según esa apariencia; si el usuario fuerza un tema distinto al del
+  // SO, los botones quedan sin contraste. Con 'system' (sin override) la ventana
+  // sigue al SO; con override forzamos 'light'/'dark' para que coincidan.
+  useEffect(() => {
+    const source = stored ?? 'system'
+    window.bachiDraw?.setNativeTheme?.(source)?.catch(() => {})
+  }, [stored])
+
   // Escucha cambios de preferencia del sistema mientras no haya override.
   useEffect(() => {
     const mql = window.matchMedia?.('(prefers-color-scheme: dark)')

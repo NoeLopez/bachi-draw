@@ -27,11 +27,12 @@ test.afterEach(async () => {
   await fs.rm(pizarraPath, { force: true })
 })
 
-test('la pantalla inicial ofrece abrir diagrama y crear pizarra', async () => {
+test('la pantalla inicial ofrece crear diagrama, crear pizarra y abrir', async () => {
   const emptyState = page.locator('.bachi-draw-empty-state')
   await expect(emptyState).toBeVisible()
-  await expect(emptyState.getByText('Abrir diagrama .bachi')).toBeVisible()
+  await expect(emptyState.getByRole('button', { name: /Nuevo diagrama/ })).toBeVisible()
   await expect(emptyState.getByRole('button', { name: /Nueva pizarra/ })).toBeVisible()
+  await expect(emptyState.getByRole('button', { name: /Abrir un archivo/ })).toBeVisible()
 })
 
 test('cargar un .dark monta Excalidraw y oculta el panel de figuras', async () => {

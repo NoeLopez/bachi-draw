@@ -15,8 +15,11 @@ interface ToolbarProps {
   onToggleTheme: () => void
   onToggleBackground: () => void
   onToggleMinimap: () => void
+  figuresVisible: boolean
+  onToggleFigures: () => void
   codeEditorVisible: boolean
   onToggleCodeEditor: () => void
+  hasDocument: boolean
   canEditCode: boolean
   canSave: boolean
 }
@@ -118,6 +121,20 @@ const CODE_ICON = (
   </svg>
 )
 
+const FIGURES_ICON = (
+  <svg viewBox="0 0 20 20" width="15" height="15" fill="none" aria-hidden focusable="false">
+    <rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.4" />
+    <circle cx="14" cy="6.5" r="3.5" stroke="currentColor" strokeWidth="1.4" />
+    <path
+      d="M6.5 11.5l3.5 5.5h-7z"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinejoin="round"
+    />
+    <rect x="11" y="12" width="6" height="5" rx="1.5" stroke="currentColor" strokeWidth="1.4" />
+  </svg>
+)
+
 const SUN_ICON = (
   <svg viewBox="0 0 20 20" width="15" height="15" fill="none" aria-hidden focusable="false">
     <circle cx="10" cy="10" r="3.5" fill="currentColor" />
@@ -155,8 +172,11 @@ export default function Toolbar({
   onToggleTheme,
   onToggleBackground,
   onToggleMinimap,
+  figuresVisible,
+  onToggleFigures,
   codeEditorVisible,
   onToggleCodeEditor,
+  hasDocument,
   canEditCode,
   canSave
 }: ToolbarProps): React.JSX.Element {
@@ -165,8 +185,10 @@ export default function Toolbar({
 
   const nextThemeLabel = theme === 'dark' ? 'claro' : 'oscuro'
   const nextBackgroundLabel = background === 'dots' ? 'cuadrícula' : 'puntos'
-  // En la pizarra (Excalidraw) los controles de fondo/minimapa y el guardado de
-  // posiciones .bachid no aplican: el lienzo gestiona su propia escena.
+  // El chrome se adapta al contexto: sin documento no hay nada que guardar, editar
+  // ni configurar. La pizarra (Excalidraw) gestiona su propia escena, así que el
+  // editor de código DSL y los controles de fondo/minimapa solo aplican a cloud.
+  const isCloud = diagramKind === 'cloud'
   const isPizarra = diagramKind === 'pizarra'
   const saveTitle = isPizarra ? 'Guardar pizarra (.dark)' : 'Guardar posiciones en .bachid'
 
@@ -260,21 +282,35 @@ export default function Toolbar({
           {FOLDER_ICON}
           Abrir
         </button>
-        <button
-          type="button"
-          className="bachi-draw-hbtn"
-          onClick={onSaveArchd}
-          disabled={!canSave}
-          title={saveTitle}
-        >
-          {SAVE_ICON}
-          Guardar
-        </button>
+        {/* Guardar solo tiene sentido con un documento abierto. */}
+        {hasDocument && (
+          <button
+            type="button"
+            className="bachi-draw-hbtn"
+            onClick={onSaveArchd}
+            disabled={!canSave}
+            title={saveTitle}
+          >
+            {SAVE_ICON}
+            Guardar
+          </button>
+        )}
 
-        {/* El editor de código DSL solo aplica a diagramas .bachi, no a la pizarra */}
-        {!isPizarra && (
+        {/* Figuras y Código comparten un único muelle izquierdo: abrir uno cierra
+            el otro. Ambos solo aplican a diagramas cloud (.bachi). */}
+        {isCloud && (
           <>
             <span className="bachi-draw-header-vsep" />
+            <button
+              type="button"
+              className={`bachi-draw-hbtn${figuresVisible ? ' is-on' : ''}`}
+              onClick={onToggleFigures}
+              aria-pressed={figuresVisible}
+              title={figuresVisible ? 'Ocultar panel de figuras' : 'Mostrar panel de figuras'}
+            >
+              {FIGURES_ICON}
+              Figuras
+            </button>
             <button
               type="button"
               className={`bachi-draw-hbtn${codeEditorVisible ? ' is-on' : ''}`}
@@ -297,31 +333,33 @@ export default function Toolbar({
 
       {/* Controles de vista — derecha */}
       <div className="bachi-draw-header-right">
-        <div className="bachi-draw-seg" role="group" aria-label="Opciones de vista">
-          {/* Fondo y minimapa solo aplican al canvas cloud (React Flow) */}
-          {!isPizarra && (
-            <>
-              <button
-                type="button"
-                className="bachi-draw-seg-btn"
-                onClick={onToggleBackground}
-                title={`Cambiar fondo a ${nextBackgroundLabel}`}
-                aria-label={`Fondo: ${nextBackgroundLabel}`}
-              >
-                {background === 'dots' ? GRID_ICON : DOTS_ICON}
-              </button>
-              <button
-                type="button"
-                className={`bachi-draw-seg-btn${minimapVisible ? ' is-on' : ''}`}
-                onClick={onToggleMinimap}
-                title={minimapVisible ? 'Ocultar minimapa' : 'Mostrar minimapa'}
-                aria-pressed={minimapVisible}
-                aria-label="Minimapa"
-              >
-                {MAP_ICON}
-              </button>
-            </>
-          )}
+        {/* Fondo y minimapa solo aplican al canvas cloud (React Flow). */}
+        {isCloud && (
+          <div className="bachi-draw-seg" role="group" aria-label="Opciones de vista del lienzo">
+            <button
+              type="button"
+              className="bachi-draw-seg-btn"
+              onClick={onToggleBackground}
+              title={`Cambiar fondo a ${nextBackgroundLabel}`}
+              aria-label={`Fondo: ${nextBackgroundLabel}`}
+            >
+              {background === 'dots' ? GRID_ICON : DOTS_ICON}
+            </button>
+            <button
+              type="button"
+              className={`bachi-draw-seg-btn${minimapVisible ? ' is-on' : ''}`}
+              onClick={onToggleMinimap}
+              title={minimapVisible ? 'Ocultar minimapa' : 'Mostrar minimapa'}
+              aria-pressed={minimapVisible}
+              aria-label="Minimapa"
+            >
+              {MAP_ICON}
+            </button>
+          </div>
+        )}
+
+        {/* El tema es global: siempre disponible, también en la bienvenida. */}
+        <div className="bachi-draw-seg" role="group" aria-label="Tema">
           <button
             type="button"
             className="bachi-draw-seg-btn"

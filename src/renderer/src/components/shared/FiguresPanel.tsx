@@ -90,7 +90,18 @@ function buildGroups(query: string, provider: string): Group[] {
     })
 }
 
-export default function FiguresPanel(): React.JSX.Element {
+const CLOSE_ICON = (
+  <svg viewBox="0 0 14 14" width="13" height="13" aria-hidden focusable="false">
+    <path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+  </svg>
+)
+
+interface FiguresPanelProps {
+  /** Cierra el panel de figuras (el muelle izquierdo queda vacío). */
+  onClose?: () => void
+}
+
+export default function FiguresPanel({ onClose }: FiguresPanelProps): React.JSX.Element {
   const providers = useMemo(() => listProviders(), [])
   const [provider, setProvider] = useState(() => providers[0] ?? 'aws')
   const [query, setQuery] = useState('')
@@ -100,7 +111,20 @@ export default function FiguresPanel(): React.JSX.Element {
   return (
     <aside className="bachi-draw-figures">
       <header className="bachi-draw-figures-head">
-        <h2 className="bachi-draw-figures-title">Figuras</h2>
+        <div className="bachi-draw-figures-headrow">
+          <h2 className="bachi-draw-figures-title">Figuras</h2>
+          {onClose ? (
+            <button
+              type="button"
+              className="bachi-draw-figures-close"
+              onClick={onClose}
+              title="Ocultar panel de figuras"
+              aria-label="Ocultar panel de figuras"
+            >
+              {CLOSE_ICON}
+            </button>
+          ) : null}
+        </div>
         <div className="bachi-draw-figures-tabs" role="tablist">
           {providers.map((p) => (
             <button
