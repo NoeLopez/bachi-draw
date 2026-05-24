@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import BachiCodeEditor from './components/shared/BachiCodeEditor'
+import BachiCodeEditor, { type SaveState } from './components/shared/BachiCodeEditor'
 import EmptyState from './components/shared/EmptyState'
 import FiguresPanel from './components/shared/FiguresPanel'
 import StatusBar, { ReloadStatus } from './components/shared/StatusBar'
@@ -31,6 +31,8 @@ function App(): React.JSX.Element {
   const { codeEditorVisible, toggleCodeEditor, setCodeEditorVisible } = useCodeEditorVisible()
   // Timer del auto-guardado del DSL (debounce de escritura a disco).
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Estado del auto-guardado del .bachi, para el indicador del editor.
+  const [saveState, setSaveState] = useState<SaveState>('saved')
 
   // El estado del diagrama vive en el store. El viewport (zoom/pan/fit) lo
   // gestiona React Flow internamente, así que aquí ya no lo manejamos.
@@ -90,6 +92,8 @@ function App(): React.JSX.Element {
       // Si el contenido coincide con lo que ya tenemos en memoria, es el eco de
       // nuestro propio auto-guardado (o un cambio sin efecto): lo ignoramos.
       if (content === useEditorStore.getState().sourceContent) return
+      // Cambio externo (agente / edición manual): memoria y disco quedan en sync.
+      setSaveState('saved')
       void buildDiagram(content, path)
     })
     const offError = window.bachiDraw.onFileError(({ message }) => {
@@ -116,15 +120,24 @@ function App(): React.JSX.Element {
       void buildDiagram(next, path, undefined, { fit: false })
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
       saveTimerRef.current = setTimeout(() => {
-        window.bachiDraw.saveBachi(path, next).catch((err) => {
-          const message = err instanceof Error ? err.message : String(err)
-          setStatus('error')
-          setStatusMessage(message)
-        })
+        setSaveState('saving')
+        window.bachiDraw
+          .saveBachi(path, next)
+          .then(() => setSaveState('saved'))
+          .catch((err) => {
+            const message = err instanceof Error ? err.message : String(err)
+            setStatus('error')
+            setStatusMessage(message)
+          })
       }, 500)
     },
     [buildDiagram]
   )
+
+  // El editor avisa (sin debounce) que se escribió: marca "sin guardar".
+  const handleDirty = useCallback(() => {
+    setSaveState('pending')
+  }, [])
 
   // Limpia el timer de auto-guardado al desmontar.
   useEffect(() => {
@@ -137,6 +150,7 @@ function App(): React.JSX.Element {
     try {
       const opened = await window.bachiDraw.newDiagram()
       if (!opened) return
+      setSaveState('saved')
       void buildDiagram(opened.content, opened.path, opened.archd)
       // Diagrama recién creado (vacío): abrimos el editor para empezar a escribir.
       setCodeEditorVisible(true)
@@ -151,6 +165,7 @@ function App(): React.JSX.Element {
     try {
       const opened = await window.bachiDraw.newBoard()
       if (!opened) return
+      setSaveState('saved')
       void buildDiagram(opened.content, opened.path, opened.archd)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
@@ -162,6 +177,7 @@ function App(): React.JSX.Element {
   const handleOpenFile = useCallback(async () => {
     const opened = await window.bachiDraw.openFile()
     if (!opened) return
+    setSaveState('saved')
     void buildDiagram(opened.content, opened.path, opened.archd)
   }, [buildDiagram])
 
@@ -217,6 +233,17 @@ function App(): React.JSX.Element {
     return getKindDef(diagram.kind).Canvas
   }, [diagram])
 
+  // Ids conocidos (nodos + grupos) del último diagrama cloud parseado, para
+  // autocompletar edges y `in <id>` en el editor de código.
+  const knownIds = useMemo(() => {
+    if (!diagram || diagram.kind !== 'cloud') return []
+    const model = diagram.model as {
+      nodes?: Array<{ id: string }>
+      clusters?: Array<{ id: string }>
+    }
+    return [...(model.nodes ?? []).map((n) => n.id), ...(model.clusters ?? []).map((c) => c.id)]
+  }, [diagram])
+
   // La pizarra (Excalidraw) no usa panel de figuras, editor de código DSL ni el
   // .bachid; esos elementos son exclusivos de los diagramas cloud.
   const isPizarra = diagram?.kind === 'pizarra'
@@ -247,8 +274,11 @@ function App(): React.JSX.Element {
           <BachiCodeEditor
             source={sourceContent ?? ''}
             onChange={handleSourceChange}
+            onDirty={handleDirty}
             onClose={() => setCodeEditorVisible(false)}
             errorMessage={status === 'error' ? statusMessage : null}
+            saveState={saveState}
+            knownIds={knownIds}
           />
         ) : null}
         {Canvas && diagram ? (
