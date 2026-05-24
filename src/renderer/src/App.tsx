@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import BachiCodeEditor from './components/shared/BachiCodeEditor'
 import EmptyState from './components/shared/EmptyState'
 import FiguresPanel from './components/shared/FiguresPanel'
 import StatusBar, { ReloadStatus } from './components/shared/StatusBar'
@@ -9,6 +10,7 @@ import { getKindDef } from './core/diagram/registry'
 import { useTheme } from './core/theme/useTheme'
 import { useCanvasBackground } from './core/theme/useCanvasBackground'
 import { useMinimapVisible } from './core/theme/useMinimapVisible'
+import { useCodeEditorVisible } from './core/theme/useCodeEditorVisible'
 import { reconcileLayoutWithArchd } from './core/layout/kinds/cloud/reconcile'
 
 function filenameWithoutExt(path: string): string {
@@ -25,15 +27,19 @@ function App(): React.JSX.Element {
   const { theme, toggleTheme } = useTheme()
   const { background, toggleBackground } = useCanvasBackground()
   const { minimapVisible, toggleMinimap } = useMinimapVisible()
+  const { codeEditorVisible, toggleCodeEditor, setCodeEditorVisible } = useCodeEditorVisible()
+  // Timer del auto-guardado del DSL (debounce de escritura a disco).
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // El estado del diagrama vive en el store. El viewport (zoom/pan/fit) lo
   // gestiona React Flow internamente, así que aquí ya no lo manejamos.
   const diagram = useEditorStore((s) => s.diagram)
   const filePath = useEditorStore((s) => s.filePath)
+  const sourceContent = useEditorStore((s) => s.sourceContent)
   const setDiagramInStore = useEditorStore((s) => s.setDiagram)
 
   const buildDiagram = useCallback(
-    async (content: string, path: string, archd?: any): Promise<void> => {
+    async (content: string, path: string, archd?: any, opts?: { fit?: boolean }): Promise<void> => {
       const runId = ++runIdRef.current
       setStatus('reloading')
       setStatusMessage(undefined)
@@ -59,7 +65,8 @@ function App(): React.JSX.Element {
         setDiagramInStore(
           { kind, model, layout, name, bounds: def.getBounds(layout) },
           path,
-          content
+          content,
+          { fit: opts?.fit ?? true }
         )
         setLastReloadMs(Math.round(performance.now() - start))
         setStatus('ok')
@@ -76,6 +83,9 @@ function App(): React.JSX.Element {
 
   useEffect(() => {
     const offChanged = window.bachiDraw.onFileChanged(({ path, content }) => {
+      // Si el contenido coincide con lo que ya tenemos en memoria, es el eco de
+      // nuestro propio auto-guardado (o un cambio sin efecto): lo ignoramos.
+      if (content === useEditorStore.getState().sourceContent) return
       void buildDiagram(content, path)
     })
     const offError = window.bachiDraw.onFileError(({ message }) => {
@@ -93,17 +103,45 @@ function App(): React.JSX.Element {
     }
   }, [buildDiagram])
 
+  // Edición en vivo desde el editor de código: redibuja el diagrama sin
+  // reencuadrar (fit:false) y auto-guarda el .bachi a disco con debounce.
+  const handleSourceChange = useCallback(
+    (next: string) => {
+      const path = useEditorStore.getState().filePath
+      if (!path) return
+      void buildDiagram(next, path, undefined, { fit: false })
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+      saveTimerRef.current = setTimeout(() => {
+        window.bachiDraw.saveBachi(path, next).catch((err) => {
+          const message = err instanceof Error ? err.message : String(err)
+          setStatus('error')
+          setStatusMessage(message)
+        })
+      }, 500)
+    },
+    [buildDiagram]
+  )
+
+  // Limpia el timer de auto-guardado al desmontar.
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    }
+  }, [])
+
   const handleNewDiagram = useCallback(async () => {
     try {
       const opened = await window.bachiDraw.newDiagram()
       if (!opened) return
       void buildDiagram(opened.content, opened.path, opened.archd)
+      // Diagrama recién creado (vacío): abrimos el editor para empezar a escribir.
+      setCodeEditorVisible(true)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       setStatus('error')
       setStatusMessage(message)
     }
-  }, [buildDiagram])
+  }, [buildDiagram, setCodeEditorVisible])
 
   const handleNewBoard = useCallback(async () => {
     try {
@@ -171,10 +209,21 @@ function App(): React.JSX.Element {
         onToggleTheme={toggleTheme}
         onToggleBackground={toggleBackground}
         onToggleMinimap={toggleMinimap}
+        codeEditorVisible={codeEditorVisible}
+        onToggleCodeEditor={toggleCodeEditor}
+        canEditCode={Boolean(filePath && diagram)}
         canSave={Boolean(filePath && diagram)}
       />
       <main className="bachi-draw-main">
         <FiguresPanel />
+        {codeEditorVisible && diagram ? (
+          <BachiCodeEditor
+            source={sourceContent ?? ''}
+            onChange={handleSourceChange}
+            onClose={() => setCodeEditorVisible(false)}
+            errorMessage={status === 'error' ? statusMessage : null}
+          />
+        ) : null}
         {Canvas && diagram ? (
           <Canvas layout={diagram.layout} background={background} minimapVisible={minimapVisible} />
         ) : (

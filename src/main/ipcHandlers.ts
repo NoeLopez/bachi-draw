@@ -1,7 +1,7 @@
 import { BrowserWindow, dialog, ipcMain } from 'electron'
 import path from 'path'
 import { archdPathFor, readJsonIfExists, readText, writeJson, writeText } from './fileManager'
-import { stopWatching, watchArchFile } from './fileWatcher'
+import { muteWatcher, stopWatching, watchArchFile } from './fileWatcher'
 
 export interface OpenedFilePayload {
   path: string
@@ -37,6 +37,17 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
       const archd = archdPathFor(payload.archPath)
       await writeJson(archd, payload.data)
       return { path: archd }
+    }
+  )
+
+  // Auto-guardado del DSL desde el editor de código. Silencia el watcher antes
+  // de escribir para que el cambio no rebote como una edición externa.
+  ipcMain.handle(
+    'save-bachi',
+    async (_event, payload: { path: string; content: string }): Promise<{ path: string }> => {
+      muteWatcher()
+      await writeText(payload.path, payload.content)
+      return { path: payload.path }
     }
   )
 

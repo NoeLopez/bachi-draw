@@ -35,8 +35,17 @@ export interface EditorState {
    * reload). El canvas lo usa para re-sembrar y reencuadrar solo entonces; las
    * ediciones del usuario (updateLayout) no lo tocan, así el zoom se conserva. */
   externalRev: number
+  /** Si la próxima re-siembra (al cambiar externalRev) debe reencuadrar con
+   * fitView. El editor de código en vivo la pone en false: re-siembra los
+   * nodos del nuevo DSL pero conserva zoom/pan para no saltar en cada tecla. */
+  fitOnSeed: boolean
 
-  setDiagram: (diagram: DiagramData, filePath: string, sourceContent: string) => void
+  setDiagram: (
+    diagram: DiagramData,
+    filePath: string,
+    sourceContent: string,
+    opts?: { fit?: boolean }
+  ) => void
   clearDiagram: () => void
   updateLayout: (layout: unknown, bounds: { width: number; height: number }) => void
   markDirty: () => void
@@ -50,13 +59,15 @@ export const useEditorStore = create<EditorState>()(
     sourceContent: null,
     dirty: false,
     externalRev: 0,
+    fitOnSeed: true,
 
-    setDiagram: (diagram, filePath, sourceContent) => {
+    setDiagram: (diagram, filePath, sourceContent, opts) => {
       set((state) => {
         state.diagram = diagram
         state.filePath = filePath
         state.sourceContent = sourceContent
         state.dirty = false
+        state.fitOnSeed = opts?.fit ?? true
         // Layout externo: dispara la re-siembra/encuadre del canvas.
         state.externalRev += 1
       })

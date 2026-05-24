@@ -111,6 +111,13 @@
   border-color: var(--border-strong);
 }
 
+/* Estado activo (toggle pulsado), p. ej. el editor de código abierto. */
+.bachi-draw-hbtn.is-on {
+  background: var(--accent);
+  border-color: transparent;
+  color: #fff;
+}
+
 .bachi-draw-hbtn svg {
   flex-shrink: 0;
   color: var(--text-1);
@@ -120,6 +127,10 @@
 .bachi-draw-hbtn:hover:not(:disabled) svg,
 .bachi-draw-hbtn.is-open svg {
   color: var(--text-0);
+}
+
+.bachi-draw-hbtn.is-on svg {
+  color: #fff;
 }
 
 /* ── Dropdown "Nuevo" ── */
@@ -687,6 +698,123 @@
      que se transforma con el viewport. Aquí solo el color base. */
   background: var(--bg-0);
   overflow: hidden;
+}
+
+/* ── Editor de código .bachi (panel lateral, estilo Mermaid) ──────────────── */
+
+.bachi-draw-code {
+  flex: 0 0 420px;
+  width: 420px;
+  min-width: 420px;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--bg-1);
+  border-right: 1px solid var(--border);
+}
+
+.bachi-draw-code-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 34px;
+  padding: 0 8px 0 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.bachi-draw-code-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-1);
+  letter-spacing: 0.2px;
+}
+
+.bachi-draw-code-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  color: var(--text-2);
+  transition:
+    background 100ms ease,
+    color 100ms ease;
+}
+
+.bachi-draw-code-close:hover {
+  background: var(--bg-2);
+  color: var(--text-0);
+}
+
+/* Cuerpo: medianil de líneas + textarea, comparten la misma métrica. */
+.bachi-draw-code-body {
+  flex: 1 1 auto;
+  display: flex;
+  min-height: 0;
+  /* Métricas compartidas por el medianil y el textarea. */
+  --code-font: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+  --code-size: 12.5px;
+  --code-line: 1.6;
+  --code-pad-y: 10px;
+}
+
+.bachi-draw-code-gutter {
+  flex: 0 0 auto;
+  overflow: hidden;
+  padding: var(--code-pad-y) 8px var(--code-pad-y) 10px;
+  text-align: right;
+  background: var(--bg-1);
+  border-right: 1px solid var(--border);
+  user-select: none;
+  font-family: var(--code-font);
+  font-size: var(--code-size);
+  line-height: var(--code-line);
+  color: var(--text-2);
+}
+
+.bachi-draw-code-lineno {
+  font-variant-numeric: tabular-nums;
+}
+
+.bachi-draw-code-textarea {
+  flex: 1 1 auto;
+  min-width: 0;
+  resize: none;
+  border: 0;
+  outline: none;
+  padding: var(--code-pad-y) 12px;
+  background: var(--bg-1);
+  color: var(--text-0);
+  font-family: var(--code-font);
+  font-size: var(--code-size);
+  line-height: var(--code-line);
+  tab-size: 2;
+  white-space: pre;
+  overflow: auto;
+}
+
+.bachi-draw-code-textarea::placeholder {
+  color: var(--text-2);
+  opacity: 0.7;
+}
+
+/* Banda de error de parseo al pie del editor. */
+.bachi-draw-code-error {
+  flex: 0 0 auto;
+  max-height: 30%;
+  overflow: auto;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+  background: color-mix(in oklab, var(--danger) 12%, var(--bg-1));
+  color: var(--danger);
+  font-family: var(--code-font, monospace);
+  font-size: 11.5px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .bachi-draw-viewport {

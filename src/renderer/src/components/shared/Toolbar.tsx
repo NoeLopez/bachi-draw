@@ -14,6 +14,9 @@ interface ToolbarProps {
   onToggleTheme: () => void
   onToggleBackground: () => void
   onToggleMinimap: () => void
+  codeEditorVisible: boolean
+  onToggleCodeEditor: () => void
+  canEditCode: boolean
   canSave: boolean
 }
 
@@ -105,6 +108,15 @@ const MAP_ICON = (
   </svg>
 )
 
+const CODE_ICON = (
+  <svg viewBox="0 0 20 20" width="15" height="15" fill="none" aria-hidden focusable="false">
+    <g stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M7 6l-4 4 4 4" />
+      <path d="M13 6l4 4-4 4" />
+    </g>
+  </svg>
+)
+
 const SUN_ICON = (
   <svg viewBox="0 0 20 20" width="15" height="15" fill="none" aria-hidden focusable="false">
     <circle cx="10" cy="10" r="3.5" fill="currentColor" />
@@ -141,6 +153,9 @@ export default function Toolbar({
   onToggleTheme,
   onToggleBackground,
   onToggleMinimap,
+  codeEditorVisible,
+  onToggleCodeEditor,
+  canEditCode,
   canSave
 }: ToolbarProps): React.JSX.Element {
   const [newMenuOpen, setNewMenuOpen] = useState(false)
@@ -248,6 +263,20 @@ export default function Toolbar({
         >
           {SAVE_ICON}
           Guardar
+        </button>
+
+        <span className="bachi-draw-header-vsep" />
+
+        <button
+          type="button"
+          className={`bachi-draw-hbtn${codeEditorVisible ? ' is-on' : ''}`}
+          onClick={onToggleCodeEditor}
+          disabled={!canEditCode}
+          aria-pressed={codeEditorVisible}
+          title={codeEditorVisible ? 'Ocultar editor de código' : 'Mostrar editor de código'}
+        >
+          {CODE_ICON}
+          Código
         </button>
       </div>
 
