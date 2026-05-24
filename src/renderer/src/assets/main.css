@@ -761,10 +761,9 @@
 /* ── Editor de código .bachi (panel lateral, estilo Mermaid) ──────────────── */
 
 .bachi-draw-code {
-  flex: 0 0 420px;
-  width: 420px;
-  min-width: 420px;
-  max-width: 420px;
+  /* El ancho lo fija el componente (inline style) y es redimensionable. */
+  position: relative;
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -777,6 +776,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   height: 34px;
   padding: 0 8px 0 12px;
   border-bottom: 1px solid var(--border);
@@ -787,6 +787,52 @@
   font-weight: 600;
   color: var(--text-1);
   letter-spacing: 0.2px;
+}
+
+.bachi-draw-code-head-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Indicador de guardado del .bachi. */
+.bachi-draw-code-save {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-2);
+  user-select: none;
+  white-space: nowrap;
+}
+
+.bachi-draw-code-save-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-2);
+  flex-shrink: 0;
+  transition: background 200ms ease;
+}
+
+.bachi-draw-code-save-saved {
+  color: var(--success);
+}
+.bachi-draw-code-save-saved .bachi-draw-code-save-dot {
+  background: var(--success);
+}
+.bachi-draw-code-save-pending {
+  color: var(--text-2);
+}
+.bachi-draw-code-save-pending .bachi-draw-code-save-dot {
+  background: var(--warn);
+}
+.bachi-draw-code-save-saving {
+  color: var(--warn);
+}
+.bachi-draw-code-save-saving .bachi-draw-code-save-dot {
+  background: var(--warn);
+  animation: bachi-status-pulse 1s ease-in-out infinite;
 }
 
 .bachi-draw-code-close {
@@ -812,11 +858,33 @@
   flex: 1 1 auto;
   display: flex;
   min-height: 0;
-  /* Métricas compartidas por el medianil y el textarea. */
+  /* Métricas compartidas por el medianil, la capa de resaltado y el textarea.
+     DEBEN ser idénticas en los tres para que el texto quede alineado. */
   --code-font: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
   --code-size: 12.5px;
   --code-line: 1.6;
   --code-pad-y: 10px;
+  --code-pad-x: 12px;
+  /* Paleta de tokens (tema claro). */
+  --code-comment: #8a91a0;
+  --code-keyword: #7c3aed;
+  --code-arrow: #c2410c;
+  --code-type: #0e7490;
+  --code-label: #15803d;
+  --code-string: #15803d;
+  --code-punct: #9aa1ad;
+  --code-ident: var(--text-0);
+}
+
+[data-theme='dark'] .bachi-draw-code-body {
+  --code-comment: #6b7280;
+  --code-keyword: #c4b5fd;
+  --code-arrow: #fdba74;
+  --code-type: #67e8f9;
+  --code-label: #86efac;
+  --code-string: #86efac;
+  --code-punct: #6b7280;
+  --code-ident: var(--text-0);
 }
 
 .bachi-draw-code-gutter {
@@ -837,26 +905,112 @@
   font-variant-numeric: tabular-nums;
 }
 
-.bachi-draw-code-textarea {
+.bachi-draw-code-lineno.is-error {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+/* Área de edición: contenedor relativo donde se superponen la capa de
+   resaltado (detrás) y el textarea transparente (delante). */
+.bachi-draw-code-editarea {
+  position: relative;
   flex: 1 1 auto;
   min-width: 0;
-  resize: none;
+  overflow: hidden;
+}
+
+/* Métricas idénticas para resaltado y textarea (mixin via doble selector). */
+.bachi-draw-code-highlight,
+.bachi-draw-code-textarea {
+  position: absolute;
+  inset: 0;
+  margin: 0;
   border: 0;
-  outline: none;
-  padding: var(--code-pad-y) 12px;
-  background: var(--bg-1);
-  color: var(--text-0);
+  padding: var(--code-pad-y) var(--code-pad-x);
   font-family: var(--code-font);
   font-size: var(--code-size);
   line-height: var(--code-line);
+  letter-spacing: normal;
   tab-size: 2;
   white-space: pre;
+  word-wrap: normal;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+/* Capa de resaltado: solo visual, no captura eventos. Contiene una línea por
+   cada renglón para poder marcar la línea de error como un bloque. */
+.bachi-draw-code-highlight {
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--bg-1);
+  color: var(--code-ident);
+}
+
+.bachi-draw-code-line {
+  /* Ancho al contenido (con mínimo el del área) para que el scroll horizontal y
+     el fondo de la línea de error funcionen igual que el textarea. */
+  width: max-content;
+  min-width: 100%;
+  white-space: pre;
+}
+
+.bachi-draw-code-line.is-error {
+  background: color-mix(in oklab, var(--danger) 16%, transparent);
+  /* Sutil marca a la izquierda para reforzar la línea con error. */
+  box-shadow: inset 2px 0 0 var(--danger);
+}
+
+/* Textarea por encima: texto transparente (solo se ve el caret y la selección);
+   los colores los aporta la capa de resaltado de debajo. */
+.bachi-draw-code-textarea {
+  resize: none;
+  outline: none;
   overflow: auto;
+  background: transparent;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  caret-color: var(--text-0);
+}
+
+.bachi-draw-code-textarea::selection {
+  background: color-mix(in oklab, var(--accent) 30%, transparent);
 }
 
 .bachi-draw-code-textarea::placeholder {
   color: var(--text-2);
+  -webkit-text-fill-color: var(--text-2);
   opacity: 0.7;
+}
+
+/* ── Colores de tokens del DSL ── */
+.bachi-tok-comment {
+  color: var(--code-comment);
+  font-style: italic;
+}
+.bachi-tok-keyword {
+  color: var(--code-keyword);
+  font-weight: 600;
+}
+.bachi-tok-arrow {
+  color: var(--code-arrow);
+  font-weight: 600;
+}
+.bachi-tok-type {
+  color: var(--code-type);
+}
+.bachi-tok-label {
+  color: var(--code-label);
+}
+.bachi-tok-string {
+  color: var(--code-string);
+}
+.bachi-tok-colon,
+.bachi-tok-punct {
+  color: var(--code-punct);
+}
+.bachi-tok-ident {
+  color: var(--code-ident);
 }
 
 /* Banda de error de parseo al pie del editor. */
@@ -873,6 +1027,70 @@
   line-height: 1.45;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+/* Tirador de redimensionado en el borde derecho del panel. */
+.bachi-draw-code-resize {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 5;
+  touch-action: none;
+}
+
+.bachi-draw-code-resize:hover {
+  background: color-mix(in oklab, var(--accent) 40%, transparent);
+}
+
+/* Durante el arrastre: cursor global y sin selección de texto accidental. */
+body.bachi-col-resizing {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+/* ── Dropdown de autocompletado ── */
+.bachi-draw-code-suggest {
+  position: absolute;
+  z-index: 10;
+  margin: 2px 0 0;
+  padding: 4px;
+  list-style: none;
+  min-width: 160px;
+  max-width: 320px;
+  max-height: 220px;
+  overflow-y: auto;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow:
+    0 8px 28px rgba(0, 0, 0, 0.16),
+    0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme='dark'] .bachi-draw-code-suggest {
+  box-shadow:
+    0 8px 28px rgba(0, 0, 0, 0.45),
+    0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.bachi-draw-code-suggest-item {
+  padding: 4px 8px;
+  border-radius: 5px;
+  font-family: var(--code-font, monospace);
+  font-size: 12px;
+  color: var(--text-0);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.bachi-draw-code-suggest-item.is-active,
+.bachi-draw-code-suggest-item:hover {
+  background: color-mix(in oklab, var(--accent) 14%, var(--bg-2));
 }
 
 .bachi-draw-viewport {
