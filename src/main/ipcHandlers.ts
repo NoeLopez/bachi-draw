@@ -28,6 +28,15 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     nativeTheme.themeSource = source
   })
 
+  // Pantalla completa "simple" (sin crear un espacio nativo de macOS) para el
+  // modo presentación. Best-effort: si no hay ventana, no hace nada.
+  ipcMain.handle('enter-presentation', (): void => {
+    getWindow()?.setSimpleFullScreen(true)
+  })
+  ipcMain.handle('exit-presentation', (): void => {
+    getWindow()?.setSimpleFullScreen(false)
+  })
+
   ipcMain.handle('open-file-dialog', async (): Promise<OpenedFilePayload | null> => {
     const win = getWindow()
     if (!win) return null

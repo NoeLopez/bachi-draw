@@ -4,6 +4,7 @@ import EmptyState from './components/shared/EmptyState'
 import FiguresPanel from './components/shared/FiguresPanel'
 import StatusBar, { ReloadStatus } from './components/shared/StatusBar'
 import Toolbar from './components/shared/Toolbar'
+import PresentationOverlay from './components/shared/PresentationOverlay'
 import { detectKind } from './core/diagram/dispatcher'
 import { useEditorStore } from './core/diagram/editor/store'
 import { getKindDef } from './core/diagram/registry'
@@ -33,6 +34,8 @@ function App(): React.JSX.Element {
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Estado del auto-guardado del .bachi, para el indicador del editor.
   const [saveState, setSaveState] = useState<SaveState>('saved')
+  // Modo presentación: oculta todo el chrome de edición y deja el lienzo limpio.
+  const [presentationMode, setPresentationMode] = useState(false)
 
   // El estado del diagrama vive en el store. El viewport (zoom/pan/fit) lo
   // gestiona React Flow internamente, así que aquí ya no lo manejamos.
@@ -251,32 +254,77 @@ function App(): React.JSX.Element {
     return [...(model.nodes ?? []).map((n) => n.id), ...(model.clusters ?? []).map((c) => c.id)]
   }, [diagram])
 
+  // Entrar/salir del modo presentación. Leemos el diagrama del store (no de la
+  // clausura) para que los callbacks sean estables. La pantalla completa nativa
+  // es best-effort: si falla (o no está disponible), el modo igual funciona.
+  const enterPresentation = useCallback(() => {
+    if (!useEditorStore.getState().diagram) return
+    setPresentationMode(true)
+    window.bachiDraw.enterPresentation?.().catch(() => {})
+  }, [])
+
+  const exitPresentation = useCallback(() => {
+    setPresentationMode(false)
+    window.bachiDraw.exitPresentation?.().catch(() => {})
+  }, [])
+
+  // Atajos: F5 entra (si hay diagrama), Cmd/Ctrl+Shift+P alterna, Escape sale.
+  // Capturamos en fase de captura para tener prioridad sobre otros Escape.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'F5') {
+        e.preventDefault()
+        enterPresentation()
+        return
+      }
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'p') {
+        e.preventDefault()
+        if (presentationMode) exitPresentation()
+        else enterPresentation()
+        return
+      }
+      if (e.key === 'Escape' && presentationMode) {
+        e.preventDefault()
+        e.stopPropagation()
+        exitPresentation()
+      }
+    }
+    window.addEventListener('keydown', onKey, { capture: true })
+    return () => window.removeEventListener('keydown', onKey, { capture: true })
+  }, [presentationMode, enterPresentation, exitPresentation])
+
   return (
-    <div className="bachi-draw-app">
-      <Toolbar
-        diagramName={diagram?.name ?? ''}
-        diagramKind={diagram?.kind ?? null}
-        theme={theme}
-        background={background}
-        minimapVisible={minimapVisible}
-        onNewDiagram={handleNewDiagram}
-        onNewBoard={handleNewBoard}
-        onOpenFile={handleOpenFile}
-        onSaveArchd={handleSaveArchd}
-        onToggleTheme={toggleTheme}
-        onToggleBackground={toggleBackground}
-        onToggleMinimap={toggleMinimap}
-        figuresVisible={leftPanel === 'figures'}
-        onToggleFigures={toggleFigures}
-        codeEditorVisible={leftPanel === 'code'}
-        onToggleCodeEditor={toggleCode}
-        hasDocument={hasDocument}
-        canEditCode={Boolean(filePath && isCloud)}
-        canSave={Boolean(filePath && diagram)}
-      />
+    <div className={`bachi-draw-app${presentationMode ? ' is-presenting' : ''}`}>
+      {/* En modo presentación se oculta todo el chrome de edición. */}
+      {!presentationMode && (
+        <Toolbar
+          diagramName={diagram?.name ?? ''}
+          diagramKind={diagram?.kind ?? null}
+          theme={theme}
+          background={background}
+          minimapVisible={minimapVisible}
+          onNewDiagram={handleNewDiagram}
+          onNewBoard={handleNewBoard}
+          onOpenFile={handleOpenFile}
+          onSaveArchd={handleSaveArchd}
+          onToggleTheme={toggleTheme}
+          onToggleBackground={toggleBackground}
+          onToggleMinimap={toggleMinimap}
+          figuresVisible={leftPanel === 'figures'}
+          onToggleFigures={toggleFigures}
+          codeEditorVisible={leftPanel === 'code'}
+          onToggleCodeEditor={toggleCode}
+          onPresent={enterPresentation}
+          hasDocument={hasDocument}
+          canEditCode={Boolean(filePath && isCloud)}
+          canSave={Boolean(filePath && diagram)}
+        />
+      )}
       <main className="bachi-draw-main">
-        {isCloud && leftPanel === 'figures' && <FiguresPanel onClose={toggleFigures} />}
-        {isCloud && leftPanel === 'code' ? (
+        {!presentationMode && isCloud && leftPanel === 'figures' && (
+          <FiguresPanel onClose={toggleFigures} />
+        )}
+        {!presentationMode && isCloud && leftPanel === 'code' ? (
           <BachiCodeEditor
             source={sourceContent ?? ''}
             onChange={handleSourceChange}
@@ -288,7 +336,12 @@ function App(): React.JSX.Element {
           />
         ) : null}
         {Canvas && diagram ? (
-          <Canvas layout={diagram.layout} background={background} minimapVisible={minimapVisible} />
+          <Canvas
+            layout={diagram.layout}
+            background={background}
+            minimapVisible={minimapVisible}
+            presentationMode={presentationMode}
+          />
         ) : (
           <div className="bachi-draw-canvas">
             <EmptyState
@@ -299,13 +352,16 @@ function App(): React.JSX.Element {
           </div>
         )}
       </main>
-      <StatusBar
-        filePath={filePath}
-        stats={stats}
-        status={status}
-        message={statusMessage}
-        lastReloadMs={lastReloadMs}
-      />
+      {!presentationMode && (
+        <StatusBar
+          filePath={filePath}
+          stats={stats}
+          status={status}
+          message={statusMessage}
+          lastReloadMs={lastReloadMs}
+        />
+      )}
+      {presentationMode && <PresentationOverlay onExit={exitPresentation} />}
     </div>
   )
 }

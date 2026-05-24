@@ -246,7 +246,8 @@ function getLayoutBounds(layout: LayoutResult): { width: number; height: number 
 function CloudCanvasInner({
   layout,
   background = 'dots',
-  minimapVisible = false
+  minimapVisible = false,
+  presentationMode = false
 }: CanvasProps<LayoutResult>): React.JSX.Element {
   const [nodes, setNodes, onNodesChange] = useNodesState<CloudFlowNode>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge<CloudEdgeData>>([])
@@ -321,6 +322,14 @@ function CloudCanvasInner({
     return () => cancelAnimationFrame(rafId)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [externalRev])
+
+  // Al ENTRAR en modo presentación, encuadra el diagrama para una vista limpia y
+  // centrada. En uso normal no toca el viewport (el usuario conserva zoom/pan).
+  useEffect(() => {
+    if (!presentationMode) return
+    const rafId = requestAnimationFrame(() => fitView({ padding: 0.08, duration: 400 }))
+    return () => cancelAnimationFrame(rafId)
+  }, [presentationMode, fitView])
 
   // Crear arista al soltar una conexión entre handles.
   const onConnect = useCallback(
@@ -658,11 +667,17 @@ function CloudCanvasInner({
         onReconnectStart={onReconnectStart}
         onReconnect={onReconnect}
         onReconnectEnd={onReconnectEnd}
-        onNodeDoubleClick={onNodeDoubleClick}
+        onNodeDoubleClick={presentationMode ? undefined : onNodeDoubleClick}
         onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
+        // En modo presentación el lienzo es solo-lectura: nada de mover, conectar,
+        // seleccionar ni reconectar. Solo queda navegar (pan/zoom).
+        nodesDraggable={!presentationMode}
+        nodesConnectable={!presentationMode}
+        elementsSelectable={!presentationMode}
+        edgesReconnectable={!presentationMode}
         connectionMode={ConnectionMode.Loose}
         // Radio amplio: al soltar una conexión, React Flow engancha al handle
         // más cercano dentro de este radio. 60px cubre desde el centro de un
@@ -674,8 +689,10 @@ function CloudCanvasInner({
         //  - Botón izquierdo arrastrando en vacío → caja de selección grupal.
         //  - Botón derecho (código 2) arrastrando → pan del lienzo (la manito).
         //  - Selección parcial: la caja selecciona todo lo que toca.
-        panOnDrag={[2]}
-        selectionOnDrag
+        // En presentación, arrastrar con el botón izquierdo hace pan (modo visor)
+        // y no hay caja de selección. En edición: izq = selección, der = pan.
+        panOnDrag={presentationMode ? true : [2]}
+        selectionOnDrag={!presentationMode}
         selectionMode={SelectionMode.Partial}
         // Rueda del ratón → desplazar el lienzo (pan vertical/horizontal), no zoom.
         // Ctrl/Cmd + rueda → zoom (estilo Figma/Lucid). El pinch del trackpad
@@ -692,7 +709,8 @@ function CloudCanvasInner({
           // Los puntos necesitan un radio algo mayor para leerse; las líneas, 1px.
           size={background === 'lines' ? 1 : 1.6}
         />
-        <Controls />
+        {/* Los controles de zoom son chrome de edición: se ocultan al presentar. */}
+        {!presentationMode ? <Controls /> : null}
         {/* Minimapa opcional (preferencia persistente). Abajo-izquierda, justo a
             la derecha de los Controls (anulamos el margen y lo desplazamos con
             left para que queden uno al lado del otro sin solaparse). Como el
@@ -709,17 +727,19 @@ function CloudCanvasInner({
         <AlignmentGuides guides={guides} />
       </ReactFlow>
 
-      {/* Panel inspector contextual (superpuesto a la derecha). */}
-      <CloudInspector
-        serviceNode={inspectorServiceNode}
-        shapeNode={inspectorShapeNode}
-        edge={inspectorEdge}
-        onEditConnectionPoints={(id) => setEditorNodeId(id)}
-        onToggleJumps={toggleJumps}
-        onSetEdgeStyle={(id, style) => setEdgeData(id, { style })}
-        onSetEdgeDirection={(id, direction) => setEdgeData(id, { direction })}
-        onSetShapeData={setShapeData}
-      />
+      {/* Panel inspector contextual (superpuesto a la derecha). Oculto al presentar. */}
+      {!presentationMode && (
+        <CloudInspector
+          serviceNode={inspectorServiceNode}
+          shapeNode={inspectorShapeNode}
+          edge={inspectorEdge}
+          onEditConnectionPoints={(id) => setEditorNodeId(id)}
+          onToggleJumps={toggleJumps}
+          onSetEdgeStyle={(id, style) => setEdgeData(id, { style })}
+          onSetEdgeDirection={(id, direction) => setEdgeData(id, { direction })}
+          onSetShapeData={setShapeData}
+        />
+      )}
 
       {/* Modal de edición de puntos de conexión. */}
       {editorNodeId
