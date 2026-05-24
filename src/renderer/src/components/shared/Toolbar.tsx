@@ -19,6 +19,7 @@ interface ToolbarProps {
   onToggleFigures: () => void
   codeEditorVisible: boolean
   onToggleCodeEditor: () => void
+  onPresent: () => void
   hasDocument: boolean
   canEditCode: boolean
   canSave: boolean
@@ -157,6 +158,21 @@ const MOON_ICON = (
   </svg>
 )
 
+const PRESENT_ICON = (
+  <svg viewBox="0 0 20 20" width="15" height="15" fill="none" aria-hidden focusable="false">
+    <rect
+      x="2.5"
+      y="3.5"
+      width="15"
+      height="10"
+      rx="1.5"
+      stroke="currentColor"
+      strokeWidth="1.35"
+    />
+    <path d="M7 16.5h6M10 13.5v3" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
+  </svg>
+)
+
 /* ── Componente ─────────────────────────────────────────────────────────── */
 
 export default function Toolbar({
@@ -176,6 +192,7 @@ export default function Toolbar({
   onToggleFigures,
   codeEditorVisible,
   onToggleCodeEditor,
+  onPresent,
   hasDocument,
   canEditCode,
   canSave
@@ -333,6 +350,19 @@ export default function Toolbar({
 
       {/* Controles de vista — derecha */}
       <div className="bachi-draw-header-right">
+        {/* Presentar: vista limpia a pantalla completa. Solo con documento. */}
+        {hasDocument && (
+          <button
+            type="button"
+            className="bachi-draw-hbtn"
+            onClick={onPresent}
+            title="Presentar (F5) — vista limpia para reuniones"
+          >
+            {PRESENT_ICON}
+            Presentar
+          </button>
+        )}
+
         {/* Fondo y minimapa solo aplican al canvas cloud (React Flow). */}
         {isCloud && (
           <div className="bachi-draw-seg" role="group" aria-label="Opciones de vista del lienzo">

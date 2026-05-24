@@ -2035,3 +2035,79 @@ body.bachi-col-resizing {
 .pizarra-canvas-wrapper .excalidraw {
   height: 100%;
 }
+
+/* ─────────────────────── Modo presentación ──────────────────── */
+
+/* Vista limpia: sin chrome de edición. Los handles de conexión se ocultan del
+   todo (además de quedar inertes por nodesConnectable=false). */
+.bachi-draw-app.is-presenting .react-flow__handle {
+  display: none !important;
+}
+
+/* Aviso breve al entrar, centrado arriba. No captura eventos. */
+.bachi-draw-presentation-toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  background: rgba(0, 0, 0, 0.62);
+  color: #fff;
+  font-size: var(--fs-sm);
+  pointer-events: none;
+  backdrop-filter: blur(6px);
+  animation: bachi-presentation-toast-in 0.2s var(--ease);
+}
+
+.bachi-draw-presentation-toast strong {
+  font-weight: var(--fw-semibold);
+}
+
+@keyframes bachi-presentation-toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* Hint discreto "Esc — salir", abajo a la derecha. Clicable (alternativa a Esc),
+   se desvanece tras unos segundos de inactividad. */
+.bachi-draw-presentation-hint {
+  position: fixed;
+  bottom: var(--space-4);
+  right: var(--space-4);
+  z-index: 100;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: var(--fs-sm);
+  transition: opacity 0.3s var(--ease);
+}
+
+.bachi-draw-presentation-hint:hover {
+  background: rgba(0, 0, 0, 0.68);
+}
+
+.bachi-draw-presentation-hint.is-hidden {
+  opacity: 0;
+}
+
+.bachi-draw-presentation-hint kbd {
+  font: inherit;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 4px;
+  padding: 1px 6px;
+}

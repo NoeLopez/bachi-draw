@@ -84,4 +84,8 @@ export interface CanvasProps<Layout> {
   background?: CanvasBackground
   /** Si se muestra el minimapa. Default: false (oculto). */
   minimapVisible?: boolean
+  /** Modo presentación: vista limpia, sin edición ni handles. Default: false.
+   * Al activarse, el Canvas encuadra el diagrama y bloquea la interacción de
+   * edición (mover/conectar/seleccionar), dejando solo pan y zoom. */
+  presentationMode?: boolean
 }
