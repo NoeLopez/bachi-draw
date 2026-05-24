@@ -106,16 +106,32 @@ export default function PizarraCanvas({ layout }: CanvasProps<PizarraLayout>): R
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // onChange refresca el contador de elementos de la barra de estado (debounced);
-  // updateLayout también marca dirty. NO pasa la escena como prop a Excalidraw,
-  // así que el arrastre no se interrumpe. La escena exacta se lee al guardar.
+  // onChange refresca el contador de elementos de la barra de estado (debounced)
+  // y marca dirty. La escena exacta se lee al guardar (registro de módulo).
+  //
+  // CLAVE: guardamos un CLON de los elementos, nunca las referencias vivas de
+  // Excalidraw. El store usa Immer, que congela el estado (Object.freeze).
+  // Excalidraw mueve las figuras mutando sus objetos; si guardáramos las
+  // referencias vivas quedarían congeladas y las figuras ya no se podrían mover
+  // tras la primera sincronización (parecería que el lienzo se "congela").
   const handleChange = useCallback(() => {
     if (loadingRef.current) return
     if (statsTimerRef.current) clearTimeout(statsTimerRef.current)
     statsTimerRef.current = setTimeout(() => {
       const api = apiRef.current
       if (!api) return
-      updateLayout(readScene(api), { width: 0, height: 0 })
+      const live = readScene(api)
+      updateLayout(
+        {
+          name: live.name,
+          elements: structuredClone(live.elements),
+          appState: live.appState,
+          // Los archivos (imágenes) no hacen falta para el contador; evitamos
+          // congelar el mapa vivo de Excalidraw. Al guardar se leen en vivo.
+          files: {}
+        },
+        { width: 0, height: 0 }
+      )
     }, STATS_DEBOUNCE)
   }, [updateLayout, readScene])
 

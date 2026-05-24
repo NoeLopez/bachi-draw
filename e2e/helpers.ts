@@ -1,4 +1,5 @@
 import { _electron as electron, type ElectronApplication, type Page } from '@playwright/test'
+import { promises as fs } from 'fs'
 import path from 'path'
 
 // Playwright transpila los tests a CommonJS (el proyecto no es "type":"module"),
@@ -14,6 +15,27 @@ const ELECTRON_BIN =
 export interface LaunchedApp {
   app: ElectronApplication
   page: Page
+}
+
+export interface Point {
+  x: number
+  y: number
+}
+
+/** Forma laxa de un elemento de la escena Excalidraw persistida en el .dark. */
+export interface SceneElement {
+  type: string
+  x: number
+  y: number
+  width: number
+  height: number
+  [key: string]: unknown
+}
+
+export interface SavedScene {
+  kind: string
+  elements: SceneElement[]
+  appState: Record<string, unknown>
 }
 
 /**
@@ -66,37 +88,26 @@ export function emptyPizarra(name = 'E2E pizarra'): string {
   })
 }
 
-/** Selecciona una herramienta del panel de Excalidraw por su atributo title. */
-export async function selectExcalidrawTool(page: Page, pattern: RegExp): Promise<boolean> {
-  return page.evaluate(
-    (src) => {
-      const re = new RegExp(src.source, src.flags)
-      const tools = [...document.querySelectorAll('.excalidraw [title]')]
-      const tool = tools.find((t) => re.test(t.getAttribute('title') || ''))
-      if (tool) {
-        ;(tool as HTMLElement).click()
-        return true
-      }
-      return false
-    },
-    { source: pattern.source, flags: pattern.flags }
-  )
-}
-
-/** Dibuja un rectángulo arrastrando dentro del canvas de Excalidraw. */
-export async function drawRectangle(
+/**
+ * Carga una pizarra vacía y espera a que Excalidraw esté montado e interactivo.
+ * Esperar a que la barra de herramientas sea visible (y un breve margen) evita
+ * que la primera interacción se pierda mientras Excalidraw aún inicializa.
+ */
+export async function loadEmptyPizarra(
+  app: ElectronApplication,
   page: Page,
-  origin: { x: number; y: number },
-  size: { w: number; h: number }
+  filePath: string
 ): Promise<void> {
-  await selectExcalidrawTool(page, /rect|rectángulo/i)
-  await page.mouse.move(origin.x, origin.y)
-  await page.mouse.down()
-  await page.mouse.move(origin.x + size.w, origin.y + size.h, { steps: 10 })
-  await page.mouse.up()
+  await loadDocument(app, filePath, emptyPizarra())
+  await page.waitForSelector('.excalidraw', { timeout: 10_000 })
+  await page.waitForSelector('[data-testid="toolbar-rectangle"]', {
+    state: 'visible',
+    timeout: 10_000
+  })
+  await page.waitForTimeout(350)
 }
 
-/** Devuelve el bounding box del canvas principal de Excalidraw. */
+/** Bounding box del canvas principal de Excalidraw. */
 export async function excalidrawCanvasBox(
   page: Page
 ): Promise<{ x: number; y: number; width: number; height: number }> {
@@ -104,4 +115,66 @@ export async function excalidrawCanvasBox(
   const box = await canvas.boundingBox()
   if (!box) throw new Error('No se encontró el canvas de Excalidraw')
   return box
+}
+
+/** Punto en el canvas a partir de fracciones (0..1) de su ancho/alto. */
+export async function canvasPoint(page: Page, fx: number, fy: number): Promise<Point> {
+  const box = await excalidrawCanvasBox(page)
+  return { x: box.x + box.width * fx, y: box.y + box.height * fy }
+}
+
+/** Herramientas de la barra de Excalidraw usadas como utilería de los tests. */
+export type ExcalidrawTool = 'selection' | 'rectangle' | 'ellipse' | 'diamond'
+
+/**
+ * Selecciona una herramienta de la barra de Excalidraw por su data-testid.
+ * El testid está en el `<input type="radio">`, cubierto por el icono SVG (que
+ * intercepta el puntero), así que forzamos el click sobre el input.
+ */
+export async function selectTool(page: Page, tool: ExcalidrawTool): Promise<void> {
+  await page.locator(`[data-testid="toolbar-${tool}"]`).click({ force: true })
+}
+
+/** Dibuja una figura arrastrando (utilería para preparar el estado del test). */
+export async function drawWithTool(
+  page: Page,
+  tool: ExcalidrawTool,
+  origin: Point,
+  size: { w: number; h: number }
+): Promise<void> {
+  await selectTool(page, tool)
+  await page.mouse.move(origin.x, origin.y)
+  await page.mouse.down()
+  await page.mouse.move(origin.x + size.w, origin.y + size.h, { steps: 10 })
+  await page.mouse.up()
+}
+
+/** Atajo: dibuja un rectángulo. */
+export async function drawRectangle(
+  page: Page,
+  origin: Point,
+  size: { w: number; h: number }
+): Promise<void> {
+  await drawWithTool(page, 'rectangle', origin, size)
+}
+
+/** Arrastra desde `from` hasta `to` (mover una figura/selección). */
+export async function dragMouse(page: Page, from: Point, to: Point): Promise<void> {
+  await page.mouse.move(from.x, from.y)
+  await page.mouse.down()
+  await page.mouse.move(to.x, to.y, { steps: 12 })
+  await page.mouse.up()
+}
+
+/**
+ * Pulsa "Guardar" en la toolbar de Bachi Draw, espera a que se escriba el .dark
+ * y devuelve la escena parseada del disco. Validación de extremo a extremo: lo
+ * que está en el lienzo acabó realmente en el archivo del proyecto.
+ */
+export async function saveAndReadScene(page: Page, filePath: string): Promise<SavedScene> {
+  await page.getByRole('button', { name: 'Guardar' }).click()
+  // El guardado escribe el archivo antes de actualizar el estado; un pequeño
+  // margen asegura que el IPC terminó de escribir a disco.
+  await page.waitForTimeout(500)
+  return JSON.parse(await fs.readFile(filePath, 'utf-8'))
 }

@@ -5,13 +5,22 @@ import path from 'path'
 import {
   launchApp,
   loadDocument,
+  loadEmptyPizarra,
   emptyPizarra,
+  excalidrawCanvasBox,
   drawRectangle,
-  excalidrawCanvasBox
+  drawWithTool,
+  dragMouse,
+  saveAndReadScene,
+  type Point
 } from './helpers'
 
-// Cada test arranca una app Electron fresca: el estado del editor (y la escena de
-// Excalidraw) no se comparte entre tests, evitando interferencias.
+// Estos tests NO validan funciones de Excalidraw (crear figuras, estilos…): eso
+// es responsabilidad de Excalidraw. Validan que la PIZARRA funcione fluida dentro
+// de esta app Electron: que la interacción no se congele tras sincronizar estado,
+// que la UI de Bachi se adapte al modo pizarra, y que el guardado/recarga del
+// archivo .dark funcionen de extremo a extremo.
+
 let app: ElectronApplication
 let page: Page
 let pizarraPath: string
@@ -27,6 +36,13 @@ test.afterEach(async () => {
   await fs.rm(pizarraPath, { force: true })
 })
 
+// Espera a que el estado del lienzo se sincronice al store (debounce ~400ms): el
+// contador de la barra de estado pasa a reflejar el nº de elementos. Ese era el
+// instante en el que (con el bug) las figuras quedaban congeladas.
+async function waitForStoreSync(count: number): Promise<void> {
+  await expect(page.locator('.bachi-draw-status-bar')).toContainText(`${count} elementos`)
+}
+
 test('la pantalla inicial ofrece abrir diagrama y crear pizarra', async () => {
   const emptyState = page.locator('.bachi-draw-empty-state')
   await expect(emptyState).toBeVisible()
@@ -34,90 +50,124 @@ test('la pantalla inicial ofrece abrir diagrama y crear pizarra', async () => {
   await expect(emptyState.getByRole('button', { name: /Nueva pizarra/ })).toBeVisible()
 })
 
-test('cargar un .dark monta Excalidraw y oculta el panel de figuras', async () => {
+test('abrir un .dark monta la pizarra y adapta la UI de Bachi al modo pizarra', async () => {
   await loadDocument(app, pizarraPath, emptyPizarra('Mi pizarra'))
 
   await expect(page.locator('.excalidraw')).toBeVisible()
-  // El panel de figuras (cloud) no aplica a la pizarra.
-  await expect(page.locator('.bachi-draw-figures')).toHaveCount(0)
-  // El título del header refleja el nombre del documento.
+  // En modo pizarra no aplican los controles cloud:
+  await expect(page.locator('.bachi-draw-figures')).toHaveCount(0) // panel de figuras
+  await expect(page.getByRole('button', { name: 'Código' })).toHaveCount(0) // editor DSL
+  // El título refleja el nombre y el guardar apunta al .dark.
   await expect(page.locator('.bachi-draw-header-title')).toHaveText('Mi pizarra')
-  // El botón de guardar adapta su tooltip al modo pizarra (.dark).
   await expect(page.getByRole('button', { name: 'Guardar' })).toHaveAttribute(
     'title',
     'Guardar pizarra (.dark)'
   )
 })
 
-test('dibujar una figura actualiza el contador de la barra de estado', async () => {
-  await loadDocument(app, pizarraPath, emptyPizarra())
-  await expect(page.locator('.excalidraw')).toBeVisible()
-
-  const box = await excalidrawCanvasBox(page)
-  // Dibujamos en el centro del canvas, lejos del panel de propiedades izquierdo
-  // (que aparece al activar una herramienta y taparía la esquina superior izq.).
-  const origin = { x: box.x + box.width * 0.45, y: box.y + box.height * 0.35 }
-  await drawRectangle(page, origin, { w: 160, h: 110 })
-
-  // El contador se refresca tras el debounce (~400ms).
-  await expect(page.locator('.bachi-draw-status-bar')).toContainText('1 elementos')
+test('la barra de estado refleja el número de figuras del lienzo', async () => {
+  await loadEmptyPizarra(app, page, pizarraPath)
+  await drawRectangle(page, await canvasCenter(), { w: 160, h: 110 })
+  await waitForStoreSync(1)
 })
 
-test('mover una figura y guardar persiste la nueva posición en el .dark', async () => {
-  await loadDocument(app, pizarraPath, emptyPizarra())
-  await expect(page.locator('.excalidraw')).toBeVisible()
-
+// REGRESIÓN del bug reportado: al añadir una figura y, tras una pausa (cuando el
+// estado se sincroniza al store de Immer), intentar moverla, el lienzo se
+// "congelaba" y la figura no se podía mover. Debe poder moverse.
+test('tras sincronizar el estado, la figura se sigue pudiendo mover (no se congela)', async () => {
+  await loadEmptyPizarra(app, page, pizarraPath)
   const box = await excalidrawCanvasBox(page)
-  const origin = { x: box.x + box.width * 0.45, y: box.y + box.height * 0.35 }
+  const origin: Point = { x: box.x + box.width * 0.45, y: box.y + box.height * 0.4 }
+  const size = { w: 160, h: 110 }
+  await drawRectangle(page, origin, size)
+
+  // Esperamos a que el estado se sincronice (el punto donde antes se congelaba).
+  await waitForStoreSync(1)
+
+  // La figura sigue seleccionada: arrastrar su centro debe moverla de verdad.
+  const center: Point = { x: origin.x + size.w / 2, y: origin.y + size.h / 2 }
+  await dragMouse(page, center, { x: center.x + 200, y: center.y + 120 })
+
+  const scene = await saveAndReadScene(page, pizarraPath)
+  expect(scene.elements).toHaveLength(1)
+  const drawnX = origin.x - box.x
+  expect(scene.elements[0].x).toBeGreaterThan(drawnX + 100)
+})
+
+test('la interacción sigue fluida: mover con pausas entre medias acumula el desplazamiento', async () => {
+  await loadEmptyPizarra(app, page, pizarraPath)
+  const box = await excalidrawCanvasBox(page)
+  const origin: Point = { x: box.x + box.width * 0.4, y: box.y + box.height * 0.35 }
   const size = { w: 150, h: 100 }
   await drawRectangle(page, origin, size)
+  await waitForStoreSync(1)
 
-  // Tras dibujar, Excalidraw vuelve a la herramienta de selección y deja la
-  // figura seleccionada: la arrastramos desde su centro.
-  const center = { x: origin.x + size.w / 2, y: origin.y + size.h / 2 }
-  const delta = { x: 200, y: 150 }
-  await page.mouse.move(center.x, center.y)
-  await page.mouse.down()
-  await page.mouse.move(center.x + delta.x, center.y + delta.y, { steps: 15 })
-  await page.mouse.up()
-
-  await page.getByRole('button', { name: 'Guardar' }).click()
-  await expect(page.locator('.bachi-draw-status-bar')).toContainText('Guardado')
-
-  const saved = JSON.parse(await fs.readFile(pizarraPath, 'utf-8'))
-  expect(saved.kind).toBe('pizarra')
-  expect(saved.elements).toHaveLength(1)
-  expect(saved.elements[0].type).toBe('rectangle')
-})
-
-test('el arrastre repetido no congela el canvas (regresión del bucle de re-render)', async () => {
-  await loadDocument(app, pizarraPath, emptyPizarra())
-  await expect(page.locator('.excalidraw')).toBeVisible()
-
-  const box = await excalidrawCanvasBox(page)
-  const origin = { x: box.x + box.width * 0.4, y: box.y + box.height * 0.3 }
-  const size = { w: 140, h: 90 }
-  await drawRectangle(page, origin, size)
-
-  // Tres arrastres consecutivos. Si el bucle de re-render reapareciera, el canvas
-  // dejaría de responder y la posición final no reflejaría los tres movimientos.
-  let from = { x: origin.x + size.w / 2, y: origin.y + size.h / 2 }
+  // Tres movimientos, cada uno tras una nueva sincronización del store.
+  let from: Point = { x: origin.x + size.w / 2, y: origin.y + size.h / 2 }
   for (let i = 0; i < 3; i++) {
-    const to = { x: from.x + 80, y: from.y + 55 }
-    await page.mouse.move(from.x, from.y)
-    await page.mouse.down()
-    await page.mouse.move(to.x, to.y, { steps: 12 })
-    await page.mouse.up()
+    const to: Point = { x: from.x + 70, y: from.y + 50 }
+    await dragMouse(page, from, to)
+    await page.waitForTimeout(500) // deja que el debounce sincronice otra vez
     from = to
   }
 
-  await page.getByRole('button', { name: 'Guardar' }).click()
-  await expect(page.locator('.bachi-draw-status-bar')).toContainText('Guardado')
-
-  const saved = JSON.parse(await fs.readFile(pizarraPath, 'utf-8'))
-  expect(saved.elements).toHaveLength(1)
-  // Tras 3 arrastres acumulados (+240/+165 en total) la figura quedó muy
-  // desplazada respecto a donde se dibujó.
-  const sceneOriginX = origin.x - box.x
-  expect(saved.elements[0].x).toBeGreaterThan(sceneOriginX + 150)
+  const scene = await saveAndReadScene(page, pizarraPath)
+  expect(scene.elements).toHaveLength(1)
+  // Tras 3 desplazamientos acumulados la figura quedó claramente desplazada.
+  const drawnX = origin.x - box.x
+  expect(scene.elements[0].x).toBeGreaterThan(drawnX + 120)
 })
+
+test('tras sincronizar, añadir más figuras sigue funcionando', async () => {
+  await loadEmptyPizarra(app, page, pizarraPath)
+  const box = await excalidrawCanvasBox(page)
+  await drawRectangle(
+    page,
+    { x: box.x + box.width * 0.3, y: box.y + box.height * 0.35 },
+    { w: 110, h: 90 }
+  )
+  await waitForStoreSync(1)
+
+  // Añadir otra figura después de la sincronización.
+  await drawWithTool(
+    page,
+    'ellipse',
+    { x: box.x + box.width * 0.6, y: box.y + box.height * 0.35 },
+    { w: 110, h: 90 }
+  )
+  await waitForStoreSync(2)
+
+  const scene = await saveAndReadScene(page, pizarraPath)
+  expect(scene.elements).toHaveLength(2)
+})
+
+test('guardar y volver a abrir el .dark conserva el contenido (persistencia)', async () => {
+  await loadEmptyPizarra(app, page, pizarraPath)
+  const box = await excalidrawCanvasBox(page)
+  await drawRectangle(
+    page,
+    { x: box.x + box.width * 0.4, y: box.y + box.height * 0.4 },
+    { w: 150, h: 100 }
+  )
+  await waitForStoreSync(1)
+
+  const saved = await saveAndReadScene(page, pizarraPath)
+  expect(saved.elements).toHaveLength(1)
+
+  // Vaciar el lienzo y comprobar que queda en 0. Usamos un nombre distinto: el
+  // app ignora recargas con contenido idéntico al actual (evita ecos), así que
+  // el contenido debe diferir del que ya está cargado.
+  await loadDocument(app, pizarraPath, emptyPizarra('Lienzo vacío'))
+  await waitForStoreSync(0)
+
+  // …y al reabrir el .dark guardado (como un hot reload) la figura vuelve.
+  await loadDocument(app, pizarraPath, JSON.stringify(saved))
+  await waitForStoreSync(1)
+  await expect(page.locator('.excalidraw')).toBeVisible()
+})
+
+// Centro del canvas como punto de dibujo, lejos del panel de propiedades izq.
+async function canvasCenter(): Promise<Point> {
+  const box = await excalidrawCanvasBox(page)
+  return { x: box.x + box.width * 0.45, y: box.y + box.height * 0.4 }
+}
