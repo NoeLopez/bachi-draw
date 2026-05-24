@@ -136,6 +136,29 @@ test('modo oscuro: grid, minimapa y controles siguen el tema (no quedan en blanc
   expect(minimapBg).not.toMatch(/255,\s*255,\s*255/)
 })
 
+test('la apariencia nativa de la ventana sigue el tema de la app (semáforos macOS)', async () => {
+  const themeSource = (): Promise<string> =>
+    app.evaluate(({ nativeTheme }) => nativeTheme.themeSource)
+
+  // Override oscuro → la ventana reporta apariencia oscura (semáforos con contraste).
+  await page.evaluate(() => window.localStorage.setItem('bachi-draw.theme', 'dark'))
+  await page.reload()
+  await page.waitForSelector('.bachi-draw-header', { timeout: 15_000 })
+  await expect.poll(themeSource).toBe('dark')
+
+  // Override claro.
+  await page.evaluate(() => window.localStorage.setItem('bachi-draw.theme', 'light'))
+  await page.reload()
+  await page.waitForSelector('.bachi-draw-header', { timeout: 15_000 })
+  await expect.poll(themeSource).toBe('light')
+
+  // Sin override → la ventana vuelve a seguir al sistema.
+  await page.evaluate(() => window.localStorage.removeItem('bachi-draw.theme'))
+  await page.reload()
+  await page.waitForSelector('.bachi-draw-header', { timeout: 15_000 })
+  await expect.poll(themeSource).toBe('system')
+})
+
 test('pizarra: oculta figuras, código y fondo/minimapa pero permite guardar', async () => {
   const pizarraPath = path.join(os.tmpdir(), `bachi-e2e-${Date.now()}.dark`)
   await loadDocument(app, pizarraPath, emptyPizarra('Chrome pizarra'))
