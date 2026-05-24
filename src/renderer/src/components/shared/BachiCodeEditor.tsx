@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { tokenizeBachi } from './bachiHighlight'
 
 interface BachiCodeEditorProps {
   /** Contenido actual del DSL (fuente de verdad del store). */
@@ -36,6 +37,7 @@ export default function BachiCodeEditor({
   const [text, setText] = useState(source)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const gutterRef = useRef<HTMLDivElement>(null)
+  const highlightRef = useRef<HTMLPreElement>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Último valor que ESTE editor propagó: sirve para ignorar el eco que vuelve
   // por el store y no pisar el cursor mientras se escribe.
@@ -73,10 +75,15 @@ export default function BachiCodeEditor({
     }, DEBOUNCE_MS)
   }
 
-  // Mantiene el medianil de números de línea sincronizado con el scroll.
+  // Mantiene el medianil y la capa de resaltado sincronizados con el scroll del
+  // textarea (que es el único elemento desplazable; los otros dos lo siguen).
   const handleScroll = (): void => {
-    if (gutterRef.current && textareaRef.current) {
-      gutterRef.current.scrollTop = textareaRef.current.scrollTop
+    const ta = textareaRef.current
+    if (!ta) return
+    if (gutterRef.current) gutterRef.current.scrollTop = ta.scrollTop
+    if (highlightRef.current) {
+      highlightRef.current.scrollTop = ta.scrollTop
+      highlightRef.current.scrollLeft = ta.scrollLeft
     }
   }
 
@@ -84,6 +91,9 @@ export default function BachiCodeEditor({
     const count = Math.max(text.split('\n').length, 1)
     return Array.from({ length: count }, (_, i) => i + 1)
   }, [text])
+
+  // Tokens de resaltado. Se recalcula al cambiar el texto (memoizado).
+  const tokens = useMemo(() => tokenizeBachi(text), [text])
 
   return (
     <aside className="bachi-draw-code">
@@ -108,18 +118,32 @@ export default function BachiCodeEditor({
             </div>
           ))}
         </div>
-        <textarea
-          ref={textareaRef}
-          className="bachi-draw-code-textarea"
-          value={text}
-          onChange={handleChange}
-          onScroll={handleScroll}
-          spellCheck={false}
-          autoCapitalize="off"
-          autoCorrect="off"
-          autoComplete="off"
-          placeholder={PLACEHOLDER}
-        />
+        {/* Área de edición: la capa de resaltado (pre) va detrás, alineada
+            carácter a carácter con el textarea transparente que va encima. */}
+        <div className="bachi-draw-code-editarea">
+          <pre ref={highlightRef} className="bachi-draw-code-highlight" aria-hidden>
+            {tokens.map((tok, idx) => (
+              <span key={idx} className={`bachi-tok-${tok.type}`}>
+                {tok.value}
+              </span>
+            ))}
+            {/* Salto final para que la última línea vacía se mida igual que en
+                el textarea y el scroll vertical coincida. */}
+            {'\n'}
+          </pre>
+          <textarea
+            ref={textareaRef}
+            className="bachi-draw-code-textarea"
+            value={text}
+            onChange={handleChange}
+            onScroll={handleScroll}
+            spellCheck={false}
+            autoCapitalize="off"
+            autoCorrect="off"
+            autoComplete="off"
+            placeholder={PLACEHOLDER}
+          />
+        </div>
       </div>
 
       {errorMessage ? (

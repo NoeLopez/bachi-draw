@@ -754,11 +754,33 @@
   flex: 1 1 auto;
   display: flex;
   min-height: 0;
-  /* Métricas compartidas por el medianil y el textarea. */
+  /* Métricas compartidas por el medianil, la capa de resaltado y el textarea.
+     DEBEN ser idénticas en los tres para que el texto quede alineado. */
   --code-font: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
   --code-size: 12.5px;
   --code-line: 1.6;
   --code-pad-y: 10px;
+  --code-pad-x: 12px;
+  /* Paleta de tokens (tema claro). */
+  --code-comment: #8a91a0;
+  --code-keyword: #7c3aed;
+  --code-arrow: #c2410c;
+  --code-type: #0e7490;
+  --code-label: #15803d;
+  --code-string: #15803d;
+  --code-punct: #9aa1ad;
+  --code-ident: var(--text-0);
+}
+
+[data-theme='dark'] .bachi-draw-code-body {
+  --code-comment: #6b7280;
+  --code-keyword: #c4b5fd;
+  --code-arrow: #fdba74;
+  --code-type: #67e8f9;
+  --code-label: #86efac;
+  --code-string: #86efac;
+  --code-punct: #6b7280;
+  --code-ident: var(--text-0);
 }
 
 .bachi-draw-code-gutter {
@@ -779,26 +801,92 @@
   font-variant-numeric: tabular-nums;
 }
 
-.bachi-draw-code-textarea {
+/* Área de edición: contenedor relativo donde se superponen la capa de
+   resaltado (detrás) y el textarea transparente (delante). */
+.bachi-draw-code-editarea {
+  position: relative;
   flex: 1 1 auto;
   min-width: 0;
-  resize: none;
+  overflow: hidden;
+}
+
+/* Métricas idénticas para resaltado y textarea (mixin via doble selector). */
+.bachi-draw-code-highlight,
+.bachi-draw-code-textarea {
+  position: absolute;
+  inset: 0;
+  margin: 0;
   border: 0;
-  outline: none;
-  padding: var(--code-pad-y) 12px;
-  background: var(--bg-1);
-  color: var(--text-0);
+  padding: var(--code-pad-y) var(--code-pad-x);
   font-family: var(--code-font);
   font-size: var(--code-size);
   line-height: var(--code-line);
+  letter-spacing: normal;
   tab-size: 2;
   white-space: pre;
+  word-wrap: normal;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+/* Capa de resaltado: solo visual, no captura eventos. */
+.bachi-draw-code-highlight {
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--bg-1);
+  color: var(--code-ident);
+}
+
+/* Textarea por encima: texto transparente (solo se ve el caret y la selección);
+   los colores los aporta la capa de resaltado de debajo. */
+.bachi-draw-code-textarea {
+  resize: none;
+  outline: none;
   overflow: auto;
+  background: transparent;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  caret-color: var(--text-0);
+}
+
+.bachi-draw-code-textarea::selection {
+  background: color-mix(in oklab, var(--accent) 30%, transparent);
 }
 
 .bachi-draw-code-textarea::placeholder {
   color: var(--text-2);
+  -webkit-text-fill-color: var(--text-2);
   opacity: 0.7;
+}
+
+/* ── Colores de tokens del DSL ── */
+.bachi-tok-comment {
+  color: var(--code-comment);
+  font-style: italic;
+}
+.bachi-tok-keyword {
+  color: var(--code-keyword);
+  font-weight: 600;
+}
+.bachi-tok-arrow {
+  color: var(--code-arrow);
+  font-weight: 600;
+}
+.bachi-tok-type {
+  color: var(--code-type);
+}
+.bachi-tok-label {
+  color: var(--code-label);
+}
+.bachi-tok-string {
+  color: var(--code-string);
+}
+.bachi-tok-colon,
+.bachi-tok-punct {
+  color: var(--code-punct);
+}
+.bachi-tok-ident {
+  color: var(--code-ident);
 }
 
 /* Banda de error de parseo al pie del editor. */
