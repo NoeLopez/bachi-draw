@@ -10,7 +10,7 @@ import { getKindDef } from './core/diagram/registry'
 import { useTheme } from './core/theme/useTheme'
 import { useCanvasBackground } from './core/theme/useCanvasBackground'
 import { useMinimapVisible } from './core/theme/useMinimapVisible'
-import { useCodeEditorVisible } from './core/theme/useCodeEditorVisible'
+import { useLeftPanel } from './core/theme/useLeftPanel'
 import { reconcileLayoutWithArchd } from './core/layout/kinds/cloud/reconcile'
 import { getPizarraScene } from './core/state/kinds/pizarra/sceneRegistry'
 
@@ -28,7 +28,7 @@ function App(): React.JSX.Element {
   const { theme, toggleTheme } = useTheme()
   const { background, toggleBackground } = useCanvasBackground()
   const { minimapVisible, toggleMinimap } = useMinimapVisible()
-  const { codeEditorVisible, toggleCodeEditor, setCodeEditorVisible } = useCodeEditorVisible()
+  const { leftPanel, setLeftPanel, toggleFigures, toggleCode } = useLeftPanel()
   // Timer del auto-guardado del DSL (debounce de escritura a disco).
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -138,14 +138,15 @@ function App(): React.JSX.Element {
       const opened = await window.bachiDraw.newDiagram()
       if (!opened) return
       void buildDiagram(opened.content, opened.path, opened.archd)
-      // Diagrama recién creado (vacío): abrimos el editor para empezar a escribir.
-      setCodeEditorVisible(true)
+      // Diagrama recién creado (vacío): abrimos el editor para empezar a escribir
+      // (el muelle es único, así que esto oculta las figuras hasta que se cierre).
+      setLeftPanel('code')
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       setStatus('error')
       setStatusMessage(message)
     }
-  }, [buildDiagram, setCodeEditorVisible])
+  }, [buildDiagram, setLeftPanel])
 
   const handleNewBoard = useCallback(async () => {
     try {
@@ -217,9 +218,11 @@ function App(): React.JSX.Element {
     return getKindDef(diagram.kind).Canvas
   }, [diagram])
 
-  // La pizarra (Excalidraw) no usa panel de figuras, editor de código DSL ni el
-  // .bachid; esos elementos son exclusivos de los diagramas cloud.
-  const isPizarra = diagram?.kind === 'pizarra'
+  // El chrome de la app se adapta al contexto. Los diagramas cloud usan panel de
+  // figuras, editor de código DSL, controles de fondo/minimapa e inspector; la
+  // pizarra (Excalidraw) gestiona su propia escena y no usa ninguno de ellos.
+  const hasDocument = Boolean(diagram)
+  const isCloud = diagram?.kind === 'cloud'
 
   return (
     <div className="bachi-draw-app">
@@ -236,18 +239,21 @@ function App(): React.JSX.Element {
         onToggleTheme={toggleTheme}
         onToggleBackground={toggleBackground}
         onToggleMinimap={toggleMinimap}
-        codeEditorVisible={codeEditorVisible}
-        onToggleCodeEditor={toggleCodeEditor}
-        canEditCode={Boolean(filePath && diagram && !isPizarra)}
+        figuresVisible={leftPanel === 'figures'}
+        onToggleFigures={toggleFigures}
+        codeEditorVisible={leftPanel === 'code'}
+        onToggleCodeEditor={toggleCode}
+        hasDocument={hasDocument}
+        canEditCode={Boolean(filePath && isCloud)}
         canSave={Boolean(filePath && diagram)}
       />
       <main className="bachi-draw-main">
-        {!isPizarra && <FiguresPanel />}
-        {codeEditorVisible && diagram && !isPizarra ? (
+        {isCloud && leftPanel === 'figures' && <FiguresPanel onClose={toggleFigures} />}
+        {isCloud && leftPanel === 'code' ? (
           <BachiCodeEditor
             source={sourceContent ?? ''}
             onChange={handleSourceChange}
-            onClose={() => setCodeEditorVisible(false)}
+            onClose={toggleCode}
             errorMessage={status === 'error' ? statusMessage : null}
           />
         ) : null}
@@ -255,7 +261,11 @@ function App(): React.JSX.Element {
           <Canvas layout={diagram.layout} background={background} minimapVisible={minimapVisible} />
         ) : (
           <div className="bachi-draw-canvas">
-            <EmptyState onNewBoard={handleNewBoard} onOpenFile={handleOpenFile} />
+            <EmptyState
+              onNewDiagram={handleNewDiagram}
+              onNewBoard={handleNewBoard}
+              onOpenFile={handleOpenFile}
+            />
           </div>
         )}
       </main>

@@ -12,10 +12,15 @@
   --text-2: #6b7280;
   --accent: #4f46e5;
   --accent-hover: #6366f1;
+  /* Acento oscurecido para el hover de un botón YA seleccionado (feel de
+     "pulsado"). Se define con color-mix sobre --accent, así sigue al tema. */
+  --accent-press: color-mix(in oklab, var(--accent) 88%, #000);
   --danger: #dc2626;
   --success: #059669;
   --warn: #d97706;
-  --grid-dot: rgba(15, 23, 42, 0.08);
+  /* Los puntos son diminutos: necesitan más opacidad que las líneas para leerse. */
+  --grid-dot: rgba(15, 23, 42, 0.18);
+  --grid-line: rgba(15, 23, 42, 0.05);
   --edge-stroke: #6b7280;
   --edge-label-bg: #ffffff;
   --edge-label-border: #d1d5db;
@@ -23,9 +28,59 @@
   --cluster-fill: rgba(79, 70, 229, 0.05);
   --cluster-stroke: #9ca3af;
   --cluster-label: #4b5563;
+
+  /* ── Design tokens ─────────────────────────────────────────────────────────
+     Escalas formales para un sistema visual coherente (Apple HIG + Material):
+     espaciado en múltiplos de 4, radios y elevación consolidados, tipografía y
+     tiempos de transición uniformes. Usar SIEMPRE estos tokens en componentes
+     nuevos en vez de valores sueltos. */
+
+  /* Espaciado (base 4px) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* Radios — 4 niveles + pill */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill: 9999px;
+
+  /* Elevación — sombras suaves estilo Apple (3 niveles) */
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05), 0 1px 1px rgba(15, 23, 42, 0.03);
+  --shadow-md: 0 4px 14px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.05);
+  --shadow-lg: 0 12px 34px rgba(15, 23, 42, 0.12), 0 4px 10px rgba(15, 23, 42, 0.06);
+
+  /* Tipografía — escala modular */
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-base: 13px;
+  --fs-md: 14px;
+  --fs-lg: 16px;
+  --fs-xl: 20px;
+  --fs-2xl: 24px;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+
+  /* Altura estándar de controles (botones header, inputs, tabs) */
+  --control-h: 28px;
+  --control-h-lg: 36px;
+
+  /* Movimiento — una curva y dos duraciones */
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --dur-fast: 110ms;
+  --dur: 180ms;
+
   font-family:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  font-size: 13px;
+  font-size: var(--fs-base);
 }
 
 * {
@@ -106,7 +161,8 @@ button:disabled {
   --danger: #ef4444;
   --success: #10b981;
   --warn: #f59e0b;
-  --grid-dot: rgba(255, 255, 255, 0.06);
+  --grid-dot: rgba(255, 255, 255, 0.16);
+  --grid-line: rgba(255, 255, 255, 0.045);
   --edge-stroke: #9ca3af;
   --edge-label-bg: #1e2330;
   --edge-label-border: #374151;
@@ -114,4 +170,9 @@ button:disabled {
   --cluster-fill: rgba(99, 102, 241, 0.08);
   --cluster-stroke: #4b5563;
   --cluster-label: #9ca3af;
+
+  /* Sombras más marcadas sobre fondos oscuros para mantener la separación. */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 14px 40px rgba(0, 0, 0, 0.6), 0 4px 12px rgba(0, 0, 0, 0.45);
 }

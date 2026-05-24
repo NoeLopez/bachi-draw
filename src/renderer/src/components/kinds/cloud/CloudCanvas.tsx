@@ -689,7 +689,8 @@ function CloudCanvasInner({
         <Background
           variant={background === 'lines' ? BackgroundVariant.Lines : BackgroundVariant.Dots}
           gap={24}
-          size={1}
+          // Los puntos necesitan un radio algo mayor para leerse; las líneas, 1px.
+          size={background === 'lines' ? 1 : 1.6}
         />
         <Controls />
         {/* Minimapa opcional (preferencia persistente). Abajo-izquierda, justo a
