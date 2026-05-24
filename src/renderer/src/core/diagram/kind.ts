@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react'
+import type { Theme } from '../theme/useTheme'
 
 /** Identificador único de un tipo de diagrama. Cada tipo declara su propio
  * lenguaje (header de archivo), su modelo de dominio, su layout y su renderer. */
@@ -84,4 +85,9 @@ export interface CanvasProps<Layout> {
   background?: CanvasBackground
   /** Si se muestra el minimapa. Default: false (oculto). */
   minimapVisible?: boolean
+  /** Tema actual de la app. El canvas cloud usa variables CSS (data-theme), pero
+   * Excalidraw necesita el tema explícito por prop para seguir el toggle. */
+  theme?: Theme
+  /** Si se muestra la grilla de fondo (solo aplica a la pizarra/Excalidraw). */
+  gridEnabled?: boolean
 }

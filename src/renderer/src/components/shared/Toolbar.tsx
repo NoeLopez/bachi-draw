@@ -15,6 +15,8 @@ interface ToolbarProps {
   onToggleTheme: () => void
   onToggleBackground: () => void
   onToggleMinimap: () => void
+  gridEnabled: boolean
+  onToggleGrid: () => void
   codeEditorVisible: boolean
   onToggleCodeEditor: () => void
   canEditCode: boolean
@@ -155,6 +157,8 @@ export default function Toolbar({
   onToggleTheme,
   onToggleBackground,
   onToggleMinimap,
+  gridEnabled,
+  onToggleGrid,
   codeEditorVisible,
   onToggleCodeEditor,
   canEditCode,
@@ -255,7 +259,7 @@ export default function Toolbar({
           type="button"
           className="bachi-draw-hbtn"
           onClick={onOpenFile}
-          title="Abrir archivo .bachi existente"
+          title="Abrir diagrama .bachi o pizarra .dark"
         >
           {FOLDER_ICON}
           Abrir
@@ -321,6 +325,19 @@ export default function Toolbar({
                 {MAP_ICON}
               </button>
             </>
+          )}
+          {/* La grilla solo aplica a la pizarra (Excalidraw) */}
+          {isPizarra && (
+            <button
+              type="button"
+              className={`bachi-draw-seg-btn${gridEnabled ? ' is-on' : ''}`}
+              onClick={onToggleGrid}
+              title={gridEnabled ? 'Ocultar grilla' : 'Mostrar grilla'}
+              aria-pressed={gridEnabled}
+              aria-label="Grilla"
+            >
+              {GRID_ICON}
+            </button>
           )}
           <button
             type="button"

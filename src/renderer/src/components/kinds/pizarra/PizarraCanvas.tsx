@@ -6,7 +6,6 @@ import type { PizarraLayout } from '../../../core/parser/kinds/pizarra/types'
 import { EMPTY_PIZARRA_LAYOUT } from '../../../core/parser/kinds/pizarra/types'
 import { useEditorStore } from '../../../core/diagram/editor/store'
 import { registerPizarraScene } from '../../../core/state/kinds/pizarra/sceneRegistry'
-import { useTheme } from '../../../core/theme/useTheme'
 
 // Tipos derivados del componente público de Excalidraw, sin importar rutas
 // internas del paquete. La pizarra guarda elementos/archivos como `unknown`
@@ -23,10 +22,16 @@ type BinaryFilesArg = Parameters<ExcalidrawAPI['addFiles']>[0]
 // store cambie y App re-renderice, Excalidraw NO se vuelve a renderizar.
 const STATS_DEBOUNCE = 400
 
-export default function PizarraCanvas({ layout }: CanvasProps<PizarraLayout>): React.JSX.Element {
-  const { theme } = useTheme()
+export default function PizarraCanvas({
+  layout,
+  theme,
+  gridEnabled
+}: CanvasProps<PizarraLayout>): React.JSX.Element {
   const externalRev = useEditorStore((s) => s.externalRev)
   const updateLayout = useEditorStore((s) => s.updateLayout)
+  // El tema lo controla App (fuente única, ligada al toggle del header) y llega
+  // por prop. Antes PizarraCanvas usaba su propio useTheme (estado local), que no
+  // se sincronizaba con el toggle y dejaba Excalidraw clavado en el tema inicial.
   const excalidrawTheme = theme === 'dark' ? 'dark' : 'light'
 
   // API imperativa de Excalidraw: recarga la escena en cargas externas y permite
@@ -62,12 +67,18 @@ export default function PizarraCanvas({ layout }: CanvasProps<PizarraLayout>): R
   // initialData solo lo lee Excalidraw al montar. Lo memoizamos a la primera
   // escena para no recrear el objeto en cada render. Las recargas posteriores se
   // aplican via updateScene (efecto de abajo), no via initialData.
+  //
+  // CLAVE: los elementos del store vienen CONGELADOS por Immer (Object.freeze).
+  // Excalidraw necesita mutarlos (les añade su `index` de orden fraccional y los
+  // mueve), así que les pasamos siempre un structuredClone extensible. Si no,
+  // Excalidraw lanza "Cannot add property index, object is not extensible" y/o
+  // las figuras cargadas del archivo no se pueden mover.
   const initialData = useMemo(
     () =>
       ({
-        elements: layout?.elements ?? [],
+        elements: structuredClone(layout?.elements ?? []),
         appState: { ...(layout?.appState ?? {}), theme: excalidrawTheme },
-        files: layout?.files ?? {}
+        files: structuredClone(layout?.files ?? {})
       }) as unknown as InitialData,
     // Solo en el primer montaje: las recargas van por updateScene.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -75,17 +86,18 @@ export default function PizarraCanvas({ layout }: CanvasProps<PizarraLayout>): R
   )
 
   // Cuando llega un layout EXTERNO (nueva carga/hot reload, sube externalRev),
-  // reemplazamos la escena via la API imperativa.
+  // reemplazamos la escena via la API imperativa. Clonamos los elementos por la
+  // misma razón que en initialData: los del store están congelados.
   useEffect(() => {
     const api = apiRef.current
     if (!api || !layout) return
     loadingRef.current = true
     api.updateScene({
-      elements: layout.elements,
+      elements: structuredClone(layout.elements),
       appState: { ...layout.appState, theme: excalidrawTheme }
     } as unknown as SceneData)
     if (Object.keys(layout.files).length > 0) {
-      api.addFiles(Object.values(layout.files) as BinaryFilesArg)
+      api.addFiles(Object.values(structuredClone(layout.files)) as BinaryFilesArg)
     }
     const t = setTimeout(() => {
       loadingRef.current = false
@@ -146,6 +158,7 @@ export default function PizarraCanvas({ layout }: CanvasProps<PizarraLayout>): R
         initialData={initialData}
         onChange={handleChange}
         theme={excalidrawTheme}
+        gridModeEnabled={gridEnabled ?? false}
         langCode="es-ES"
       />
     </div>

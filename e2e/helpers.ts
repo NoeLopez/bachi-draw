@@ -76,6 +76,103 @@ export async function loadDocument(
   )
 }
 
+/** Contenido de un `.dark` con una figura, para probar apertura/carga real. */
+export function darkWithRectangle(name = 'Pizarra abierta'): string {
+  return JSON.stringify({
+    kind: 'pizarra',
+    version: 1,
+    name,
+    elements: [
+      {
+        id: 'r1',
+        type: 'rectangle',
+        x: 200,
+        y: 150,
+        width: 220,
+        height: 120,
+        angle: 0,
+        strokeColor: '#1e1e1e',
+        backgroundColor: 'transparent',
+        fillStyle: 'solid',
+        strokeWidth: 2,
+        strokeStyle: 'solid',
+        roughness: 1,
+        opacity: 100,
+        groupIds: [],
+        frameId: null,
+        roundness: { type: 3 },
+        seed: 1,
+        version: 1,
+        versionNonce: 1,
+        isDeleted: false,
+        boundElements: null,
+        updated: 1,
+        link: null,
+        locked: false
+      }
+    ],
+    appState: { scrollX: 0, scrollY: 0, zoom: { value: 1 } },
+    files: {}
+  })
+}
+
+/**
+ * `.dark` con un rectángulo de relleno SÓLIDO en (x,y) de tamaño 200×140. El
+ * relleno sólido permite agarrarlo por el interior al arrastrar.
+ */
+export function darkWithSolidRectangle(name = 'config', x = 200, y = 150): string {
+  return JSON.stringify({
+    kind: 'pizarra',
+    version: 1,
+    name,
+    elements: [
+      {
+        id: 'r1',
+        type: 'rectangle',
+        x,
+        y,
+        width: 200,
+        height: 140,
+        angle: 0,
+        strokeColor: '#1e1e1e',
+        backgroundColor: '#a5d8ff',
+        fillStyle: 'solid',
+        strokeWidth: 2,
+        strokeStyle: 'solid',
+        roughness: 1,
+        opacity: 100,
+        groupIds: [],
+        frameId: null,
+        roundness: { type: 3 },
+        seed: 1,
+        version: 1,
+        versionNonce: 1,
+        isDeleted: false,
+        boundElements: null,
+        updated: 1,
+        link: null,
+        locked: false
+      }
+    ],
+    appState: { scrollX: 0, scrollY: 0, zoom: { value: 1 } },
+    files: {}
+  })
+}
+
+/**
+ * Sustituye el diálogo nativo "abrir archivo" del proceso main para que devuelva
+ * `filePath`, de modo que pulsar "Abrir" cargue ese archivo sin diálogo.
+ */
+export async function mockOpenDialog(app: ElectronApplication, filePath: string): Promise<void> {
+  await app.evaluate(({ dialog }, p) => {
+    ;(dialog as unknown as { showOpenDialog: () => Promise<unknown> }).showOpenDialog =
+      async () => ({
+        canceled: false,
+        filePaths: [p]
+      })
+  }, filePath)
+}
+
 /** Contenido de una pizarra vacía con el formato `.dark`. */
 export function emptyPizarra(name = 'E2E pizarra'): string {
   return JSON.stringify({

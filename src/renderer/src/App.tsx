@@ -11,6 +11,7 @@ import { useTheme } from './core/theme/useTheme'
 import { useCanvasBackground } from './core/theme/useCanvasBackground'
 import { useMinimapVisible } from './core/theme/useMinimapVisible'
 import { useCodeEditorVisible } from './core/theme/useCodeEditorVisible'
+import { useGridEnabled } from './core/theme/useGridEnabled'
 import { reconcileLayoutWithArchd } from './core/layout/kinds/cloud/reconcile'
 import { getPizarraScene } from './core/state/kinds/pizarra/sceneRegistry'
 
@@ -28,6 +29,7 @@ function App(): React.JSX.Element {
   const { theme, toggleTheme } = useTheme()
   const { background, toggleBackground } = useCanvasBackground()
   const { minimapVisible, toggleMinimap } = useMinimapVisible()
+  const { gridEnabled, toggleGrid } = useGridEnabled()
   const { codeEditorVisible, toggleCodeEditor, setCodeEditorVisible } = useCodeEditorVisible()
   // Timer del auto-guardado del DSL (debounce de escritura a disco).
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -236,6 +238,8 @@ function App(): React.JSX.Element {
         onToggleTheme={toggleTheme}
         onToggleBackground={toggleBackground}
         onToggleMinimap={toggleMinimap}
+        gridEnabled={gridEnabled}
+        onToggleGrid={toggleGrid}
         codeEditorVisible={codeEditorVisible}
         onToggleCodeEditor={toggleCodeEditor}
         canEditCode={Boolean(filePath && diagram && !isPizarra)}
@@ -252,7 +256,13 @@ function App(): React.JSX.Element {
           />
         ) : null}
         {Canvas && diagram ? (
-          <Canvas layout={diagram.layout} background={background} minimapVisible={minimapVisible} />
+          <Canvas
+            layout={diagram.layout}
+            background={background}
+            minimapVisible={minimapVisible}
+            theme={theme}
+            gridEnabled={gridEnabled}
+          />
         ) : (
           <div className="bachi-draw-canvas">
             <EmptyState onNewBoard={handleNewBoard} onOpenFile={handleOpenFile} />

@@ -24,8 +24,12 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     const win = getWindow()
     if (!win) return null
     const result = await dialog.showOpenDialog(win, {
-      title: 'Abrir archivo .bachi',
-      filters: [{ name: 'Bachi Draw', extensions: ['bachi'] }],
+      title: 'Abrir diagrama o pizarra',
+      filters: [
+        { name: 'Bachi Draw', extensions: ['bachi', 'dark'] },
+        { name: 'Diagrama (.bachi)', extensions: ['bachi'] },
+        { name: 'Pizarra (.dark)', extensions: ['dark'] }
+      ],
       properties: ['openFile']
     })
     if (result.canceled || result.filePaths.length === 0) return null
@@ -89,9 +93,13 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   })
 
   // Guarda el estado actual de la pizarra directamente en el archivo .dark.
+  // Silencia el watcher antes de escribir: como la pizarra abierta vigila su
+  // propio .dark, sin esto el guardado rebotaría como una edición externa y
+  // recargaría la escena (reset de selección/scroll).
   ipcMain.handle(
     'save-pizarra',
     async (_event, payload: { filePath: string; data: unknown }): Promise<{ path: string }> => {
+      muteWatcher()
       await writeJson(payload.filePath, payload.data)
       return { path: payload.filePath }
     }
