@@ -2,7 +2,7 @@ import type { ComponentType } from 'react'
 
 /** Identificador único de un tipo de diagrama. Cada tipo declara su propio
  * lenguaje (header de archivo), su modelo de dominio, su layout y su renderer. */
-export type DiagramKind = 'cloud'
+export type DiagramKind = 'cloud' | 'pizarra'
 
 /**
  * Resultado de ejecutar el pipeline completo de un tipo de diagrama:

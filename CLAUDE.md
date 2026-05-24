@@ -16,6 +16,8 @@ pnpm typecheck        # typecheck:node + typecheck:web
 pnpm typecheck:web    # solo el renderer (lo más rápido durante iteración de UI)
 pnpm lint             # eslint con cache
 pnpm format           # prettier --write .
+pnpm test:e2e         # compila la app y corre los tests E2E (Playwright + Electron)
+pnpm test:e2e:run     # corre los tests E2E sin recompilar (requiere out/ ya construido)
 ```
 
 Tras tocar el renderer, lo habitual es: `pnpm typecheck:web` + `npx eslint <archivo>` + `npx prettier --write <archivo>`.
@@ -121,4 +123,13 @@ El editor visual está bastante completo (todo en `master`): selección/caja, pa
 
 ## Verificación
 
-No hay infraestructura E2E (ni Playwright ni driver de Electron). El `.bachi` se abre con un diálogo nativo modal. Para verificar cambios de UI en runtime hay que lanzar `pnpm dev` y probar a mano; un build limpio no prueba comportamiento.
+Hay tests **E2E con Playwright** que lanzan la app Electron compilada y la conducen como un usuario (carpeta [e2e/](e2e/), config [playwright.config.ts](playwright.config.ts)). Hoy cubren el tipo `pizarra` ([e2e/pizarra.spec.ts](e2e/pizarra.spec.ts)): dibujar/mover figuras, contador de elementos, guardado y la regresión del bucle de re-render que congelaba el canvas. Se corren con `pnpm test:e2e` (compila primero) o `pnpm test:e2e:run` (sobre `out/` ya construido).
+
+Detalles no obvios del setup E2E (en [e2e/helpers.ts](e2e/helpers.ts)):
+
+- **Cada test lanza una app fresca** (`beforeEach`/`afterEach`): el estado del editor y la escena de Excalidraw no se comparten entre tests.
+- **El diálogo nativo de archivos no es accesible** desde Playwright. Para cargar un documento sin diálogo, `loadDocument` usa `app.evaluate` y emite el IPC `arch-file-changed` desde el main, igual que un hot reload del file watcher.
+- **Dibujar/mover** se hace con `page.mouse` sobre el canvas de Excalidraw; dibujar en el **centro** del canvas evita el panel de propiedades izquierdo (que tapa la esquina superior izquierda al activar una herramienta).
+- Playwright transpila los tests a **CommonJS** (el proyecto no es `type: module`): usar `__dirname`, no `import.meta.url`.
+
+El `.bachi`/`.dark` también se puede abrir a mano con `pnpm dev` y el diálogo nativo. Cabe extender los specs a `cloud` cuando haga falta.

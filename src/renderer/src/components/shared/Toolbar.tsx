@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Theme } from '../../core/theme/useTheme'
-import type { CanvasBackground } from '../../core/diagram/kind'
+import type { CanvasBackground, DiagramKind } from '../../core/diagram/kind'
 
 interface ToolbarProps {
   diagramName: string
+  diagramKind: DiagramKind | null
   theme: Theme
   background: CanvasBackground
   minimapVisible: boolean
@@ -143,6 +144,7 @@ const MOON_ICON = (
 
 export default function Toolbar({
   diagramName,
+  diagramKind,
   theme,
   background,
   minimapVisible,
@@ -163,6 +165,10 @@ export default function Toolbar({
 
   const nextThemeLabel = theme === 'dark' ? 'claro' : 'oscuro'
   const nextBackgroundLabel = background === 'dots' ? 'cuadrícula' : 'puntos'
+  // En la pizarra (Excalidraw) los controles de fondo/minimapa y el guardado de
+  // posiciones .bachid no aplican: el lienzo gestiona su propia escena.
+  const isPizarra = diagramKind === 'pizarra'
+  const saveTitle = isPizarra ? 'Guardar pizarra (.dark)' : 'Guardar posiciones en .bachid'
 
   // Cierra el menú al hacer clic fuera de él.
   useEffect(() => {
@@ -259,25 +265,29 @@ export default function Toolbar({
           className="bachi-draw-hbtn"
           onClick={onSaveArchd}
           disabled={!canSave}
-          title="Guardar posiciones en .bachid"
+          title={saveTitle}
         >
           {SAVE_ICON}
           Guardar
         </button>
 
-        <span className="bachi-draw-header-vsep" />
-
-        <button
-          type="button"
-          className={`bachi-draw-hbtn${codeEditorVisible ? ' is-on' : ''}`}
-          onClick={onToggleCodeEditor}
-          disabled={!canEditCode}
-          aria-pressed={codeEditorVisible}
-          title={codeEditorVisible ? 'Ocultar editor de código' : 'Mostrar editor de código'}
-        >
-          {CODE_ICON}
-          Código
-        </button>
+        {/* El editor de código DSL solo aplica a diagramas .bachi, no a la pizarra */}
+        {!isPizarra && (
+          <>
+            <span className="bachi-draw-header-vsep" />
+            <button
+              type="button"
+              className={`bachi-draw-hbtn${codeEditorVisible ? ' is-on' : ''}`}
+              onClick={onToggleCodeEditor}
+              disabled={!canEditCode}
+              aria-pressed={codeEditorVisible}
+              title={codeEditorVisible ? 'Ocultar editor de código' : 'Mostrar editor de código'}
+            >
+              {CODE_ICON}
+              Código
+            </button>
+          </>
+        )}
       </div>
 
       {/* Título centrado — no interactivo */}
@@ -288,25 +298,30 @@ export default function Toolbar({
       {/* Controles de vista — derecha */}
       <div className="bachi-draw-header-right">
         <div className="bachi-draw-seg" role="group" aria-label="Opciones de vista">
-          <button
-            type="button"
-            className="bachi-draw-seg-btn"
-            onClick={onToggleBackground}
-            title={`Cambiar fondo a ${nextBackgroundLabel}`}
-            aria-label={`Fondo: ${nextBackgroundLabel}`}
-          >
-            {background === 'dots' ? GRID_ICON : DOTS_ICON}
-          </button>
-          <button
-            type="button"
-            className={`bachi-draw-seg-btn${minimapVisible ? ' is-on' : ''}`}
-            onClick={onToggleMinimap}
-            title={minimapVisible ? 'Ocultar minimapa' : 'Mostrar minimapa'}
-            aria-pressed={minimapVisible}
-            aria-label="Minimapa"
-          >
-            {MAP_ICON}
-          </button>
+          {/* Fondo y minimapa solo aplican al canvas cloud (React Flow) */}
+          {!isPizarra && (
+            <>
+              <button
+                type="button"
+                className="bachi-draw-seg-btn"
+                onClick={onToggleBackground}
+                title={`Cambiar fondo a ${nextBackgroundLabel}`}
+                aria-label={`Fondo: ${nextBackgroundLabel}`}
+              >
+                {background === 'dots' ? GRID_ICON : DOTS_ICON}
+              </button>
+              <button
+                type="button"
+                className={`bachi-draw-seg-btn${minimapVisible ? ' is-on' : ''}`}
+                onClick={onToggleMinimap}
+                title={minimapVisible ? 'Ocultar minimapa' : 'Mostrar minimapa'}
+                aria-pressed={minimapVisible}
+                aria-label="Minimapa"
+              >
+                {MAP_ICON}
+              </button>
+            </>
+          )}
           <button
             type="button"
             className="bachi-draw-seg-btn"

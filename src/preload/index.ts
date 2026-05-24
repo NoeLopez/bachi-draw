@@ -39,6 +39,8 @@ const bachiDraw = {
     ipcRenderer.invoke('save-archd', { archPath, data }),
   saveBachi: (path: string, content: string): Promise<{ path: string }> =>
     ipcRenderer.invoke('save-bachi', { path, content }),
+  savePizarra: (filePath: string, data: unknown): Promise<{ path: string }> =>
+    ipcRenderer.invoke('save-pizarra', { filePath, data }),
   stopWatching: (): Promise<void> => ipcRenderer.invoke('stop-watching'),
   resolveArchName: (path: string): Promise<string> => ipcRenderer.invoke('resolve-arch-name', path),
 

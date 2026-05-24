@@ -6,11 +6,21 @@ import { getKindDef } from './registry'
 const HEADER_RE = /^\s*arch-([a-z][a-z0-9-]*)\b/m
 
 /**
- * Detecta el tipo de diagrama del contenido fuente leyendo el header
- * `arch-<kind>` en la primera línea efectiva. Lanza si no hay header o el
- * tipo es desconocido.
+ * Detecta el tipo de diagrama del contenido fuente. Para archivos `.dark`
+ * espera JSON con `kind: "pizarra"`; para `.bachi` lee el header `arch-<kind>`.
  */
 export function detectKind(source: string): DiagramKind {
+  // Archivos .dark son JSON con campo "kind"
+  const trimmed = source.trimStart()
+  if (trimmed.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(source)
+      if (parsed.kind === 'pizarra') return 'pizarra'
+    } catch {
+      // no es JSON válido, continúa con la detección DSL
+    }
+  }
+
   // Saltamos comentarios y líneas vacías al inicio para encontrar el header real.
   const firstSignificant = source
     .split('\n')

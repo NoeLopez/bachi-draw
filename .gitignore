@@ -10,3 +10,8 @@ out
 
 # Carpeta temporal para procesar packs de iconos antes de reorganizarlos
 _incoming/
+
+# Artefactos de Playwright (tests E2E)
+/test-results/
+/playwright-report/
+/playwright/.cache/

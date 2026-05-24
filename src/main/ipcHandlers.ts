@@ -9,6 +9,16 @@ export interface OpenedFilePayload {
   archd: unknown | null
 }
 
+// Escena Excalidraw vacía para una pizarra nueva (formato .dark).
+const EMPTY_PIZARRA = {
+  kind: 'pizarra',
+  version: 1,
+  name: '',
+  elements: [],
+  appState: {},
+  files: {}
+}
+
 export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void {
   ipcMain.handle('open-file-dialog', async (): Promise<OpenedFilePayload | null> => {
     const win = getWindow()
@@ -64,18 +74,28 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     return loadFile(result.filePath, win)
   })
 
+  // Crea una pizarra Excalidraw nueva: escribe un .dark vacío y lo carga.
   ipcMain.handle('new-board', async (): Promise<OpenedFilePayload | null> => {
     const win = getWindow()
     if (!win) return null
     const result = await dialog.showSaveDialog(win, {
       title: 'Nueva pizarra',
-      defaultPath: 'pizarra.bachi',
-      filters: [{ name: 'Bachi Draw', extensions: ['bachi'] }]
+      defaultPath: 'nueva-pizarra.dark',
+      filters: [{ name: 'Pizarra', extensions: ['dark'] }]
     })
     if (result.canceled || !result.filePath) return null
-    await writeText(result.filePath, 'arch-cloud lr\n\n')
+    await writeJson(result.filePath, EMPTY_PIZARRA)
     return loadFile(result.filePath, win)
   })
+
+  // Guarda el estado actual de la pizarra directamente en el archivo .dark.
+  ipcMain.handle(
+    'save-pizarra',
+    async (_event, payload: { filePath: string; data: unknown }): Promise<{ path: string }> => {
+      await writeJson(payload.filePath, payload.data)
+      return { path: payload.filePath }
+    }
+  )
 
   ipcMain.handle('stop-watching', async (): Promise<void> => {
     await stopWatching()

@@ -12,6 +12,7 @@ import { useCanvasBackground } from './core/theme/useCanvasBackground'
 import { useMinimapVisible } from './core/theme/useMinimapVisible'
 import { useCodeEditorVisible } from './core/theme/useCodeEditorVisible'
 import { reconcileLayoutWithArchd } from './core/layout/kinds/cloud/reconcile'
+import { getPizarraScene } from './core/state/kinds/pizarra/sceneRegistry'
 
 function filenameWithoutExt(path: string): string {
   const base = path.split(/[/\\]/).pop() ?? path
@@ -53,11 +54,14 @@ function App(): React.JSX.Element {
 
         // Reconcile layout with archd (loaded from disk) or with the existing in-memory layout.
         // The in-memory state is the most fresh visual state (preserving unsaved visual edits).
-        const currentDiagram = useEditorStore.getState().diagram
-        const reconciliationSource = archd || currentDiagram?.layout
-
-        if (reconciliationSource) {
-          layout = reconcileLayoutWithArchd(layout as any, reconciliationSource)
+        // La reconciliación de posiciones es exclusiva del tipo cloud (la pizarra
+        // gestiona su propia escena en Excalidraw).
+        if (kind === 'cloud') {
+          const currentDiagram = useEditorStore.getState().diagram
+          const reconciliationSource = archd || currentDiagram?.layout
+          if (reconciliationSource) {
+            layout = reconcileLayoutWithArchd(layout as any, reconciliationSource)
+          }
         }
 
         const rawName = def.getName(layout)
@@ -166,6 +170,24 @@ function App(): React.JSX.Element {
     try {
       const fileName = filePath.split(/[/\\]/).pop() ?? filePath
       const def = getKindDef(diagram.kind)
+
+      if (diagram.kind === 'pizarra') {
+        // La pizarra se guarda directamente en el archivo .dark. Leemos la escena
+        // en vivo desde Excalidraw (el store no la copia en cada cambio).
+        const scene = getPizarraScene() ?? diagram.layout
+        const data = def.serialize(fileName, scene, {
+          zoom: 1,
+          offsetX: 0,
+          offsetY: 0,
+          width: 0,
+          height: 0
+        })
+        const result = await window.bachiDraw.savePizarra(filePath, data)
+        setStatus('ok')
+        setStatusMessage(`Guardado ${result.path.split(/[/\\]/).pop()}`)
+        return
+      }
+
       const archd = def.serialize(fileName, diagram.layout, {
         zoom: 1,
         offsetX: 0,
@@ -195,10 +217,15 @@ function App(): React.JSX.Element {
     return getKindDef(diagram.kind).Canvas
   }, [diagram])
 
+  // La pizarra (Excalidraw) no usa panel de figuras, editor de código DSL ni el
+  // .bachid; esos elementos son exclusivos de los diagramas cloud.
+  const isPizarra = diagram?.kind === 'pizarra'
+
   return (
     <div className="bachi-draw-app">
       <Toolbar
         diagramName={diagram?.name ?? ''}
+        diagramKind={diagram?.kind ?? null}
         theme={theme}
         background={background}
         minimapVisible={minimapVisible}
@@ -211,12 +238,12 @@ function App(): React.JSX.Element {
         onToggleMinimap={toggleMinimap}
         codeEditorVisible={codeEditorVisible}
         onToggleCodeEditor={toggleCodeEditor}
-        canEditCode={Boolean(filePath && diagram)}
+        canEditCode={Boolean(filePath && diagram && !isPizarra)}
         canSave={Boolean(filePath && diagram)}
       />
       <main className="bachi-draw-main">
-        <FiguresPanel />
-        {codeEditorVisible && diagram ? (
+        {!isPizarra && <FiguresPanel />}
+        {codeEditorVisible && diagram && !isPizarra ? (
           <BachiCodeEditor
             source={sourceContent ?? ''}
             onChange={handleSourceChange}
