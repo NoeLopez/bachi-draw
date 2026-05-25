@@ -15,3 +15,6 @@ _incoming/
 /test-results/
 /playwright-report/
 /playwright/.cache/
+
+# Fuentes de Excalidraw copiadas en build (regenerables)
+/src/renderer/public/fonts/

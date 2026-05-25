@@ -159,6 +159,54 @@ export function darkWithSolidRectangle(name = 'config', x = 200, y = 150): strin
   })
 }
 
+/** `.dark` con un texto (fontFamily 1 = manuscrita) para probar las fuentes. */
+export function darkWithText(text = 'Texto Aa', fontFamily = 1): string {
+  return JSON.stringify({
+    kind: 'pizarra',
+    version: 1,
+    name: 'texto',
+    elements: [
+      {
+        id: 't1',
+        type: 'text',
+        x: 160,
+        y: 160,
+        width: 360,
+        height: 50,
+        angle: 0,
+        strokeColor: '#1e1e1e',
+        backgroundColor: 'transparent',
+        fillStyle: 'solid',
+        strokeWidth: 1,
+        strokeStyle: 'solid',
+        roughness: 1,
+        opacity: 100,
+        groupIds: [],
+        frameId: null,
+        roundness: null,
+        seed: 1,
+        version: 1,
+        versionNonce: 1,
+        isDeleted: false,
+        boundElements: null,
+        updated: 1,
+        link: null,
+        locked: false,
+        text,
+        fontSize: 28,
+        fontFamily,
+        textAlign: 'left',
+        verticalAlign: 'top',
+        containerId: null,
+        originalText: text,
+        lineHeight: 1.25
+      }
+    ],
+    appState: { scrollX: 0, scrollY: 0, zoom: { value: 1 } },
+    files: {}
+  })
+}
+
 /**
  * Sustituye el diálogo nativo "abrir archivo" del proceso main para que devuelva
  * `filePath`, de modo que pulsar "Abrir" cargue ese archivo sin diálogo.

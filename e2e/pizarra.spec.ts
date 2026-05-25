@@ -9,6 +9,7 @@ import {
   emptyPizarra,
   darkWithRectangle,
   darkWithSolidRectangle,
+  darkWithText,
   mockOpenDialog,
   excalidrawCanvasBox,
   drawRectangle,
@@ -265,6 +266,22 @@ test('activar/desactivar la grilla cambia el render del lienzo', async () => {
   await page.waitForTimeout(300)
   const stateC = await page.screenshot({ clip })
   expect(Buffer.compare(stateA, stateC)).toBe(0)
+})
+
+test('las fuentes de Excalidraw se cargan localmente (no desde un CDN)', async () => {
+  // Abrir una pizarra con texto manuscrito (fontFamily 1) fuerza la carga de la
+  // fuente. Antes fallaba: Excalidraw las pedía a un CDN bloqueado por la CSP y
+  // el texto caía a una fuente del sistema. Ahora deben cargarse desde el bundle.
+  await loadDocument(app, pizarraPath, darkWithText('Texto Aa'))
+  await page.waitForSelector('.excalidraw', { timeout: 10_000 })
+
+  const someExcalidrawFontLoaded = await page.evaluate(async () => {
+    await document.fonts.ready
+    const excalidrawLatin = /Virgil|Excalifont|Nunito|Comic Shanns|Cascadia|Assistant|Lilita/
+    return [...document.fonts].some((f) => f.status === 'loaded' && excalidrawLatin.test(f.family))
+  })
+
+  expect(someExcalidrawFontLoaded).toBe(true)
 })
 
 // Centro del canvas como punto de dibujo, lejos del panel de propiedades izq.

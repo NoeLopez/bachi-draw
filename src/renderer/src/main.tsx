@@ -1,3 +1,5 @@
+// Debe ir primero: fija EXCALIDRAW_ASSET_PATH antes de cargar Excalidraw.
+import './setupExcalidrawAssets'
 import './assets/main.css'
 
 import { StrictMode } from 'react'
