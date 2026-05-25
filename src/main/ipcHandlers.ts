@@ -1,4 +1,4 @@
-import { BrowserWindow, dialog, ipcMain } from 'electron'
+import { BrowserWindow, dialog, ipcMain, nativeTheme } from 'electron'
 import path from 'path'
 import { archdPathFor, readJsonIfExists, readText, writeJson, writeText } from './fileManager'
 import { muteWatcher, stopWatching, watchArchFile } from './fileWatcher'
@@ -20,6 +20,23 @@ const EMPTY_PIZARRA = {
 }
 
 export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void {
+  // Sincroniza la apariencia NATIVA de la ventana con el tema de la app. macOS
+  // dibuja los semáforos (cerrar/min/max) según esta apariencia; si no coincide
+  // con nuestro header, quedan sin contraste (invisibles). 'system' deja que siga
+  // al SO (cuando el usuario no ha forzado tema).
+  ipcMain.handle('set-native-theme', (_event, source: 'system' | 'light' | 'dark'): void => {
+    nativeTheme.themeSource = source
+  })
+
+  // Pantalla completa "simple" (sin crear un espacio nativo de macOS) para el
+  // modo presentación. Best-effort: si no hay ventana, no hace nada.
+  ipcMain.handle('enter-presentation', (): void => {
+    getWindow()?.setSimpleFullScreen(true)
+  })
+  ipcMain.handle('exit-presentation', (): void => {
+    getWindow()?.setSimpleFullScreen(false)
+  })
+
   ipcMain.handle('open-file-dialog', async (): Promise<OpenedFilePayload | null> => {
     const win = getWindow()
     if (!win) return null

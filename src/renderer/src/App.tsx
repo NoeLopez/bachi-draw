@@ -1,17 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import BachiCodeEditor from './components/shared/BachiCodeEditor'
+import BachiCodeEditor, { type SaveState } from './components/shared/BachiCodeEditor'
 import EmptyState from './components/shared/EmptyState'
 import FiguresPanel from './components/shared/FiguresPanel'
 import StatusBar, { ReloadStatus } from './components/shared/StatusBar'
 import Toolbar from './components/shared/Toolbar'
+import PresentationOverlay from './components/shared/PresentationOverlay'
 import { detectKind } from './core/diagram/dispatcher'
 import { useEditorStore } from './core/diagram/editor/store'
 import { getKindDef } from './core/diagram/registry'
 import { useTheme } from './core/theme/useTheme'
 import { useCanvasBackground } from './core/theme/useCanvasBackground'
 import { useMinimapVisible } from './core/theme/useMinimapVisible'
-import { useCodeEditorVisible } from './core/theme/useCodeEditorVisible'
 import { useGridEnabled } from './core/theme/useGridEnabled'
+import { useLeftPanel } from './core/theme/useLeftPanel'
 import { reconcileLayoutWithArchd } from './core/layout/kinds/cloud/reconcile'
 import { getPizarraScene } from './core/state/kinds/pizarra/sceneRegistry'
 
@@ -30,9 +31,13 @@ function App(): React.JSX.Element {
   const { background, toggleBackground } = useCanvasBackground()
   const { minimapVisible, toggleMinimap } = useMinimapVisible()
   const { gridEnabled, toggleGrid } = useGridEnabled()
-  const { codeEditorVisible, toggleCodeEditor, setCodeEditorVisible } = useCodeEditorVisible()
+  const { leftPanel, setLeftPanel, toggleFigures, toggleCode } = useLeftPanel()
   // Timer del auto-guardado del DSL (debounce de escritura a disco).
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Estado del auto-guardado del .bachi, para el indicador del editor.
+  const [saveState, setSaveState] = useState<SaveState>('saved')
+  // Modo presentación: oculta todo el chrome de edición y deja el lienzo limpio.
+  const [presentationMode, setPresentationMode] = useState(false)
 
   // El estado del diagrama vive en el store. El viewport (zoom/pan/fit) lo
   // gestiona React Flow internamente, así que aquí ya no lo manejamos.
@@ -92,6 +97,8 @@ function App(): React.JSX.Element {
       // Si el contenido coincide con lo que ya tenemos en memoria, es el eco de
       // nuestro propio auto-guardado (o un cambio sin efecto): lo ignoramos.
       if (content === useEditorStore.getState().sourceContent) return
+      // Cambio externo (agente / edición manual): memoria y disco quedan en sync.
+      setSaveState('saved')
       void buildDiagram(content, path)
     })
     const offError = window.bachiDraw.onFileError(({ message }) => {
@@ -118,15 +125,24 @@ function App(): React.JSX.Element {
       void buildDiagram(next, path, undefined, { fit: false })
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
       saveTimerRef.current = setTimeout(() => {
-        window.bachiDraw.saveBachi(path, next).catch((err) => {
-          const message = err instanceof Error ? err.message : String(err)
-          setStatus('error')
-          setStatusMessage(message)
-        })
+        setSaveState('saving')
+        window.bachiDraw
+          .saveBachi(path, next)
+          .then(() => setSaveState('saved'))
+          .catch((err) => {
+            const message = err instanceof Error ? err.message : String(err)
+            setStatus('error')
+            setStatusMessage(message)
+          })
       }, 500)
     },
     [buildDiagram]
   )
+
+  // El editor avisa (sin debounce) que se escribió: marca "sin guardar".
+  const handleDirty = useCallback(() => {
+    setSaveState('pending')
+  }, [])
 
   // Limpia el timer de auto-guardado al desmontar.
   useEffect(() => {
@@ -139,20 +155,23 @@ function App(): React.JSX.Element {
     try {
       const opened = await window.bachiDraw.newDiagram()
       if (!opened) return
+      setSaveState('saved')
       void buildDiagram(opened.content, opened.path, opened.archd)
-      // Diagrama recién creado (vacío): abrimos el editor para empezar a escribir.
-      setCodeEditorVisible(true)
+      // Diagrama recién creado (vacío): abrimos el editor para empezar a escribir
+      // (el muelle es único, así que esto oculta las figuras hasta que se cierre).
+      setLeftPanel('code')
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       setStatus('error')
       setStatusMessage(message)
     }
-  }, [buildDiagram, setCodeEditorVisible])
+  }, [buildDiagram, setLeftPanel])
 
   const handleNewBoard = useCallback(async () => {
     try {
       const opened = await window.bachiDraw.newBoard()
       if (!opened) return
+      setSaveState('saved')
       void buildDiagram(opened.content, opened.path, opened.archd)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
@@ -164,6 +183,7 @@ function App(): React.JSX.Element {
   const handleOpenFile = useCallback(async () => {
     const opened = await window.bachiDraw.openFile()
     if (!opened) return
+    setSaveState('saved')
     void buildDiagram(opened.content, opened.path, opened.archd)
   }, [buildDiagram])
 
@@ -219,40 +239,104 @@ function App(): React.JSX.Element {
     return getKindDef(diagram.kind).Canvas
   }, [diagram])
 
-  // La pizarra (Excalidraw) no usa panel de figuras, editor de código DSL ni el
-  // .bachid; esos elementos son exclusivos de los diagramas cloud.
-  const isPizarra = diagram?.kind === 'pizarra'
+  // El chrome de la app se adapta al contexto. Los diagramas cloud usan panel de
+  // figuras, editor de código DSL, controles de fondo/minimapa e inspector; la
+  // pizarra (Excalidraw) gestiona su propia escena y no usa ninguno de ellos.
+  const hasDocument = Boolean(diagram)
+  const isCloud = diagram?.kind === 'cloud'
+
+  // Ids conocidos (nodos + grupos) del último diagrama cloud parseado, para
+  // autocompletar edges y `in <id>` en el editor de código.
+  const knownIds = useMemo(() => {
+    if (!diagram || diagram.kind !== 'cloud') return []
+    const model = diagram.model as {
+      nodes?: Array<{ id: string }>
+      clusters?: Array<{ id: string }>
+    }
+    return [...(model.nodes ?? []).map((n) => n.id), ...(model.clusters ?? []).map((c) => c.id)]
+  }, [diagram])
+
+  // Entrar/salir del modo presentación. Leemos el diagrama del store (no de la
+  // clausura) para que los callbacks sean estables. La pantalla completa nativa
+  // es best-effort: si falla (o no está disponible), el modo igual funciona.
+  const enterPresentation = useCallback(() => {
+    if (!useEditorStore.getState().diagram) return
+    setPresentationMode(true)
+    window.bachiDraw.enterPresentation?.().catch(() => {})
+  }, [])
+
+  const exitPresentation = useCallback(() => {
+    setPresentationMode(false)
+    window.bachiDraw.exitPresentation?.().catch(() => {})
+  }, [])
+
+  // Atajos: F5 entra (si hay diagrama), Cmd/Ctrl+Shift+P alterna, Escape sale.
+  // Capturamos en fase de captura para tener prioridad sobre otros Escape.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'F5') {
+        e.preventDefault()
+        enterPresentation()
+        return
+      }
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'p') {
+        e.preventDefault()
+        if (presentationMode) exitPresentation()
+        else enterPresentation()
+        return
+      }
+      if (e.key === 'Escape' && presentationMode) {
+        e.preventDefault()
+        e.stopPropagation()
+        exitPresentation()
+      }
+    }
+    window.addEventListener('keydown', onKey, { capture: true })
+    return () => window.removeEventListener('keydown', onKey, { capture: true })
+  }, [presentationMode, enterPresentation, exitPresentation])
 
   return (
-    <div className="bachi-draw-app">
-      <Toolbar
-        diagramName={diagram?.name ?? ''}
-        diagramKind={diagram?.kind ?? null}
-        theme={theme}
-        background={background}
-        minimapVisible={minimapVisible}
-        onNewDiagram={handleNewDiagram}
-        onNewBoard={handleNewBoard}
-        onOpenFile={handleOpenFile}
-        onSaveArchd={handleSaveArchd}
-        onToggleTheme={toggleTheme}
-        onToggleBackground={toggleBackground}
-        onToggleMinimap={toggleMinimap}
-        gridEnabled={gridEnabled}
-        onToggleGrid={toggleGrid}
-        codeEditorVisible={codeEditorVisible}
-        onToggleCodeEditor={toggleCodeEditor}
-        canEditCode={Boolean(filePath && diagram && !isPizarra)}
-        canSave={Boolean(filePath && diagram)}
-      />
+    <div className={`bachi-draw-app${presentationMode ? ' is-presenting' : ''}`}>
+      {/* En modo presentación se oculta todo el chrome de edición. */}
+      {!presentationMode && (
+        <Toolbar
+          diagramName={diagram?.name ?? ''}
+          diagramKind={diagram?.kind ?? null}
+          theme={theme}
+          background={background}
+          minimapVisible={minimapVisible}
+          onNewDiagram={handleNewDiagram}
+          onNewBoard={handleNewBoard}
+          onOpenFile={handleOpenFile}
+          onSaveArchd={handleSaveArchd}
+          onToggleTheme={toggleTheme}
+          onToggleBackground={toggleBackground}
+          onToggleMinimap={toggleMinimap}
+          gridEnabled={gridEnabled}
+          onToggleGrid={toggleGrid}
+          figuresVisible={leftPanel === 'figures'}
+          onToggleFigures={toggleFigures}
+          codeEditorVisible={leftPanel === 'code'}
+          onToggleCodeEditor={toggleCode}
+          onPresent={enterPresentation}
+          hasDocument={hasDocument}
+          canEditCode={Boolean(filePath && isCloud)}
+          canSave={Boolean(filePath && diagram)}
+        />
+      )}
       <main className="bachi-draw-main">
-        {!isPizarra && <FiguresPanel />}
-        {codeEditorVisible && diagram && !isPizarra ? (
+        {!presentationMode && isCloud && leftPanel === 'figures' && (
+          <FiguresPanel onClose={toggleFigures} />
+        )}
+        {!presentationMode && isCloud && leftPanel === 'code' ? (
           <BachiCodeEditor
             source={sourceContent ?? ''}
             onChange={handleSourceChange}
-            onClose={() => setCodeEditorVisible(false)}
+            onDirty={handleDirty}
+            onClose={toggleCode}
             errorMessage={status === 'error' ? statusMessage : null}
+            saveState={saveState}
+            knownIds={knownIds}
           />
         ) : null}
         {Canvas && diagram ? (
@@ -260,22 +344,30 @@ function App(): React.JSX.Element {
             layout={diagram.layout}
             background={background}
             minimapVisible={minimapVisible}
+            presentationMode={presentationMode}
             theme={theme}
             gridEnabled={gridEnabled}
           />
         ) : (
           <div className="bachi-draw-canvas">
-            <EmptyState onNewBoard={handleNewBoard} onOpenFile={handleOpenFile} />
+            <EmptyState
+              onNewDiagram={handleNewDiagram}
+              onNewBoard={handleNewBoard}
+              onOpenFile={handleOpenFile}
+            />
           </div>
         )}
       </main>
-      <StatusBar
-        filePath={filePath}
-        stats={stats}
-        status={status}
-        message={statusMessage}
-        lastReloadMs={lastReloadMs}
-      />
+      {!presentationMode && (
+        <StatusBar
+          filePath={filePath}
+          stats={stats}
+          status={status}
+          message={statusMessage}
+          lastReloadMs={lastReloadMs}
+        />
+      )}
+      {presentationMode && <PresentationOverlay onExit={exitPresentation} />}
     </div>
   )
 }

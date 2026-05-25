@@ -90,4 +90,8 @@ export interface CanvasProps<Layout> {
   theme?: Theme
   /** Si se muestra la grilla de fondo (solo aplica a la pizarra/Excalidraw). */
   gridEnabled?: boolean
+  /** Modo presentación: vista limpia, sin edición ni handles. Default: false.
+   * Al activarse, el Canvas encuadra el diagrama y bloquea la interacción de
+   * edición (mover/conectar/seleccionar), dejando solo pan y zoom. */
+  presentationMode?: boolean
 }

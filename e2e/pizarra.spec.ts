@@ -47,11 +47,12 @@ async function waitForStoreSync(count: number): Promise<void> {
   await expect(page.locator('.bachi-draw-status-bar')).toContainText(`${count} elementos`)
 }
 
-test('la pantalla inicial ofrece abrir diagrama y crear pizarra', async () => {
+test('la pantalla inicial ofrece crear diagrama, crear pizarra y abrir', async () => {
   const emptyState = page.locator('.bachi-draw-empty-state')
   await expect(emptyState).toBeVisible()
-  await expect(emptyState.getByText('Abrir diagrama .bachi')).toBeVisible()
+  await expect(emptyState.getByRole('button', { name: /Nuevo diagrama/ })).toBeVisible()
   await expect(emptyState.getByRole('button', { name: /Nueva pizarra/ })).toBeVisible()
+  await expect(emptyState.getByRole('button', { name: /Abrir un archivo/ })).toBeVisible()
 })
 
 test('abrir un .dark monta la pizarra y adapta la UI de Bachi al modo pizarra', async () => {
@@ -177,7 +178,7 @@ test('el toggle de tema del header también cambia el tema del lienzo Excalidraw
     page.evaluate(() => document.documentElement.getAttribute('data-theme') === 'dark')
   const isExcaliDark = async (): Promise<boolean> =>
     (await page.locator('.excalidraw.theme--dark').count()) === 1
-  const themeToggle = page.locator('[aria-label^="Tema"]')
+  const themeToggle = page.locator('button[aria-label^="Tema"]')
 
   // En todo momento el tema del lienzo debe coincidir con el de la app. Antes del
   // fix, el lienzo se quedaba clavado mientras la app cambiaba. No asumimos el

@@ -17,7 +17,7 @@
 
 .bachi-draw-header {
   position: relative;
-  flex: 0 0 44px;
+  flex: 0 0 48px;
   display: flex;
   align-items: center;
   background: var(--bg-1);
@@ -35,8 +35,8 @@
 .bachi-draw-header-left {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding-left: calc(80px + 8px);
+  gap: var(--space-1);
+  padding-left: calc(80px + var(--space-2));
   -webkit-app-region: no-drag;
 }
 
@@ -44,8 +44,8 @@
 .bachi-draw-header-right {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding-right: 12px;
+  gap: var(--space-2);
+  padding-right: var(--space-3);
   margin-left: auto;
   -webkit-app-region: no-drag;
 }
@@ -86,29 +86,28 @@
 .bachi-draw-hbtn {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  height: 28px;
-  padding: 0 10px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--bg-2);
+  gap: var(--space-1);
+  height: var(--control-h);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
   color: var(--text-0);
-  font-size: 12.5px;
-  font-weight: 500;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
   letter-spacing: 0.1px;
   transition:
-    background 100ms ease,
-    border-color 100ms ease;
+    background var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease);
 }
 
 .bachi-draw-hbtn:hover:not(:disabled) {
-  background: var(--bg-0);
-  border-color: var(--border-strong);
+  background: var(--bg-2);
 }
 
 .bachi-draw-hbtn.is-open {
-  background: var(--bg-0);
-  border-color: var(--border-strong);
+  background: var(--bg-2);
 }
 
 /* Estado activo (toggle pulsado), p. ej. el editor de código abierto. */
@@ -118,10 +117,17 @@
   color: #fff;
 }
 
+/* El hover del estado activo conserva el acento (no debe revertir a gris, que
+   dejaría el texto blanco ilegible). Especificidad explícita > la del hover base. */
+.bachi-draw-hbtn.is-on:hover:not(:disabled) {
+  background: var(--accent-press);
+  color: #fff;
+}
+
 .bachi-draw-hbtn svg {
   flex-shrink: 0;
   color: var(--text-1);
-  transition: color 100ms ease;
+  transition: color var(--dur-fast) var(--ease);
 }
 
 .bachi-draw-hbtn:hover:not(:disabled) svg,
@@ -256,6 +262,11 @@
   border-left-color: transparent;
 }
 
+.bachi-draw-seg-btn.is-on:hover {
+  background: var(--accent-press);
+  color: #fff;
+}
+
 .bachi-draw-seg-btn.is-on + .bachi-draw-seg-btn {
   border-left-color: transparent;
 }
@@ -303,6 +314,12 @@
   color: #fff;
 }
 
+.bachi-draw-btn-icon.is-active:hover {
+  background: var(--accent-press);
+  border-color: var(--accent-press);
+  color: #fff;
+}
+
 .bachi-draw-zoom-readout {
   min-width: 44px;
   text-align: center;
@@ -345,10 +362,34 @@
   border-bottom: 1px solid var(--border);
 }
 
+.bachi-draw-figures-headrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 .bachi-draw-figures-title {
   margin: 0;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semibold);
+  color: var(--text-0);
+}
+
+.bachi-draw-figures-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  color: var(--text-2);
+  transition:
+    background var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease);
+}
+
+.bachi-draw-figures-close:hover {
+  background: var(--bg-2);
   color: var(--text-0);
 }
 
@@ -608,6 +649,12 @@
   color: #fff;
 }
 
+.bachi-draw-inspector-row.is-active:hover {
+  background: var(--accent-press);
+  border-color: var(--accent-press);
+  color: #fff;
+}
+
 /* Icono dentro de una fila/segmento del inspector. */
 .bachi-draw-inspector-ico {
   display: inline-flex;
@@ -645,6 +692,12 @@
 .bachi-draw-inspector-segmented button.is-active {
   background: var(--accent);
   border-color: var(--accent);
+  color: #fff;
+}
+
+.bachi-draw-inspector-segmented button.is-active:hover {
+  background: var(--accent-press);
+  border-color: var(--accent-press);
   color: #fff;
 }
 
@@ -691,6 +744,11 @@
   color: #fff;
 }
 
+.bachi-draw-modebar-btn.is-active:hover {
+  background: var(--accent-press);
+  color: #fff;
+}
+
 .bachi-draw-canvas {
   flex: 1 1 auto;
   position: relative;
@@ -703,10 +761,9 @@
 /* ── Editor de código .bachi (panel lateral, estilo Mermaid) ──────────────── */
 
 .bachi-draw-code {
-  flex: 0 0 420px;
-  width: 420px;
-  min-width: 420px;
-  max-width: 420px;
+  /* El ancho lo fija el componente (inline style) y es redimensionable. */
+  position: relative;
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -719,6 +776,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   height: 34px;
   padding: 0 8px 0 12px;
   border-bottom: 1px solid var(--border);
@@ -729,6 +787,52 @@
   font-weight: 600;
   color: var(--text-1);
   letter-spacing: 0.2px;
+}
+
+.bachi-draw-code-head-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Indicador de guardado del .bachi. */
+.bachi-draw-code-save {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-2);
+  user-select: none;
+  white-space: nowrap;
+}
+
+.bachi-draw-code-save-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-2);
+  flex-shrink: 0;
+  transition: background 200ms ease;
+}
+
+.bachi-draw-code-save-saved {
+  color: var(--success);
+}
+.bachi-draw-code-save-saved .bachi-draw-code-save-dot {
+  background: var(--success);
+}
+.bachi-draw-code-save-pending {
+  color: var(--text-2);
+}
+.bachi-draw-code-save-pending .bachi-draw-code-save-dot {
+  background: var(--warn);
+}
+.bachi-draw-code-save-saving {
+  color: var(--warn);
+}
+.bachi-draw-code-save-saving .bachi-draw-code-save-dot {
+  background: var(--warn);
+  animation: bachi-status-pulse 1s ease-in-out infinite;
 }
 
 .bachi-draw-code-close {
@@ -754,11 +858,33 @@
   flex: 1 1 auto;
   display: flex;
   min-height: 0;
-  /* Métricas compartidas por el medianil y el textarea. */
+  /* Métricas compartidas por el medianil, la capa de resaltado y el textarea.
+     DEBEN ser idénticas en los tres para que el texto quede alineado. */
   --code-font: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
   --code-size: 12.5px;
   --code-line: 1.6;
   --code-pad-y: 10px;
+  --code-pad-x: 12px;
+  /* Paleta de tokens (tema claro). */
+  --code-comment: #8a91a0;
+  --code-keyword: #7c3aed;
+  --code-arrow: #c2410c;
+  --code-type: #0e7490;
+  --code-label: #15803d;
+  --code-string: #15803d;
+  --code-punct: #9aa1ad;
+  --code-ident: var(--text-0);
+}
+
+[data-theme='dark'] .bachi-draw-code-body {
+  --code-comment: #6b7280;
+  --code-keyword: #c4b5fd;
+  --code-arrow: #fdba74;
+  --code-type: #67e8f9;
+  --code-label: #86efac;
+  --code-string: #86efac;
+  --code-punct: #6b7280;
+  --code-ident: var(--text-0);
 }
 
 .bachi-draw-code-gutter {
@@ -779,26 +905,112 @@
   font-variant-numeric: tabular-nums;
 }
 
-.bachi-draw-code-textarea {
+.bachi-draw-code-lineno.is-error {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+/* Área de edición: contenedor relativo donde se superponen la capa de
+   resaltado (detrás) y el textarea transparente (delante). */
+.bachi-draw-code-editarea {
+  position: relative;
   flex: 1 1 auto;
   min-width: 0;
-  resize: none;
+  overflow: hidden;
+}
+
+/* Métricas idénticas para resaltado y textarea (mixin via doble selector). */
+.bachi-draw-code-highlight,
+.bachi-draw-code-textarea {
+  position: absolute;
+  inset: 0;
+  margin: 0;
   border: 0;
-  outline: none;
-  padding: var(--code-pad-y) 12px;
-  background: var(--bg-1);
-  color: var(--text-0);
+  padding: var(--code-pad-y) var(--code-pad-x);
   font-family: var(--code-font);
   font-size: var(--code-size);
   line-height: var(--code-line);
+  letter-spacing: normal;
   tab-size: 2;
   white-space: pre;
+  word-wrap: normal;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+/* Capa de resaltado: solo visual, no captura eventos. Contiene una línea por
+   cada renglón para poder marcar la línea de error como un bloque. */
+.bachi-draw-code-highlight {
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--bg-1);
+  color: var(--code-ident);
+}
+
+.bachi-draw-code-line {
+  /* Ancho al contenido (con mínimo el del área) para que el scroll horizontal y
+     el fondo de la línea de error funcionen igual que el textarea. */
+  width: max-content;
+  min-width: 100%;
+  white-space: pre;
+}
+
+.bachi-draw-code-line.is-error {
+  background: color-mix(in oklab, var(--danger) 16%, transparent);
+  /* Sutil marca a la izquierda para reforzar la línea con error. */
+  box-shadow: inset 2px 0 0 var(--danger);
+}
+
+/* Textarea por encima: texto transparente (solo se ve el caret y la selección);
+   los colores los aporta la capa de resaltado de debajo. */
+.bachi-draw-code-textarea {
+  resize: none;
+  outline: none;
   overflow: auto;
+  background: transparent;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  caret-color: var(--text-0);
+}
+
+.bachi-draw-code-textarea::selection {
+  background: color-mix(in oklab, var(--accent) 30%, transparent);
 }
 
 .bachi-draw-code-textarea::placeholder {
   color: var(--text-2);
+  -webkit-text-fill-color: var(--text-2);
   opacity: 0.7;
+}
+
+/* ── Colores de tokens del DSL ── */
+.bachi-tok-comment {
+  color: var(--code-comment);
+  font-style: italic;
+}
+.bachi-tok-keyword {
+  color: var(--code-keyword);
+  font-weight: 600;
+}
+.bachi-tok-arrow {
+  color: var(--code-arrow);
+  font-weight: 600;
+}
+.bachi-tok-type {
+  color: var(--code-type);
+}
+.bachi-tok-label {
+  color: var(--code-label);
+}
+.bachi-tok-string {
+  color: var(--code-string);
+}
+.bachi-tok-colon,
+.bachi-tok-punct {
+  color: var(--code-punct);
+}
+.bachi-tok-ident {
+  color: var(--code-ident);
 }
 
 /* Banda de error de parseo al pie del editor. */
@@ -815,6 +1027,70 @@
   line-height: 1.45;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+/* Tirador de redimensionado en el borde derecho del panel. */
+.bachi-draw-code-resize {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 5;
+  touch-action: none;
+}
+
+.bachi-draw-code-resize:hover {
+  background: color-mix(in oklab, var(--accent) 40%, transparent);
+}
+
+/* Durante el arrastre: cursor global y sin selección de texto accidental. */
+body.bachi-col-resizing {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+/* ── Dropdown de autocompletado ── */
+.bachi-draw-code-suggest {
+  position: absolute;
+  z-index: 10;
+  margin: 2px 0 0;
+  padding: 4px;
+  list-style: none;
+  min-width: 160px;
+  max-width: 320px;
+  max-height: 220px;
+  overflow-y: auto;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow:
+    0 8px 28px rgba(0, 0, 0, 0.16),
+    0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme='dark'] .bachi-draw-code-suggest {
+  box-shadow:
+    0 8px 28px rgba(0, 0, 0, 0.45),
+    0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.bachi-draw-code-suggest-item {
+  padding: 4px 8px;
+  border-radius: 5px;
+  font-family: var(--code-font, monospace);
+  font-size: 12px;
+  color: var(--text-0);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.bachi-draw-code-suggest-item.is-active,
+.bachi-draw-code-suggest-item:hover {
+  background: color-mix(in oklab, var(--accent) 14%, var(--bg-2));
 }
 
 .bachi-draw-viewport {
@@ -950,53 +1226,62 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: var(--space-6);
 }
 
 .bachi-draw-empty-state-card {
   text-align: center;
-  max-width: 620px;
+  max-width: 560px;
   width: 100%;
-  padding: 40px 48px;
+  padding: var(--space-10) var(--space-10) var(--space-6);
   background: var(--bg-1);
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
 }
 
-.bachi-draw-empty-state-card h2 {
-  margin: 0 0 28px;
-  font-size: 24px;
-  font-weight: 700;
+.bachi-draw-empty-title {
+  margin: 0;
+  font-size: var(--fs-2xl);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.4px;
   color: var(--text-0);
 }
 
-/* Tarjetas de elección (abrir / nueva pizarra), lado a lado. */
+.bachi-draw-empty-subtitle {
+  margin: var(--space-2) 0 var(--space-8);
+  font-size: var(--fs-md);
+  color: var(--text-1);
+}
+
+/* Tarjetas de creación (nuevo diagrama / nueva pizarra), lado a lado. */
 .bachi-draw-empty-choices {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: var(--space-3);
 }
 
 .bachi-draw-empty-choice {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 28px 24px;
-  background: var(--bg-2);
+  gap: var(--space-2);
+  padding: var(--space-6) var(--space-5);
+  background: var(--bg-1);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   cursor: pointer;
   text-align: center;
   transition:
-    background 0.12s ease,
-    border-color 0.12s ease,
-    transform 0.12s ease;
+    background var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease),
+    transform var(--dur-fast) var(--ease);
 }
 
 .bachi-draw-empty-choice:hover {
-  background: var(--bg-1);
   border-color: var(--accent);
+  box-shadow: var(--shadow-md);
   transform: translateY(-2px);
 }
 
@@ -1006,26 +1291,57 @@
 }
 
 .bachi-draw-empty-choice-icon {
-  font-size: 32px;
-  line-height: 1;
-  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: var(--space-1);
+  border-radius: var(--radius-lg);
+  background: color-mix(in oklab, var(--accent) 12%, var(--bg-2));
+  color: var(--accent);
 }
 
 .bachi-draw-empty-choice-title {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-semibold);
   color: var(--text-0);
 }
 
 .bachi-draw-empty-choice-desc {
-  font-size: 13px;
+  font-size: var(--fs-base);
   color: var(--text-2);
   line-height: 1.45;
 }
 
+/* Acción secundaria: abrir archivo existente. */
+.bachi-draw-empty-open {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-5) auto 0;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  color: var(--text-1);
+  font-size: var(--fs-base);
+  font-weight: var(--fw-medium);
+  transition:
+    background var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease);
+}
+
+.bachi-draw-empty-open:hover {
+  background: var(--bg-2);
+  color: var(--text-0);
+}
+
+.bachi-draw-empty-open svg {
+  color: var(--text-2);
+}
+
 .bachi-draw-empty-hint {
-  margin: 28px 0 0;
-  font-size: 13px;
+  margin: var(--space-6) 0 0;
+  font-size: var(--fs-sm);
   color: var(--text-2);
 }
 
@@ -1430,9 +1746,30 @@
   pointer-events: none;
 }
 
-/* Tema del lienzo React Flow */
-.react-flow {
+/* Tema del lienzo React Flow.
+   React Flow trae sus propios colores de patrón (`#eee` líneas, `#91919a` puntos)
+   y su bloque oscuro está scoped a SU clase `.dark`, no a nuestro
+   `[data-theme='dark']`. Por eso reasignamos esos defaults a nuestros tokens, que
+   sí siguen el tema: así el grid es sutil en oscuro en vez de casi blanco. */
+/* Especificidad (0,2,0) para ganar al `.react-flow` (0,1,0) de la librería, cuyo
+   style.css se importa después del nuestro. */
+.bachi-draw-canvas .react-flow {
   background: var(--bg-0);
+  --xy-background-pattern-dots-color-default: var(--grid-dot);
+  --xy-background-pattern-lines-color-default: var(--grid-line);
+  --xy-background-pattern-cross-color-default: var(--grid-line);
+  /* Minimapa acorde al tema (su fondo, veladura y nodos usan defaults claros:
+     #fff y similares, cuyo bloque oscuro está atado a la clase `.dark` de la
+     librería, que no usamos). */
+  --xy-minimap-background-color-default: var(--bg-1);
+  --xy-minimap-mask-background-color-default: color-mix(in oklab, var(--bg-0) 55%, transparent);
+  --xy-minimap-node-background-color-default: var(--border-strong);
+  /* Controles (zoom/fit/lock): mismo motivo, defaults casi blancos. */
+  --xy-controls-button-background-color-default: var(--bg-1);
+  --xy-controls-button-background-color-hover-default: var(--bg-2);
+  --xy-controls-button-color-default: var(--text-0);
+  --xy-controls-button-color-hover-default: var(--text-0);
+  --xy-controls-button-border-color-default: var(--border);
 }
 
 /* Guías de alineación (imán) durante el arrastre de nodos. Cubren todo el
@@ -1697,4 +2034,80 @@
 /* Excalidraw hereda el tema del sistema. Aseguramos que ocupe todo el espacio. */
 .pizarra-canvas-wrapper .excalidraw {
   height: 100%;
+}
+
+/* ─────────────────────── Modo presentación ──────────────────── */
+
+/* Vista limpia: sin chrome de edición. Los handles de conexión se ocultan del
+   todo (además de quedar inertes por nodesConnectable=false). */
+.bachi-draw-app.is-presenting .react-flow__handle {
+  display: none !important;
+}
+
+/* Aviso breve al entrar, centrado arriba. No captura eventos. */
+.bachi-draw-presentation-toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  background: rgba(0, 0, 0, 0.62);
+  color: #fff;
+  font-size: var(--fs-sm);
+  pointer-events: none;
+  backdrop-filter: blur(6px);
+  animation: bachi-presentation-toast-in 0.2s var(--ease);
+}
+
+.bachi-draw-presentation-toast strong {
+  font-weight: var(--fw-semibold);
+}
+
+@keyframes bachi-presentation-toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* Hint discreto "Esc — salir", abajo a la derecha. Clicable (alternativa a Esc),
+   se desvanece tras unos segundos de inactividad. */
+.bachi-draw-presentation-hint {
+  position: fixed;
+  bottom: var(--space-4);
+  right: var(--space-4);
+  z-index: 100;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: var(--fs-sm);
+  transition: opacity 0.3s var(--ease);
+}
+
+.bachi-draw-presentation-hint:hover {
+  background: rgba(0, 0, 0, 0.68);
+}
+
+.bachi-draw-presentation-hint.is-hidden {
+  opacity: 0;
+}
+
+.bachi-draw-presentation-hint kbd {
+  font: inherit;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 4px;
+  padding: 1px 6px;
 }

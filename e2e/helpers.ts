@@ -221,6 +221,19 @@ export async function mockOpenDialog(app: ElectronApplication, filePath: string)
   }, filePath)
 }
 
+/** DSL mínimo de un diagrama cloud (.bachi): dos servicios y una arista. */
+export function simpleCloud(): string {
+  return [
+    'arch-cloud lr',
+    '',
+    'service api(oss/server)[API]',
+    'service db(oss/postgres)[DB]',
+    '',
+    'api --> db',
+    ''
+  ].join('\n')
+}
+
 /** Contenido de una pizarra vacía con el formato `.dark`. */
 export function emptyPizarra(name = 'E2E pizarra'): string {
   return JSON.stringify({

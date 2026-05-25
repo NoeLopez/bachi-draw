@@ -41,6 +41,10 @@ const bachiDraw = {
     ipcRenderer.invoke('save-bachi', { path, content }),
   savePizarra: (filePath: string, data: unknown): Promise<{ path: string }> =>
     ipcRenderer.invoke('save-pizarra', { filePath, data }),
+  setNativeTheme: (source: 'system' | 'light' | 'dark'): Promise<void> =>
+    ipcRenderer.invoke('set-native-theme', source),
+  enterPresentation: (): Promise<void> => ipcRenderer.invoke('enter-presentation'),
+  exitPresentation: (): Promise<void> => ipcRenderer.invoke('exit-presentation'),
   stopWatching: (): Promise<void> => ipcRenderer.invoke('stop-watching'),
   resolveArchName: (path: string): Promise<string> => ipcRenderer.invoke('resolve-arch-name', path),
 
