@@ -67,6 +67,13 @@ interface EdgeFragment {
   direction: EdgeDirection
 }
 
+/** Desescapa un label leído del DSL: `\n` → salto de línea real, `\\` → `\`
+ * (inverso de escapeLabel en serialize.ts). Permite labels multilínea en
+ * `[...]` y en los `"..."` de las aristas. */
+function unescapeLabel(text: string): string {
+  return text.replace(/\\(.)/g, (_, c) => (c === 'n' ? '\n' : c))
+}
+
 class Parser {
   private pos = 0
 
@@ -180,7 +187,7 @@ class Parser {
       category = this.parseCategory()
     }
     if (this.peek().kind === 'bracket-label') {
-      label = this.consume().value
+      label = unescapeLabel(this.consume().value)
     }
     if (this.peek().kind === 'ident' && this.peek().value === 'in') {
       this.consume()
@@ -211,7 +218,7 @@ class Parser {
       type = this.parseCategory()
     }
     if (this.peek().kind === 'bracket-label') {
-      label = this.consume().value
+      label = unescapeLabel(this.consume().value)
     }
     if (this.peek().kind === 'ident' && this.peek().value === 'in') {
       this.consume()
@@ -271,7 +278,7 @@ class Parser {
           parts.push(this.peek().value)
           this.consume()
         }
-        label = parts.join(' ')
+        label = unescapeLabel(parts.join(' '))
       } else {
         throw this.error(`se esperaba el texto del label tras ":"`, tok)
       }

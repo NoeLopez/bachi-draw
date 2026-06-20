@@ -4,6 +4,8 @@ export type ReloadStatus = 'idle' | 'reloading' | 'ok' | 'error'
 
 interface StatusBarProps {
   filePath: string | null
+  /** true si hay ediciones sin guardar (muestra un ● antes del nombre). */
+  dirty?: boolean
   stats: DiagramStat[]
   status: ReloadStatus
   message?: string
@@ -23,6 +25,7 @@ function filenameFromPath(path: string): string {
 
 export default function StatusBar({
   filePath,
+  dirty = false,
   stats,
   status,
   message,
@@ -41,6 +44,15 @@ export default function StatusBar({
   return (
     <footer className="bachi-draw-status-bar">
       <div className="bachi-draw-status-file" title={filePath ?? ''}>
+        {filename && dirty ? (
+          <span
+            className="bachi-draw-status-dirty"
+            aria-label="Cambios sin guardar"
+            title="Cambios sin guardar"
+          >
+            ●{' '}
+          </span>
+        ) : null}
         {filename ?? '— Sin archivo abierto —'}
       </div>
       <div className="bachi-draw-status-meta">

@@ -32,10 +32,16 @@ import {
   edgeVisuals,
   toReactFlow
 } from '../../../core/layout/kinds/cloud/toReactFlow'
-import type { ExtraHandles, LayoutResult, LayoutEdge } from '../../../core/parser/kinds/cloud/types'
+import type {
+  ExtraHandles,
+  LayoutResult,
+  LayoutEdge,
+  LayoutNode
+} from '../../../core/parser/kinds/cloud/types'
 import { type GuideLine, snapToAlignment } from '../../../core/layout/kinds/cloud/alignment'
 import { allExtraHandleIds } from '../../../core/layout/kinds/cloud/connectionHandles'
 import { humanizeIconType, ICON_DND_TYPE } from '../../../icons/officialIcons'
+import { registerCloudLayout } from '../../../core/state/kinds/cloud/layoutRegistry'
 import {
   defaultShapeSize,
   fromShapeNodeType,
@@ -100,65 +106,43 @@ function updateLayoutWithReactFlow(
     }
   }
 
-  // Update layout nodes with new positions and labels
-  const updatedNodes = layout.nodes.map((n) => {
-    const rfNode = nodesMap.get(n.id)
-    if (!rfNode) return n
-    const absPos = getAbsolutePosition(n.id)
-    if (rfNode.type === 'service') {
-      return {
-        ...n,
-        x: absPos.x,
-        y: absPos.y,
-        label: rfNode.data.label,
-        extraHandles: rfNode.data.extraHandles
-      }
-    }
-    if (rfNode.type === 'shape') {
-      const sn = rfNode as ShapeFlowNode
-      return {
-        ...n,
-        x: absPos.x,
-        y: absPos.y,
-        width: sn.width ?? n.width,
-        height: sn.height ?? n.height,
-        label: sn.data.label,
-        fillColor: sn.data.fillColor,
-        strokeColor: sn.data.strokeColor,
-        strokeWidth: sn.data.strokeWidth
-      }
-    }
-    return n
-  })
-
-  // Anexa nodos service/shape que existen en React Flow pero no en el layout
-  // (creados al arrastrar del panel). Sin esto el sync los ignoraría.
-  const existingIds = new Set(layout.nodes.map((n) => n.id))
+  // Construimos los nodos del layout a partir de los nodos ACTUALES de React
+  // Flow (fuente de verdad), no del layout previo: así las altas aparecen, las
+  // ediciones se reflejan y los BORRADOS desaparecen (antes un nodo borrado
+  // quedaba fantasma en el layout y se re-serializaba al .bachi).
+  const prevById = new Map(layout.nodes.map((n) => [n.id, n]))
+  const updatedNodes: LayoutNode[] = []
   for (const rfNode of rfNodes) {
-    if (existingIds.has(rfNode.id)) continue
+    if (rfNode.type === 'group') continue // los grupos van en `clusters`
+    const prev = prevById.get(rfNode.id)
     const absPos = getAbsolutePosition(rfNode.id)
     if (rfNode.type === 'service') {
+      const clusterId = prev?.clusterId ?? rfNode.parentId ?? undefined
       updatedNodes.push({
+        ...prev,
         id: rfNode.id,
-        type: rfNode.data.iconType,
+        type: prev?.type ?? rfNode.data.iconType,
         label: rfNode.data.label,
         x: absPos.x,
         y: absPos.y,
-        width: rfNode.width ?? 80,
-        height: rfNode.height ?? 80,
-        ...(rfNode.parentId ? { clusterId: rfNode.parentId } : {}),
+        width: prev?.width ?? rfNode.width ?? 80,
+        height: prev?.height ?? rfNode.height ?? 80,
+        ...(clusterId ? { clusterId } : {}),
         extraHandles: rfNode.data.extraHandles
       })
     } else if (rfNode.type === 'shape') {
       const sn = rfNode as ShapeFlowNode
+      const clusterId = prev?.clusterId ?? sn.parentId ?? undefined
       updatedNodes.push({
+        ...prev,
         id: sn.id,
-        type: toShapeNodeType(sn.data.shapeType),
+        type: prev?.type ?? toShapeNodeType(sn.data.shapeType),
         label: sn.data.label,
         x: absPos.x,
         y: absPos.y,
-        width: sn.width ?? 160,
-        height: sn.height ?? 80,
+        width: sn.width ?? prev?.width ?? 160,
+        height: sn.height ?? prev?.height ?? 80,
+        ...(clusterId ? { clusterId } : {}),
         fillColor: sn.data.fillColor,
         strokeColor: sn.data.strokeColor,
         strokeWidth: sn.data.strokeWidth
@@ -166,20 +150,23 @@ function updateLayoutWithReactFlow(
     }
   }
 
-  // Update layout clusters with new positions and labels
-  const updatedClusters = layout.clusters.map((c) => {
-    const rfNode = nodesMap.get(c.id)
-    if (!rfNode || rfNode.type !== 'group') return c
-    const absPos = getAbsolutePosition(c.id)
-    return {
-      ...c,
-      x: absPos.x,
-      y: absPos.y,
-      label: rfNode.data.label,
-      width: rfNode.width ?? c.width,
-      height: rfNode.height ?? c.height
-    }
-  })
+  // Clusters: solo los que siguen presentes en React Flow (filtra los borrados),
+  // con sus posiciones/labels actualizados.
+  const updatedClusters = layout.clusters
+    .filter((c) => nodesMap.has(c.id))
+    .map((c) => {
+      const rfNode = nodesMap.get(c.id)
+      if (!rfNode || rfNode.type !== 'group') return c
+      const absPos = getAbsolutePosition(c.id)
+      return {
+        ...c,
+        x: absPos.x,
+        y: absPos.y,
+        label: rfNode.data.label,
+        width: rfNode.width ?? c.width,
+        height: rfNode.height ?? c.height
+      }
+    })
 
   // Update edges.
   // Match rfEdges back to LayoutEdge.
@@ -281,6 +268,33 @@ function CloudCanvasInner({
   useEffect(() => {
     layoutRef.current = layout
   }, [layout])
+
+  // Refs siempre al día con el estado vivo de React Flow, para que el getter del
+  // registro (consultado al guardar) derive el layout exacto que se ve.
+  const nodesRef = useRef(nodes)
+  const edgesRef = useRef(edges)
+  useEffect(() => {
+    nodesRef.current = nodes
+  }, [nodes])
+  useEffect(() => {
+    edgesRef.current = edges
+  }, [edges])
+
+  // Publica el getter del layout actual mientras este canvas está montado. Al
+  // guardar, App lo lee para serializar el .bachi desde el estado vivo (no del
+  // store, que puede quedar stale entre ediciones encadenadas).
+  useEffect(() => {
+    registerCloudLayout(() => {
+      const base = layoutRef.current
+      if (!base) return null
+      const next = updateLayoutWithReactFlow(base, nodesRef.current, edgesRef.current)
+      const bounds = getLayoutBounds(next)
+      next.width = bounds.width
+      next.height = bounds.height
+      return next
+    })
+    return () => registerCloudLayout(null)
+  }, [])
 
   const syncToStore = useCallback(
     (currentNodes: CloudFlowNode[], currentEdges: Edge<CloudEdgeData>[]) => {

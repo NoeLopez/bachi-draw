@@ -14,19 +14,27 @@ const HEADER_COMMENT = [
   '# a<-->b (bidir) · chains: a-->b-->c · label: ": texto" · # comentarios'
 ]
 
-/** ¿El texto necesita comillas como label de edge? (si tiene espacios). */
+/** Escapa un label para meterlo en el DSL: los saltos de línea (edición
+ * multilínea) se vuelven `\n` literal y las barras invertidas se duplican, para
+ * no romper la sintaxis dentro de `[...]` o `"..."`. El parser lo desescapa. */
+function escapeLabel(text: string): string {
+  return text.replace(/\\/g, '\\\\').replace(/\n/g, '\\n')
+}
+
+/** ¿El label de edge necesita comillas? Cualquier cosa que no sea un
+ * identificador "pelado" (sin espacios ni escapes) se entrecomilla. */
 function needsQuotes(text: string): boolean {
-  return /\s/.test(text)
+  return !/^[a-zA-Z0-9_/.-]+$/.test(text)
 }
 
 function serviceLine(n: CloudNode, inParent: boolean): string {
   const inPart = inParent && n.clusterId ? ` in ${n.clusterId}` : ''
-  return `service ${n.id}(${n.type})[${n.label}]${inPart}`
+  return `service ${n.id}(${n.type})[${escapeLabel(n.label)}]${inPart}`
 }
 
 function groupLine(c: CloudCluster): string {
   const inPart = c.parentClusterId ? ` in ${c.parentClusterId}` : ''
-  return `group ${c.id} [${c.label}]${inPart}`
+  return `group ${c.id} [${escapeLabel(c.label)}]${inPart}`
 }
 
 function edgeLine(e: CloudEdge): string {
@@ -35,7 +43,8 @@ function edgeLine(e: CloudEdge): string {
   const arrow = e.direction === 'both' ? '<-->' : e.style === 'dashed' ? '-.->' : '-->'
   let line = `${e.from} ${arrow} ${e.to}`
   if (e.label) {
-    line += ` : ${needsQuotes(e.label) ? `"${e.label}"` : e.label}`
+    const lbl = escapeLabel(e.label)
+    line += ` : ${needsQuotes(lbl) ? `"${lbl}"` : lbl}`
   }
   return line
 }

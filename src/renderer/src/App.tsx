@@ -12,6 +12,10 @@ import { useCanvasBackground } from './core/theme/useCanvasBackground'
 import { useMinimapVisible } from './core/theme/useMinimapVisible'
 import { useLeftPanel } from './core/theme/useLeftPanel'
 import { reconcileLayoutWithArchd } from './core/layout/kinds/cloud/reconcile'
+import { layoutToCloudGraph } from './core/layout/kinds/cloud/toCloudGraph'
+import { serializeCloud } from './core/parser/kinds/cloud/serialize'
+import type { LayoutResult } from './core/parser/kinds/cloud/types'
+import { getCloudLayout } from './core/state/kinds/cloud/layoutRegistry'
 import { getPizarraScene } from './core/state/kinds/pizarra/sceneRegistry'
 
 function filenameWithoutExt(path: string): string {
@@ -39,7 +43,9 @@ function App(): React.JSX.Element {
   const diagram = useEditorStore((s) => s.diagram)
   const filePath = useEditorStore((s) => s.filePath)
   const sourceContent = useEditorStore((s) => s.sourceContent)
+  const dirty = useEditorStore((s) => s.dirty)
   const setDiagramInStore = useEditorStore((s) => s.setDiagram)
+  const markClean = useEditorStore((s) => s.markClean)
 
   const buildDiagram = useCallback(
     async (content: string, path: string, archd?: any, opts?: { fit?: boolean }): Promise<void> => {
@@ -205,14 +211,26 @@ function App(): React.JSX.Element {
         return
       }
 
-      const archd = def.serialize(fileName, diagram.layout, {
+      // Cloud: además del .bachid (posiciones), reconstruimos el DSL desde el
+      // layout editado y lo escribimos al .bachi. Así las ediciones visuales
+      // del usuario vuelven al archivo fuente (loop IA ↔ humano). saveBachi
+      // silencia el watcher para que el hot reload no re-parsee y resetee.
+      // Leemos el layout vivo de React Flow (getCloudLayout) para captar incluso
+      // ediciones encadenadas que el store podría no haber sincronizado aún.
+      const layout = (getCloudLayout() ?? diagram.layout) as LayoutResult
+      const bachiText = serializeCloud(layoutToCloudGraph(layout, diagram.name))
+      await window.bachiDraw.saveBachi(filePath, bachiText)
+
+      const archd = def.serialize(fileName, layout, {
         zoom: 1,
         offsetX: 0,
         offsetY: 0,
-        width: diagram.bounds.width,
-        height: diagram.bounds.height
+        width: layout.width,
+        height: layout.height
       })
       const result = await window.bachiDraw.saveArchd(filePath, archd)
+      // El texto en disco pasa a ser nuestra nueva base; limpia el "sin guardar".
+      markClean(bachiText)
       setStatus('ok')
       setStatusMessage(`Guardado ${result.path.split(/[/\\]/).pop()}`)
     } catch (err) {
@@ -220,7 +238,7 @@ function App(): React.JSX.Element {
       setStatus('error')
       setStatusMessage(message)
     }
-  }, [filePath, diagram])
+  }, [filePath, diagram, markClean])
 
   // Stats genéricos: cada kind sabe contar lo suyo (nodos/edges/clusters).
   const stats = useMemo(() => {
@@ -301,6 +319,7 @@ function App(): React.JSX.Element {
       </main>
       <StatusBar
         filePath={filePath}
+        dirty={dirty}
         stats={stats}
         status={status}
         message={statusMessage}

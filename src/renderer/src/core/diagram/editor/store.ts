@@ -49,7 +49,10 @@ export interface EditorState {
   clearDiagram: () => void
   updateLayout: (layout: unknown, bounds: { width: number; height: number }) => void
   markDirty: () => void
-  markClean: () => void
+  /** Marca el estado como guardado. Si se pasa `sourceContent`, lo actualiza al
+   * texto recién escrito a disco, para que el eco del file watcher (mismo
+   * contenido) se ignore y no re-parsee reseteando posiciones. */
+  markClean: (sourceContent?: string) => void
 }
 
 export const useEditorStore = create<EditorState>()(
@@ -99,9 +102,10 @@ export const useEditorStore = create<EditorState>()(
       })
     },
 
-    markClean: () => {
+    markClean: (sourceContent) => {
       set((state) => {
         state.dirty = false
+        if (sourceContent !== undefined) state.sourceContent = sourceContent
       })
     }
   }))
