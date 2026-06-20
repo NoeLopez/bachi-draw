@@ -18,6 +18,7 @@ import { reconcileLayoutWithArchd } from './core/layout/kinds/cloud/reconcile'
 import { layoutToCloudGraph } from './core/layout/kinds/cloud/toCloudGraph'
 import { serializeCloud } from './core/parser/kinds/cloud/serialize'
 import type { LayoutResult } from './core/parser/kinds/cloud/types'
+import type { ArchdDocument } from './core/state/kinds/cloud/archdSerializer'
 import { getCloudLayout } from './core/state/kinds/cloud/layoutRegistry'
 import { getPizarraScene } from './core/state/kinds/pizarra/sceneRegistry'
 
@@ -56,7 +57,7 @@ function App(): React.JSX.Element {
   const markClean = useEditorStore((s) => s.markClean)
 
   const buildDiagram = useCallback(
-    async (content: string, path: string, archd?: any, opts?: { fit?: boolean }): Promise<void> => {
+    async (content: string, path: string, archd?: unknown, opts?: { fit?: boolean }): Promise<void> => {
       const runId = ++runIdRef.current
       setStatus('reloading')
       setStatusMessage(undefined)
@@ -74,9 +75,11 @@ function App(): React.JSX.Element {
         // gestiona su propia escena en Excalidraw).
         if (kind === 'cloud') {
           const currentDiagram = useEditorStore.getState().diagram
-          const reconciliationSource = archd || currentDiagram?.layout
+          // El archd llega como `unknown` desde el bridge IPC (.bachid de disco);
+          // si no hay, caemos al layout en memoria. Ambos cumplen ReconcileSource.
+          const reconciliationSource = (archd as ArchdDocument | null) ?? currentDiagram?.layout
           if (reconciliationSource) {
-            layout = reconcileLayoutWithArchd(layout as any, reconciliationSource)
+            layout = reconcileLayoutWithArchd(layout as LayoutResult, reconciliationSource)
           }
         }
 

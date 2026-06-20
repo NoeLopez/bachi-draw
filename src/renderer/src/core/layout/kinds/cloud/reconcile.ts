@@ -1,9 +1,50 @@
 import type {
+  EdgeDirection,
+  EdgeStyle,
+  ExtraHandles,
   LayoutResult,
   LayoutNode,
   LayoutCluster,
-  LayoutEdge
+  LayoutEdge,
+  Point
 } from '../../../parser/kinds/cloud/types'
+
+// Forma mínima que reconcile LEE de la fuente: un `.bachid` de disco
+// (ArchdDocument) o un LayoutResult en memoria. Todo opcional porque proviene de
+// JSON no confiable; los campos se fusionan defensivamente sobre el layout de
+// ELK. Tanto ArchdDocument como LayoutResult son asignables a este tipo.
+interface ReconcileNode {
+  id: string
+  x?: number
+  y?: number
+  width?: number
+  height?: number
+  extraHandles?: ExtraHandles | null
+}
+interface ReconcileCluster {
+  id: string
+  x?: number
+  y?: number
+  width?: number
+  height?: number
+}
+interface ReconcileEdge {
+  id: string
+  from: string
+  to: string
+  label?: string | null
+  style?: EdgeStyle
+  direction?: EdgeDirection
+  points?: Point[]
+  sourceHandle?: string | null
+  targetHandle?: string | null
+  jumps?: boolean
+}
+export interface ReconcileSource {
+  nodes?: ReconcileNode[]
+  clusters?: ReconcileCluster[]
+  edges?: ReconcileEdge[]
+}
 
 /**
  * Reconciles the newly computed ELK layout with positions/edges from a saved `.bachid` file
@@ -15,13 +56,16 @@ import type {
  * 3. Restores edge definitions (bend points, direction, labels) and preserves custom
  *    user-drawn edges that aren't in the DSL.
  */
-export function reconcileLayoutWithArchd(elkLayout: LayoutResult, archd: any): LayoutResult {
+export function reconcileLayoutWithArchd(
+  elkLayout: LayoutResult,
+  archd: ReconcileSource | null | undefined
+): LayoutResult {
   if (!archd) return elkLayout
 
   // Create maps for fast lookup
-  const archdNodes = new Map<string, any>(archd.nodes?.map((n: any) => [n.id, n]) ?? [])
-  const archdClusters = new Map<string, any>(archd.clusters?.map((c: any) => [c.id, c]) ?? [])
-  const archdEdges = new Map<string, any>(archd.edges?.map((e: any) => [e.id, e]) ?? [])
+  const archdNodes = new Map(archd.nodes?.map((n) => [n.id, n]) ?? [])
+  const archdClusters = new Map(archd.clusters?.map((c) => [c.id, c]) ?? [])
+  const archdEdges = new Map(archd.edges?.map((e) => [e.id, e]) ?? [])
 
   // 1. Reconcile nodes
   const nodes = elkLayout.nodes.map((n): LayoutNode => {
@@ -62,7 +106,7 @@ export function reconcileLayoutWithArchd(elkLayout: LayoutResult, archd: any): L
         ...e,
         from: saved.from || e.from,
         to: saved.to || e.to,
-        label: saved.label !== undefined ? saved.label : e.label,
+        label: saved.label ?? e.label,
         style: saved.style || e.style,
         direction: saved.direction || e.direction,
         points: saved.points || e.points,
