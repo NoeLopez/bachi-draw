@@ -20,6 +20,7 @@ interface ToolbarProps {
   codeEditorVisible: boolean
   onToggleCodeEditor: () => void
   onPresent: () => void
+  onShowShortcuts: () => void
   hasDocument: boolean
   canEditCode: boolean
   canSave: boolean
@@ -173,6 +174,19 @@ const PRESENT_ICON = (
   </svg>
 )
 
+const KEYBOARD_ICON = (
+  <svg viewBox="0 0 20 20" width="15" height="15" fill="none" aria-hidden focusable="false">
+    <rect x="2" y="5" width="16" height="10" rx="2" stroke="currentColor" strokeWidth="1.35" />
+    <g fill="currentColor">
+      <circle cx="5.5" cy="8.5" r="0.8" />
+      <circle cx="8.5" cy="8.5" r="0.8" />
+      <circle cx="11.5" cy="8.5" r="0.8" />
+      <circle cx="14.5" cy="8.5" r="0.8" />
+    </g>
+    <path d="M6 11.8h8" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
+  </svg>
+)
+
 /* ── Componente ─────────────────────────────────────────────────────────── */
 
 export default function Toolbar({
@@ -193,6 +207,7 @@ export default function Toolbar({
   codeEditorVisible,
   onToggleCodeEditor,
   onPresent,
+  onShowShortcuts,
   hasDocument,
   canEditCode,
   canSave
@@ -398,6 +413,19 @@ export default function Toolbar({
             aria-label={`Tema ${nextThemeLabel}`}
           >
             {theme === 'dark' ? SUN_ICON : MOON_ICON}
+          </button>
+        </div>
+
+        {/* Atajos de teclado: ayuda global, siempre disponible. */}
+        <div className="bachi-draw-seg" role="group" aria-label="Ayuda">
+          <button
+            type="button"
+            className="bachi-draw-seg-btn"
+            onClick={onShowShortcuts}
+            title="Atajos de teclado (?)"
+            aria-label="Atajos de teclado"
+          >
+            {KEYBOARD_ICON}
           </button>
         </div>
       </div>
