@@ -195,7 +195,6 @@ class Parser {
     }
     this.expectNewlineOrEof('se esperaba fin de línea tras la declaración de group')
 
-    void category // capturada por compat; el render actual no la usa
     void keyword
 
     return {
@@ -203,7 +202,8 @@ class Parser {
       label: label ?? id,
       nodeIds: [],
       childClusterIds: [],
-      parentClusterId: parent
+      parentClusterId: parent,
+      ...(category ? { type: category } : {})
     }
   }
 

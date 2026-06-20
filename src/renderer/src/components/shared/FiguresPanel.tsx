@@ -6,6 +6,7 @@ import {
   listOfficialIconTypes
 } from '../../icons/officialIcons'
 import { getIconDataUri, listIconTypes } from '../../icons/registry'
+import { getGroupStyle, listGroupTypes } from '../../core/layout/kinds/cloud/groupStyles'
 
 // ──────────────────────────────────────────────────────────────────────────
 // Panel lateral izquierdo de figuras: pestañas por proveedor (AWS / GCP / OSS)
@@ -106,7 +107,21 @@ export default function FiguresPanel({ onClose }: FiguresPanelProps): React.JSX.
   const [provider, setProvider] = useState(() => providers[0] ?? 'aws')
   const [query, setQuery] = useState('')
   const groups = useMemo(() => buildGroups(query, provider), [query, provider])
-  const total = useMemo(() => groups.reduce((n, g) => n + g.types.length, 0), [groups])
+  // Sección "Grupos" (contenedores con estilo): solo en AWS por ahora. Se filtran
+  // por el buscador igual que los iconos.
+  const groupTypes = useMemo(() => {
+    if (provider !== 'aws') return []
+    const q = query.trim().toLowerCase()
+    if (!q) return listGroupTypes()
+    return listGroupTypes().filter((t) => {
+      const lbl = getGroupStyle(t)?.label.toLowerCase() ?? ''
+      return t.toLowerCase().includes(q) || lbl.includes(q)
+    })
+  }, [query, provider])
+  const total = useMemo(
+    () => groups.reduce((n, g) => n + g.types.length, 0) + groupTypes.length,
+    [groups, groupTypes]
+  )
 
   return (
     <aside className="bachi-draw-figures">
@@ -155,31 +170,45 @@ export default function FiguresPanel({ onClose }: FiguresPanelProps): React.JSX.
         {total === 0 ? (
           <p className="bachi-draw-figures-empty">Sin resultados para &ldquo;{query}&rdquo;.</p>
         ) : (
-          groups.map((g) => (
-            <section key={g.key} className="bachi-draw-figures-group">
-              <h3 className="bachi-draw-figures-group-title">
-                {g.label} <span className="bachi-draw-figures-count">{g.types.length}</span>
-              </h3>
-              <div className="bachi-draw-figures-grid">
-                {g.types.map((type) => (
-                  <FigureItem key={type} type={type} />
-                ))}
-              </div>
-            </section>
-          ))
+          <>
+            {groupTypes.length > 0 ? (
+              <section className="bachi-draw-figures-group">
+                <h3 className="bachi-draw-figures-group-title">
+                  Grupos <span className="bachi-draw-figures-count">{groupTypes.length}</span>
+                </h3>
+                <div className="bachi-draw-figures-grid">
+                  {groupTypes.map((type) => (
+                    <FigureItem key={type} type={type} label={getGroupStyle(type)?.label} />
+                  ))}
+                </div>
+              </section>
+            ) : null}
+            {groups.map((g) => (
+              <section key={g.key} className="bachi-draw-figures-group">
+                <h3 className="bachi-draw-figures-group-title">
+                  {g.label} <span className="bachi-draw-figures-count">{g.types.length}</span>
+                </h3>
+                <div className="bachi-draw-figures-grid">
+                  {g.types.map((type) => (
+                    <FigureItem key={type} type={type} />
+                  ))}
+                </div>
+              </section>
+            ))}
+          </>
         )}
       </div>
     </aside>
   )
 }
 
-function FigureItem({ type }: { type: string }): React.JSX.Element {
-  const label = humanizeIconType(type)
+function FigureItem({ type, label }: { type: string; label?: string }): React.JSX.Element {
+  const text = label ?? humanizeIconType(type)
   return (
     <button
       type="button"
       className="bachi-draw-figure"
-      title={label}
+      title={text}
       draggable
       onDragStart={(e) => {
         e.dataTransfer.setData(ICON_DND_TYPE, type)
@@ -187,7 +216,7 @@ function FigureItem({ type }: { type: string }): React.JSX.Element {
       }}
     >
       <img className="bachi-draw-figure-img" src={getIconDataUri(type)} alt="" draggable={false} />
-      <span className="bachi-draw-figure-label">{label}</span>
+      <span className="bachi-draw-figure-label">{text}</span>
     </button>
   )
 }

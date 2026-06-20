@@ -34,7 +34,8 @@ function serviceLine(n: CloudNode, inParent: boolean): string {
 
 function groupLine(c: CloudCluster): string {
   const inPart = c.parentClusterId ? ` in ${c.parentClusterId}` : ''
-  return `group ${c.id} [${escapeLabel(c.label)}]${inPart}`
+  const typePart = c.type ? `(${c.type})` : ''
+  return `group ${c.id}${typePart} [${escapeLabel(c.label)}]${inPart}`
 }
 
 function edgeLine(e: CloudEdge): string {

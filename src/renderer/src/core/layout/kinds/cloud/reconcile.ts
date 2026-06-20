@@ -27,6 +27,7 @@ interface ReconcileCluster {
   y?: number
   width?: number
   height?: number
+  type?: string
 }
 interface ReconcileEdge {
   id: string
@@ -92,7 +93,8 @@ export function reconcileLayoutWithArchd(
         x: typeof saved.x === 'number' ? saved.x : c.x,
         y: typeof saved.y === 'number' ? saved.y : c.y,
         width: typeof saved.width === 'number' ? saved.width : c.width,
-        height: typeof saved.height === 'number' ? saved.height : c.height
+        height: typeof saved.height === 'number' ? saved.height : c.height,
+        type: saved.type ?? c.type
       }
     }
     return c

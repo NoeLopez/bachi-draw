@@ -29,6 +29,9 @@ export interface CloudCluster {
   nodeIds: string[]
   childClusterIds: string[]
   parentClusterId?: string
+  /** Tipo de grupo (borde de cluster), ej. 'aws/groups/virtual-private-cloud-vpc'.
+   * Determina icono, color y estilo de borde (ver groupStyles.ts). */
+  type?: string
 }
 
 export interface CloudGraph {
@@ -79,6 +82,8 @@ export interface LayoutCluster {
   width: number
   height: number
   parentClusterId?: string
+  /** Tipo de grupo (ver CloudCluster.type y groupStyles.ts). */
+  type?: string
 }
 
 export interface LayoutEdge {

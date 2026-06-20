@@ -1,10 +1,12 @@
 import type {
   CloudEdgeData,
+  GroupNode,
   ServiceNode,
   ShapeNode,
   ShapeNodeData
 } from '../../../core/layout/kinds/cloud/toReactFlow'
 import { SHAPE_LABEL } from '../../../core/layout/kinds/cloud/shapes'
+import { getGroupStyle, listGroupTypes } from '../../../core/layout/kinds/cloud/groupStyles'
 import type { Edge } from '@xyflow/react'
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -19,12 +21,14 @@ type EdgeDirection = 'forward' | 'back' | 'both'
 interface Props {
   serviceNode: ServiceNode | null
   shapeNode: ShapeNode | null
+  groupNode: GroupNode | null
   edge: Edge<CloudEdgeData> | null
   onEditConnectionPoints: (nodeId: string) => void
   onToggleJumps: (edgeId: string) => void
   onSetEdgeStyle: (edgeId: string, style: EdgeStyle) => void
   onSetEdgeDirection: (edgeId: string, direction: EdgeDirection) => void
   onSetShapeData: (nodeId: string, patch: Partial<ShapeNodeData>) => void
+  onSetGroupType: (nodeId: string, groupType: string) => void
 }
 
 // ── Iconos ──────────────────────────────────────────────────────────────────
@@ -94,14 +98,16 @@ const IconDashed = (
 export default function CloudInspector({
   serviceNode,
   shapeNode,
+  groupNode,
   edge,
   onEditConnectionPoints,
   onToggleJumps,
   onSetEdgeStyle,
   onSetEdgeDirection,
-  onSetShapeData
+  onSetShapeData,
+  onSetGroupType
 }: Props): React.JSX.Element | null {
-  if (!serviceNode && !shapeNode && !edge) return null
+  if (!serviceNode && !shapeNode && !groupNode && !edge) return null
 
   return (
     <aside className="bachi-draw-inspector">
@@ -109,6 +115,7 @@ export default function CloudInspector({
         <ServiceNodeInspector node={serviceNode} onEditConnectionPoints={onEditConnectionPoints} />
       ) : null}
       {shapeNode ? <ShapeInspector node={shapeNode} onSetShapeData={onSetShapeData} /> : null}
+      {groupNode ? <GroupInspector node={groupNode} onSetGroupType={onSetGroupType} /> : null}
       {edge ? (
         <EdgeInspector
           edge={edge}
@@ -118,6 +125,44 @@ export default function CloudInspector({
         />
       ) : null}
     </aside>
+  )
+}
+
+function GroupInspector({
+  node,
+  onSetGroupType
+}: {
+  node: GroupNode
+  onSetGroupType: (nodeId: string, groupType: string) => void
+}): React.JSX.Element {
+  const current = node.data.groupType ?? ''
+  return (
+    <>
+      <header className="bachi-draw-inspector-head">
+        <span className="bachi-draw-inspector-kind">Grupo</span>
+        <span className="bachi-draw-inspector-name">{node.data.label}</span>
+      </header>
+
+      <section className="bachi-draw-inspector-section">
+        <h4 className="bachi-draw-inspector-title">Tipo de grupo</h4>
+        <select
+          className="bachi-draw-inspector-select"
+          value={current}
+          onChange={(e) => onSetGroupType(node.id, e.target.value)}
+        >
+          {current ? null : (
+            <option value="" disabled>
+              Sin tipo
+            </option>
+          )}
+          {listGroupTypes().map((t) => (
+            <option key={t} value={t}>
+              {getGroupStyle(t)?.label ?? t}
+            </option>
+          ))}
+        </select>
+      </section>
+    </>
   )
 }
 

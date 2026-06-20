@@ -40,7 +40,8 @@ export function layoutToCloudGraph(layout: LayoutResult, name = ''): CloudGraph 
       label: c.label,
       nodeIds: [],
       childClusterIds: [],
-      ...(parentClusterId ? { parentClusterId } : {})
+      ...(parentClusterId ? { parentClusterId } : {}),
+      ...(c.type ? { type: c.type } : {})
     }
   })
 

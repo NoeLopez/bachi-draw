@@ -25,7 +25,7 @@ function walkNodes(
   outNodes: LayoutNode[],
   outClusters: LayoutCluster[],
   archNodeLookup: Map<string, { type: string; label: string; clusterId?: string }>,
-  archClusterLookup: Map<string, { label: string; parentClusterId?: string }>
+  archClusterLookup: Map<string, { label: string; parentClusterId?: string; type?: string }>
 ): void {
   const absX = parentX + (node.x ?? 0)
   const absY = parentY + (node.y ?? 0)
@@ -39,7 +39,8 @@ function walkNodes(
       y: absY,
       width: node.width ?? 0,
       height: node.height ?? 0,
-      parentClusterId: meta?.parentClusterId
+      parentClusterId: meta?.parentClusterId,
+      ...(meta?.type ? { type: meta.type } : {})
     })
   } else if (archNodeIds.has(node.id)) {
     const meta = archNodeLookup.get(node.id)
@@ -163,7 +164,10 @@ export async function runLayout(graph: CloudGraph): Promise<LayoutResult> {
     graph.nodes.map((n) => [n.id, { type: n.type, label: n.label, clusterId: n.clusterId }])
   )
   const archClusterLookup = new Map(
-    graph.clusters.map((c) => [c.id, { label: c.label, parentClusterId: c.parentClusterId }])
+    graph.clusters.map((c) => [
+      c.id,
+      { label: c.label, parentClusterId: c.parentClusterId, type: c.type }
+    ])
   )
   const archEdgesById = new Map(graph.edges.map((e) => [e.id, e]))
 

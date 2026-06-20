@@ -619,6 +619,22 @@
   color: var(--text-2);
 }
 
+/* Selector desplegable (ej. tipo de grupo). */
+.bachi-draw-inspector-select {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--bg-2);
+  color: var(--text-0);
+  border: 1px solid var(--border);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.bachi-draw-inspector-select:hover {
+  background: var(--bg-0);
+}
+
 /* Fila de acción con icono + texto. */
 .bachi-draw-inspector-row {
   width: 100%;
@@ -1736,21 +1752,59 @@ body.bachi-col-resizing {
   background: var(--cluster-fill);
 }
 
+/* Grupo con estilo del catálogo (groupStyles.ts): color, trazo y tinte por tipo,
+   leídos de variables inline que pone GroupNode. */
+.bachi-draw-rf-group.is-styled {
+  border-width: 2px;
+  border-style: var(--group-border-style, solid);
+  border-color: var(--group-border);
+  background: var(--group-fill);
+}
+
 .bachi-draw-rf-group.is-selected {
   border-style: solid;
   border-color: var(--accent);
 }
 
-.bachi-draw-rf-group-label {
+/* Al seleccionar, el acento gana al color del catálogo. */
+.bachi-draw-rf-group.is-styled.is-selected {
+  border-style: solid;
+  border-color: var(--accent);
+}
+
+/* Cabecera (icono + label) anclada arriba a la izquierda. Es la "manija" del
+   grupo: clic/doble-clic aquí lo selecciona/edita (como Lucid), igual que el
+   icono/label de un service node. El resto del interior no captura, para que los
+   nodos hijos sigan siendo interactuables. */
+.bachi-draw-rf-group-header {
   position: absolute;
-  top: 12px;
-  left: 14px;
+  top: 8px;
+  left: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.bachi-draw-rf-group-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  flex: none;
+}
+
+.bachi-draw-rf-group-label {
   font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.3px;
   color: var(--cluster-label);
-  pointer-events: none;
+}
+
+/* En grupos con estilo, el label hereda el color del borde del catálogo. */
+.bachi-draw-rf-group.is-styled .bachi-draw-rf-group-label {
+  color: var(--group-border);
 }
 
 /* Tema del lienzo React Flow.

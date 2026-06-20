@@ -18,6 +18,8 @@ export interface GroupNodeData extends Record<string, unknown> {
   label: string
   /** true mientras se edita el label inline. */
   editing?: boolean
+  /** Tipo de grupo (ej. 'aws/groups/region'); deriva icono/color/borde. */
+  groupType?: string
 }
 
 export interface ShapeNodeData extends Record<string, unknown> {
@@ -109,7 +111,7 @@ export function toReactFlow(layout: LayoutResult): {
       id: c.id,
       type: 'group',
       position: { x: c.x - base.x, y: c.y - base.y },
-      data: { label: c.label },
+      data: { label: c.label, ...(c.type ? { groupType: c.type } : {}) },
       width: c.width,
       height: c.height,
       ...(c.parentClusterId ? { parentId: c.parentClusterId } : {}),

@@ -1,0 +1,17 @@
+# arch-cloud v1 · grupos con estilo (contenedores AWS)
+# group <id>(<tipo>)[<label>] [in <padre>] · tipos: aws/groups/<x>
+arch-cloud lr
+
+group cloud(aws/groups/aws-cloud)[AWS Cloud]
+group region(aws/groups/region)[us-east-1] in cloud
+group vpc(aws/groups/virtual-private-cloud-vpc)[Mi VPC] in region
+
+group publica(aws/groups/public-subnet)[Subred pública] in vpc
+service alb(aws/elastic-load-balancing)[Load Balancer] in publica
+
+group privada(aws/groups/private-subnet)[Subred privada] in vpc
+service api(aws/ec2)[API] in privada
+service db(aws/rds)[Base de datos] in privada
+
+alb --> api
+api --> db

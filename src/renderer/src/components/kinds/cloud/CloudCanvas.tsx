@@ -29,6 +29,7 @@ import {
   type CloudEdgeData,
   type CloudFlowNode,
   type ShapeNode as ShapeFlowNode,
+  type GroupNode as GroupFlowNode,
   edgeVisuals,
   toReactFlow
 } from '../../../core/layout/kinds/cloud/toReactFlow'
@@ -36,10 +37,16 @@ import type {
   ExtraHandles,
   LayoutResult,
   LayoutEdge,
-  LayoutNode
+  LayoutNode,
+  LayoutCluster
 } from '../../../core/parser/kinds/cloud/types'
 import { type GuideLine, snapToAlignment } from '../../../core/layout/kinds/cloud/alignment'
 import { allExtraHandleIds } from '../../../core/layout/kinds/cloud/connectionHandles'
+import {
+  defaultGroupSize,
+  getGroupStyle,
+  isGroupType
+} from '../../../core/layout/kinds/cloud/groupStyles'
 import { humanizeIconType, ICON_DND_TYPE } from '../../../icons/officialIcons'
 import { registerCloudLayout } from '../../../core/state/kinds/cloud/layoutRegistry'
 import {
@@ -150,23 +157,29 @@ function updateLayoutWithReactFlow(
     }
   }
 
-  // Clusters: solo los que siguen presentes en React Flow (filtra los borrados),
-  // con sus posiciones/labels actualizados.
-  const updatedClusters = layout.clusters
-    .filter((c) => nodesMap.has(c.id))
-    .map((c) => {
-      const rfNode = nodesMap.get(c.id)
-      if (!rfNode || rfNode.type !== 'group') return c
-      const absPos = getAbsolutePosition(c.id)
-      return {
-        ...c,
-        x: absPos.x,
-        y: absPos.y,
-        label: rfNode.data.label,
-        width: rfNode.width ?? c.width,
-        height: rfNode.height ?? c.height
-      }
+  // Clusters: se construyen desde los group nodes ACTUALES de React Flow (igual
+  // que los nodos), no del layout previo. Así un grupo soltado del panel aparece,
+  // los borrados desaparecen y se captura su groupType/posición/label.
+  const prevClusterById = new Map(layout.clusters.map((c) => [c.id, c]))
+  const updatedClusters: LayoutCluster[] = []
+  for (const rfNode of rfNodes) {
+    if (rfNode.type !== 'group') continue
+    const prev = prevClusterById.get(rfNode.id)
+    const absPos = getAbsolutePosition(rfNode.id)
+    const parentClusterId = prev?.parentClusterId ?? rfNode.parentId ?? undefined
+    const groupType = rfNode.data.groupType ?? prev?.type
+    updatedClusters.push({
+      ...prev,
+      id: rfNode.id,
+      label: rfNode.data.label,
+      x: absPos.x,
+      y: absPos.y,
+      width: rfNode.width ?? prev?.width ?? defaultGroupSize().width,
+      height: rfNode.height ?? prev?.height ?? defaultGroupSize().height,
+      ...(parentClusterId ? { parentClusterId } : {}),
+      ...(groupType ? { type: groupType } : {})
     })
+  }
 
   // Update edges.
   // Match rfEdges back to LayoutEdge.
@@ -385,6 +398,32 @@ function CloudCanvasInner({
       if (!iconType) return
       e.preventDefault()
       const p = screenToFlowPosition({ x: e.clientX, y: e.clientY })
+
+      // Grupo (prefijo */groups/) → contenedor con estilo (GroupNode).
+      if (isGroupType(iconType)) {
+        const { width, height } = defaultGroupSize()
+        const position = { x: p.x - width / 2, y: p.y - height / 2 }
+        setNodes((nds) => {
+          const slug = iconType.split('/').pop() ?? 'group'
+          const newNode: CloudFlowNode = {
+            id: uniqueNodeId(slug, nds),
+            type: 'group',
+            position,
+            data: {
+              label: getGroupStyle(iconType)?.label ?? humanizeIconType(iconType),
+              groupType: iconType
+            },
+            width,
+            height,
+            zIndex: 0
+          }
+          const next = [...nds, newNode]
+          syncToStore(next, edges)
+          return next
+        })
+        markDirty()
+        return
+      }
 
       // Figura básica (prefijo oss/shapes/) → ShapeNode; el resto → ServiceNode.
       const shapeType = fromShapeNodeType(iconType)
@@ -648,6 +687,23 @@ function CloudCanvasInner({
     [setNodes, syncToStore, markDirty, edges]
   )
 
+  // Cambia el tipo de grupo (su estilo del catálogo) de un cluster.
+  const setGroupType = useCallback(
+    (nodeId: string, groupType: string) => {
+      setNodes((nds) => {
+        const next = nds.map((n) =>
+          n.id === nodeId && n.type === 'group'
+            ? ({ ...n, data: { ...n.data, groupType } } as CloudFlowNode)
+            : n
+        )
+        syncToStore(next, edges)
+        return next
+      })
+      markDirty()
+    },
+    [setNodes, syncToStore, markDirty, edges]
+  )
+
   // Elemento para el inspector: solo con selección única (un nodo o una arista).
   // Con 0 o múltiples seleccionados, el panel no se muestra.
   const single = selectedNodeIds.length + selectedEdgeIds.length === 1
@@ -657,6 +713,7 @@ function CloudCanvasInner({
       : null
   const inspectorServiceNode = selectedNode?.type === 'service' ? selectedNode : null
   const inspectorShapeNode = selectedNode?.type === 'shape' ? (selectedNode as ShapeFlowNode) : null
+  const inspectorGroupNode = selectedNode?.type === 'group' ? (selectedNode as GroupFlowNode) : null
   const inspectorEdge =
     single && selectedEdgeIds.length === 1
       ? (edges.find((e) => e.id === selectedEdgeIds[0]) ?? null)
@@ -765,12 +822,14 @@ function CloudCanvasInner({
         <CloudInspector
           serviceNode={inspectorServiceNode}
           shapeNode={inspectorShapeNode}
+          groupNode={inspectorGroupNode}
           edge={inspectorEdge}
           onEditConnectionPoints={(id) => setEditorNodeId(id)}
           onToggleJumps={toggleJumps}
           onSetEdgeStyle={(id, style) => setEdgeData(id, { style })}
           onSetEdgeDirection={(id, direction) => setEdgeData(id, { direction })}
           onSetShapeData={setShapeData}
+          onSetGroupType={setGroupType}
         />
       )}
 

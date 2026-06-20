@@ -30,6 +30,7 @@ export interface ArchdDocument {
     y: number
     width: number
     height: number
+    type?: string
   }>
   edges: Array<{
     id: string
@@ -71,7 +72,8 @@ export function serializeArchd(
       x: c.x,
       y: c.y,
       width: c.width,
-      height: c.height
+      height: c.height,
+      ...(c.type ? { type: c.type } : {})
     })),
     edges: layout.edges.map((e) => ({
       id: e.id,
