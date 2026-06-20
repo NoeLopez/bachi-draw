@@ -1808,6 +1808,23 @@ body.bachi-col-resizing {
   stroke-width: 2.4;
 }
 
+/* Anclajes de reconexión (cabeza y cola) de la arista seleccionada. React Flow
+   los pinta invisibles (fill transparente, r grande para el hit-test); como solo
+   la seleccionada es reconectable, podemos mostrarlos como "cuadraditos" estilo
+   Lucid: indican qué extremo se puede arrastrar y le dan prioridad de captura.
+   Mantenemos un hit-area amplio (otro circle invisible que React Flow añade). */
+.react-flow__edgeupdater {
+  fill: var(--canvas-bg, #fff);
+  stroke: var(--accent);
+  stroke-width: 1.6;
+  r: 4;
+  cursor: grab;
+}
+
+.react-flow__edgeupdater:hover {
+  fill: var(--accent);
+}
+
 .react-flow__edge-text {
   fill: var(--edge-label-text);
   font-size: 11px;

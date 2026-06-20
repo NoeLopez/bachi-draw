@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   addEdge,
   Background,
@@ -662,6 +662,25 @@ function CloudCanvasInner({
       ? (edges.find((e) => e.id === selectedEdgeIds[0]) ?? null)
       : null
 
+  // Estilo Lucid: SOLO la arista seleccionada es reconectable. React Flow pone
+  // anclajes de extremo (`react-flow__edgeupdater`) en TODA arista reconectable,
+  // y cuando dos comparten un punto, el anclaje de la de encima intercepta el
+  // arrastre (movía la que no era). Al activar la reconexión únicamente en la
+  // seleccionada, sus anclajes (los "cuadraditos") son los únicos vivos en ese
+  // punto y arrastran justo esa arista, sin importar cuál se conectó primero.
+  // Además la elevamos (zIndex) para que quede por encima. Las no seleccionadas
+  // conservan su referencia salvo que haya que apagarles la reconexión.
+  const edgesForFlow = useMemo(
+    () =>
+      edges.map((e) => {
+        const active = !!e.selected && !presentationMode
+        if (active) return { ...e, zIndex: 1000, reconnectable: true }
+        if (e.reconnectable === false && !e.zIndex) return e
+        return { ...e, reconnectable: false, zIndex: 0 }
+      }),
+    [edges, presentationMode]
+  )
+
   if (!layout) return <div className="bachi-draw-canvas" />
 
   return (
@@ -674,7 +693,7 @@ function CloudCanvasInner({
     >
       <ReactFlow
         nodes={nodes}
-        edges={edges}
+        edges={edgesForFlow}
         onNodesChange={onNodesChangeWrapped}
         onEdgesChange={onEdgesChangeWrapped}
         onConnect={onConnect}
