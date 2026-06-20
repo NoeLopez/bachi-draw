@@ -35,12 +35,33 @@ Antes de commitear, conviene el lint completo: `pnpm lint` (debe quedar en
 **Regla del proyecto: E2E por cada cambio, iterar hasta verde.** No se commitea
 hasta que el usuario lo pida tras revisar.
 
+**Corre SOLO los specs del área que tocaste — no toda la suite.** La suite
+completa son ~5–6 min; un spec aislado, ~40 s. Correr pizarra por un cambio de
+cloud es desperdicio.
+
+Los E2E se ejecutan sobre la app **compilada** en `out/`. Flujo eficiente:
+
 ```bash
-pnpm test:e2e         # compila la app y corre los E2E (lo correcto tras un cambio)
-pnpm test:e2e:run     # corre sobre out/ ya construido (más rápido, sin recompilar)
+electron-vite build                                # 1) recompila UNA vez tras editar
+pnpm test:e2e:run e2e/cloud-serialize.spec.ts      # 2) solo el/los spec(s) afectados
 ```
 
-Cubren `cloud` (serialización round-trip), `pizarra`, presentación, atajos y UI.
+Si solo cambian los tests (no el código fuente), puedes repetir el paso 2 sin
+recompilar. `pnpm test:e2e` (build + suite completa) se reserva para **antes de
+commitear** o para cambios transversales (`App.tsx`, store, theme).
+
+### Qué spec corresponde a cada área
+
+| Tocaste… | Specs a correr |
+|----------|----------------|
+| Canvas cloud, aristas, nodos, serialización | `cloud-serialize.spec.ts` |
+| Editor de código `.bachi` | `cloud-code-editor.spec.ts` |
+| Pizarra / Excalidraw | `pizarra.spec.ts` |
+| Modo presentación | `presentation.spec.ts` |
+| Atajos de teclado | `shortcuts.spec.ts` |
+| Chrome/UI general, temas, paneles | `ui-chrome.spec.ts` |
+| Transversal (App, store, theme) | la suite completa (`pnpm test:e2e`) |
+
 Si tu cambio afecta una zona sin cobertura, **añade el test** antes de cerrar.
 
 ## Si algo falla
