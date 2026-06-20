@@ -1368,6 +1368,13 @@ body.bachi-col-resizing {
   min-width: 0;
 }
 
+/* Punto de "cambios sin guardar" antes del nombre del archivo. */
+.bachi-draw-status-dirty {
+  color: var(--warn);
+  font-size: 9px;
+  vertical-align: middle;
+}
+
 .bachi-draw-status-meta {
   display: flex;
   align-items: center;
