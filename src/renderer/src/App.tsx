@@ -5,6 +5,7 @@ import FiguresPanel from './components/shared/FiguresPanel'
 import StatusBar, { ReloadStatus } from './components/shared/StatusBar'
 import Toolbar from './components/shared/Toolbar'
 import PresentationOverlay from './components/shared/PresentationOverlay'
+import KeyboardShortcutsModal from './components/shared/KeyboardShortcutsModal'
 import { detectKind } from './core/diagram/dispatcher'
 import { useEditorStore } from './core/diagram/editor/store'
 import { getKindDef } from './core/diagram/registry'
@@ -42,6 +43,8 @@ function App(): React.JSX.Element {
   const [saveState, setSaveState] = useState<SaveState>('saved')
   // Modo presentación: oculta todo el chrome de edición y deja el lienzo limpio.
   const [presentationMode, setPresentationMode] = useState(false)
+  // Modal de referencia de atajos de teclado.
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
 
   // El estado del diagrama vive en el store. El viewport (zoom/pan/fit) lo
   // gestiona React Flow internamente, así que aquí ya no lo manejamos.
@@ -288,10 +291,36 @@ function App(): React.JSX.Element {
     window.bachiDraw.exitPresentation?.().catch(() => {})
   }, [])
 
-  // Atajos: F5 entra (si hay diagrama), Cmd/Ctrl+Shift+P alterna, Escape sale.
-  // Capturamos en fase de captura para tener prioridad sobre otros Escape.
+  // Atajos globales de teclado. Capturamos en fase de captura para tener
+  // prioridad (sobre todo con Escape, que también cierra otros elementos).
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
+      const el = document.activeElement as HTMLElement | null
+      const typing =
+        !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)
+
+      // Guardar / Abrir (Cmd/Ctrl). Funcionan aunque el foco esté en un campo.
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
+        const k = e.key.toLowerCase()
+        if (k === 's') {
+          e.preventDefault()
+          void handleSaveArchd()
+          return
+        }
+        if (k === 'o') {
+          e.preventDefault()
+          void handleOpenFile()
+          return
+        }
+      }
+
+      // "?" abre el panel de atajos (no mientras se escribe en un campo).
+      if (e.key === '?' && !e.metaKey && !e.ctrlKey && !e.altKey && !typing) {
+        e.preventDefault()
+        setShortcutsOpen(true)
+        return
+      }
+
       if (e.key === 'F5') {
         e.preventDefault()
         enterPresentation()
@@ -303,15 +332,32 @@ function App(): React.JSX.Element {
         else enterPresentation()
         return
       }
-      if (e.key === 'Escape' && presentationMode) {
-        e.preventDefault()
-        e.stopPropagation()
-        exitPresentation()
+
+      // Escape: primero cierra el modal de atajos; si no, sale de presentación.
+      if (e.key === 'Escape') {
+        if (shortcutsOpen) {
+          e.preventDefault()
+          e.stopPropagation()
+          setShortcutsOpen(false)
+          return
+        }
+        if (presentationMode) {
+          e.preventDefault()
+          e.stopPropagation()
+          exitPresentation()
+        }
       }
     }
     window.addEventListener('keydown', onKey, { capture: true })
     return () => window.removeEventListener('keydown', onKey, { capture: true })
-  }, [presentationMode, enterPresentation, exitPresentation])
+  }, [
+    presentationMode,
+    shortcutsOpen,
+    enterPresentation,
+    exitPresentation,
+    handleSaveArchd,
+    handleOpenFile
+  ])
 
   return (
     <div className={`bachi-draw-app${presentationMode ? ' is-presenting' : ''}`}>
@@ -337,6 +383,7 @@ function App(): React.JSX.Element {
           codeEditorVisible={leftPanel === 'code'}
           onToggleCodeEditor={toggleCode}
           onPresent={enterPresentation}
+          onShowShortcuts={() => setShortcutsOpen(true)}
           hasDocument={hasDocument}
           canEditCode={Boolean(filePath && isCloud)}
           canSave={Boolean(filePath && diagram)}
@@ -387,6 +434,7 @@ function App(): React.JSX.Element {
         />
       )}
       {presentationMode && <PresentationOverlay onExit={exitPresentation} />}
+      <KeyboardShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </div>
   )
 }
