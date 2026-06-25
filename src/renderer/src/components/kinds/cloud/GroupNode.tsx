@@ -41,7 +41,7 @@ export default function GroupNode({
         handleClassName="bachi-draw-rf-group-resize-handle"
       />
 
-      <div className="bachi-draw-rf-group-header">
+      <div className={`bachi-draw-rf-group-header ${data.editing ? 'is-editing' : ''}`}>
         {iconUri ? (
           <img className="bachi-draw-rf-group-icon" src={iconUri} alt="" draggable={false} />
         ) : null}

@@ -1756,6 +1756,9 @@ body.bachi-col-resizing {
   border: none;
   border-radius: 0;
   background: transparent;
+  /* La librería centra el texto (text-align: center); el label del grupo va
+     alineado a la izquierda, junto al icono. */
+  text-align: left;
 }
 
 /* Group node: contenedor de cluster */
@@ -1801,6 +1804,14 @@ body.bachi-col-resizing {
   gap: 6px;
   pointer-events: auto;
   cursor: pointer;
+}
+
+/* En edición, el header se estira al ancho del grupo (anclando también la
+   derecha) para que el input pueda usar todo el espacio disponible antes de
+   envolver, igual que el label estático. Sin esto, el header `absolute` solo
+   tiene el ancho de su contenido y el textarea salta de línea enseguida. */
+.bachi-draw-rf-group-header.is-editing {
+  right: 10px;
 }
 
 .bachi-draw-rf-group-icon {
@@ -1968,12 +1979,27 @@ body.bachi-col-resizing {
   pointer-events: auto;
 }
 
+/* En edición, el input ocupa el sitio del label DENTRO del flex del header (junto
+   al icono). Antes era `position: absolute`, lo que lo sacaba del flujo y lo
+   solapaba con el icono: el textarea (sin fondo) quedaba detrás y no se veía lo
+   escrito hasta salir de la edición. */
 .bachi-draw-rf-group-label-wrap {
-  position: absolute;
-  top: 8px;
-  left: 12px;
-  width: calc(100% - 24px);
-  max-width: 280px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* El input del label del grupo replica el aspecto del label estático
+   (mayúsculas, peso y color del catálogo) para que no haya salto visual al
+   entrar/salir de la edición. */
+.bachi-draw-rf-group-label-wrap .bachi-draw-rf-label-input {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--cluster-label);
+}
+
+.bachi-draw-rf-group.is-styled .bachi-draw-rf-group-label-wrap .bachi-draw-rf-label-input {
+  color: var(--group-border);
 }
 
 /* Edición inline del label estilo Lucid: el input se funde con el label (sin
