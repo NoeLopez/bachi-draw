@@ -1,4 +1,4 @@
-import { type NodeProps } from '@xyflow/react'
+import { NodeResizer, type NodeProps } from '@xyflow/react'
 import type { GroupNode as GroupNodeType } from '../../../core/layout/kinds/cloud/toReactFlow'
 import { getGroupStyle } from '../../../core/layout/kinds/cloud/groupStyles'
 import { getIconDataUri } from '../../../icons/registry'
@@ -33,6 +33,14 @@ export default function GroupNode({
       className={`bachi-draw-rf-group ${style ? 'is-styled' : ''} ${selected ? 'is-selected' : ''}`}
       style={cssVars}
     >
+      <NodeResizer
+        minWidth={120}
+        minHeight={80}
+        isVisible={selected}
+        lineClassName="bachi-draw-rf-group-resize-line"
+        handleClassName="bachi-draw-rf-group-resize-handle"
+      />
+
       <div className="bachi-draw-rf-group-header">
         {iconUri ? (
           <img className="bachi-draw-rf-group-icon" src={iconUri} alt="" draggable={false} />

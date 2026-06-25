@@ -1742,6 +1742,22 @@ body.bachi-col-resizing {
   filter: brightness(1.08);
 }
 
+/* React Flow pinta su propio recuadro a los nodos `type: group`
+   (.react-flow__node-group: border + padding + radius + fondo, y repone el borde
+   en `.selected`). Lo anulamos para que el único borde visible sea el nuestro
+   (.bachi-draw-rf-group); si no, aparece un doble borde (el recto del wrapper + el
+   redondeado nuestro).
+   Anteponemos `.bachi-draw-canvas` para subir especificidad a (0,2,0): el
+   style.css de la librería (0,1,0) se importa DESPUÉS del nuestro, así que sin
+   esto ganaría él y el reset no aplicaría. */
+.bachi-draw-canvas .react-flow__node-group,
+.bachi-draw-canvas .react-flow__node-group.selected {
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
 /* Group node: contenedor de cluster */
 .bachi-draw-rf-group {
   width: 100%;
@@ -2045,6 +2061,24 @@ body.bachi-col-resizing {
   height: 8px;
   border-radius: 2px;
   border: 1.5px solid var(--accent);
+  background: var(--bg-1);
+}
+
+/* Resize del grupo: sin línea de contorno (ya tenemos el borde propio del grupo;
+   la línea del resizer crearía un doble borde recto) y manijas grandes y visibles
+   en las esquinas, como en cualquier editor. */
+.bachi-draw-rf-group-resize-line {
+  border-color: transparent;
+}
+
+/* Combinamos con `.react-flow__resize-control.handle` y anteponemos
+   `.bachi-draw-canvas` para ganar a la librería (sus handles son 5px con
+   especificidad (0,2,0), e importa su style.css después del nuestro). */
+.bachi-draw-canvas .react-flow__resize-control.handle.bachi-draw-rf-group-resize-handle {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  border: 2px solid var(--accent);
   background: var(--bg-1);
 }
 

@@ -557,14 +557,19 @@ function CloudCanvasInner({
     (changes: NodeChange<CloudFlowNode>[]) => {
       onNodesChange(changes)
       const hasRemoveOrReplace = changes.some((c) => c.type === 'remove' || c.type === 'replace')
-      if (hasRemoveOrReplace) {
+      // Fin de un resize (NodeResizer): el último cambio de dimensiones llega con
+      // resizing=false. Persistimos el nuevo tamaño al store (durante el arrastre,
+      // resizing=true, lo dejamos pasar sin sincronizar para no saturar).
+      const resizeEnded = changes.some((c) => c.type === 'dimensions' && c.resizing === false)
+      if (hasRemoveOrReplace || resizeEnded) {
         setNodes((nds) => {
           syncToStore(nds, edges)
           return nds
         })
+        if (resizeEnded) markDirty()
       }
     },
-    [onNodesChange, setNodes, syncToStore, edges]
+    [onNodesChange, setNodes, syncToStore, markDirty, edges]
   )
 
   const onEdgesChangeWrapped = useCallback(
