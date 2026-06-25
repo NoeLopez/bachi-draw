@@ -4,7 +4,9 @@ Guía para trabajar en **Bachi Draw** con Claude Code. Resume la arquitectura re
 
 ## Qué es Bachi Draw
 
-App de escritorio (Electron + React 19 + TypeScript) para generar diagramas de arquitectura cloud a partir de archivos de texto `.bachi` (un DSL declarativo estilo Mermaid `architecture-beta`), pensada para que agentes de IA escriban el archivo y el diagrama aparezca con hot reload, iconos oficiales y layout automático. Sobre ese visor hay un **editor visual** (React Flow) ya bastante completo: mover nodos, conectar/reconectar aristas, puntos de conexión configurables, editar labels (multilínea), saltos de línea en aristas, panel de figuras con drag&drop para añadir nodos, e inspector contextual de propiedades.
+App de escritorio (Electron + React 19 + TypeScript) para generar diagramas de arquitectura cloud a partir de archivos de texto `.bachi` (un DSL declarativo estilo Mermaid `architecture-beta`), pensada para que agentes de IA escriban el archivo y el diagrama aparezca con hot reload, iconos oficiales y layout automático. Sobre ese visor hay un **editor visual** (React Flow) ya bastante completo: mover nodos, conectar/reconectar aristas, puntos de conexión configurables, editar labels (multilínea), saltos de línea en aristas, panel de figuras con drag&drop para añadir nodos, e inspector contextual de propiedades. Las ediciones visuales se serializan de vuelta al `.bachi` (loop IA↔humano cerrado).
+
+Además del tipo `cloud` hay un segundo tipo de diagrama, **`pizarra`** (pizarra libre sobre Excalidraw, archivos `.dark`), que comparte el mismo armazón multi-tipo.
 
 ## Comandos
 
@@ -53,14 +55,27 @@ archivo .bachi (DSL)
   → <ReactFlow>             render + interacción (CloudCanvas.tsx)
 ```
 
+Camino inverso (al guardar las ediciones visuales de vuelta al DSL):
+
+```
+LayoutResult editado (en memoria / React Flow)
+  → layoutToCloudGraph()    core/layout/kinds/cloud/toCloudGraph.ts → reconstruye el CloudGraph
+  → serializeCloud()        core/parser/kinds/cloud/serialize.ts → texto .bachi (escapa labels)
+  → window.bachiDraw.saveBachi()   escribe el .bachi
+```
+
 ### Arquitectura multi-tipo
 
-Cada "tipo de diagrama" (hoy solo `cloud`) implementa `DiagramKindDef` ([core/diagram/kind.ts](src/renderer/src/core/diagram/kind.ts)) y se registra en [core/diagram/registry.ts](src/renderer/src/core/diagram/registry.ts). Un kind aporta: `parse`, `layout`, `Canvas`, `getName`, `getBounds`, `getStats`, `serialize`. **Regla de diseño: añadir un tipo nuevo no debe requerir tocar el código de los demás.** El código específico vive bajo `core/<capa>/kinds/<kind>/` y `components/kinds/<kind>/`.
+Cada "tipo de diagrama" implementa `DiagramKindDef` ([core/diagram/kind.ts](src/renderer/src/core/diagram/kind.ts)) y se registra en [core/diagram/registry.ts](src/renderer/src/core/diagram/registry.ts). Un kind aporta: `parse`, `layout`, `Canvas`, `getName`, `getBounds`, `getStats`, `serialize`. **Regla de diseño: añadir un tipo nuevo no debe requerir tocar el código de los demás.** El código específico vive bajo `core/<capa>/kinds/<kind>/` y `components/kinds/<kind>/`.
+
+Hoy hay **dos kinds registrados**: `cloud` (el principal, DSL `.bachi`) y `pizarra` (pizarra libre sobre Excalidraw, archivos `.dark` con JSON `{ "kind": "pizarra", ... }`). `detectKind` ([dispatcher.ts](src/renderer/src/core/diagram/dispatcher.ts)) distingue por header `arch-<kind>` (texto) o por el campo `kind` del JSON (`.dark`).
 
 ### Dos formatos de archivo
 
-- `.bachi` — DSL, **fuente de verdad de la topología**. Lo escribe la IA o el humano.
+- `.bachi` — DSL, **fuente de verdad de la topología**. Lo escribe la IA, el humano y **también la app**: al guardar (Cmd+S) las ediciones visuales se reserializan al DSL vía `layoutToCloudGraph` + `serializeCloud`. Además, editar el código en el editor de texto auto-guarda el `.bachi` con debounce (~750ms: 250ms en el editor + 500ms en `App.tsx`).
 - `.bachid` — JSON con posiciones, **estado visual derivado y regenerable**. Lo escribe la app. Si existe junto al `.bachi`, sus posiciones se reconcilian sobre el layout de ELK para preservar ediciones manuales.
+
+Nota: la topología (qué nodos/aristas/clusters existen) ya vive en el `.bachi`; el `.bachid` solo aporta las posiciones finas. Ambos se escriben juntos al guardar un diagrama `cloud`. La `pizarra` guarda su escena Excalidraw en el `.dark` (no toca `.bachi`/`.bachid`).
 
 ## Divergencia importante: SVG → React Flow
 
@@ -115,11 +130,13 @@ El spec ([specs/spec-project.md](specs/spec-project.md) §10, §15) describe ren
 
 ## Estado actual y cabos sueltos
 
-El editor visual está bastante completo (todo en `master`): selección/caja, pan, conexión por puntos con editor, reconexión, saltos de línea, imán de alineación, edición inline multilínea, marco de selección estilo Lucid, inspector lateral, fondo configurable (puntos/cuadrícula), y panel de figuras con iconos AWS por categoría + drag&drop. Cabos sueltos:
+El editor visual está bastante completo (todo en `master`): selección/caja, pan, conexión por puntos con editor, reconexión, saltos de línea, imán de alineación, edición inline multilínea, marco de selección estilo Lucid, inspector lateral, fondo configurable (puntos/cuadrícula), panel de figuras con iconos AWS por categoría + drag&drop, modo presentación, panel de atajos de teclado, y **serialización de vuelta al `.bachi`** (loop IA↔humano cerrado).
 
-- **No se escribe al `.bachi` todavía.** Las ediciones visuales se guardan en el `.bachid` (JSON), no en el DSL. **`serializeCloud` ([serialize.ts](src/renderer/src/core/parser/kinds/cloud/serialize.ts)) está escrito pero no conectado** (reconstruye el `.bachi` desde un `CloudGraph`, pero nada lo importa). `App.tsx`/`handleSaveArchd` usa `def.serialize` → `serializeArchd` (el `.bachid`), que es **otro** serializador. Conectarlo requeriría reconstruir el `model` (CloudGraph) desde el estado editado de React Flow (hoy `updateLayoutWithReactFlow` solo actualiza el `LayoutResult`, no el `model`).
-- **Labels multilínea y `.bachi`:** al conectar `serializeCloud`, los `\n` de un label dentro de `[...]` romperían la sintaxis del DSL — habrá que escaparlos.
-- **Drop dentro de un cluster:** un nodo soltado "dentro" de un grupo se crea top-level (no se le asigna `clusterId`).
+**Loop al `.bachi` (ya conectado).** Las ediciones visuales se escriben al DSL, no solo al `.bachid`. En `App.tsx`/`handleSaveArchd`: para `cloud` se hace `serializeCloud(layoutToCloudGraph(layout, name))` → `saveBachi`, y aparte `def.serialize` → `serializeArchd` → `saveArchd` (el `.bachid`). El `model` (CloudGraph) se reconstruye desde el `LayoutResult` editado con `layoutToCloudGraph` ([toCloudGraph.ts](src/renderer/src/core/layout/kinds/cloud/toCloudGraph.ts)) en el momento de guardar (no se mantiene sincronizado en cada edición: `updateLayout` sigue tocando solo el `LayoutResult`). Los labels se escapan al serializar (`escapeLabel` en [serialize.ts](src/renderer/src/core/parser/kinds/cloud/serialize.ts): `\n`→`\n` literal, `\`→`\\`), así que las labels multilínea ya no rompen el DSL.
+
+Cabos sueltos que quedan:
+
+- **Drop dentro de un cluster:** un nodo soltado "dentro" de un grupo se crea top-level (`onDrop` en [CloudCanvas.tsx](src/renderer/src/components/kinds/cloud/CloudCanvas.tsx) no asigna `parentId`/`clusterId`). Hay que editar el `.bachi` a mano (`in <groupId>`) para anidarlo.
 
 ## Verificación
 
