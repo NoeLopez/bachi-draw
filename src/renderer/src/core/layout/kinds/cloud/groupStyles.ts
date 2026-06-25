@@ -2,9 +2,10 @@
 //
 // Cada tipo `aws/groups/<x>` declara su apariencia: color y estilo de borde,
 // tinte de fondo e icono de esquina. El icono se resuelve con getOfficialIconUrl
-// (los SVG ya existen bajo icons/aws/groups/). Los colores se aproximan a la
-// guía oficial de AWS Architecture Icons (VPC verde, Region azul punteado,
-// Account rosa, subnets verde/azul, auto-scaling naranja punteado…).
+// (los SVG ya existen bajo icons/aws/groups/). El borderColor (que tiñe borde,
+// label y, atenuado, el fondo) coincide con el color de fondo del SVG oficial del
+// icono, para que todo el grupo sea cromáticamente coherente (VPC morado, Region
+// azul punteado, Account rosa, subnets verde/azul, auto-scaling naranja…).
 //
 // Es el patrón a replicar cuando se añadan grupos de GCP/Azure: otro mapa con
 // los tipos `gcp/groups/*`, sin tocar el resto del editor.
@@ -26,7 +27,7 @@ export interface GroupStyle {
 const GROUP_STYLES: Record<string, GroupStyle> = {
   'aws/groups/aws-cloud': {
     label: 'AWS Cloud',
-    borderColor: '#232F3E',
+    borderColor: '#242F3E',
     fillColor: 'transparent',
     borderStyle: 'solid',
     icon: 'aws/groups/aws-cloud'
@@ -40,8 +41,8 @@ const GROUP_STYLES: Record<string, GroupStyle> = {
   },
   'aws/groups/virtual-private-cloud-vpc': {
     label: 'VPC',
-    borderColor: '#248823',
-    fillColor: 'rgba(36, 136, 35, 0.04)',
+    borderColor: '#8C4FFF',
+    fillColor: 'rgba(140, 79, 255, 0.04)',
     borderStyle: 'solid',
     icon: 'aws/groups/virtual-private-cloud-vpc'
   },
@@ -89,15 +90,15 @@ const GROUP_STYLES: Record<string, GroupStyle> = {
   },
   'aws/groups/server-contents': {
     label: 'Server contents',
-    borderColor: '#5A6B86',
+    borderColor: '#7D8998',
     fillColor: 'transparent',
     borderStyle: 'solid',
     icon: 'aws/groups/server-contents'
   },
   'aws/groups/corporate-data-center': {
     label: 'Corporate data center',
-    borderColor: '#5A6B86',
-    fillColor: 'rgba(90, 107, 134, 0.05)',
+    borderColor: '#7D8998',
+    fillColor: 'rgba(125, 137, 152, 0.05)',
     borderStyle: 'solid',
     icon: 'aws/groups/corporate-data-center'
   },
