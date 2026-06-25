@@ -66,6 +66,21 @@ export function edgeVisuals(
 }
 
 /**
+ * z-index de cada grupo por ÁREA: el más pequeño queda ENCIMA del más grande
+ * (estándar Lucid/draw.io). Así un grupo grande solapado nunca tapa el borde ni
+ * la cabecera de uno más pequeño, que sigue siendo seleccionable. Todos los
+ * grupos quedan por debajo de los services/shapes (z>=1): ordenamos por área
+ * descendente y asignamos z negativos crecientes (i - N), de modo que a menor
+ * área corresponde un z mayor (más cercano a 0) pero siempre < 1.
+ */
+export function groupZIndexByArea(
+  groups: { id: string; width: number; height: number }[]
+): Map<string, number> {
+  const byAreaDesc = [...groups].sort((a, b) => b.width * b.height - a.width * a.height)
+  return new Map(byAreaDesc.map((g, i) => [g.id, i - byAreaDesc.length]))
+}
+
+/**
  * Convierte el LayoutResult (coordenadas absolutas calculadas por ELK) al
  * modelo de React Flow.
  *
@@ -103,6 +118,10 @@ export function toReactFlow(layout: LayoutResult): {
 
   const nodes: CloudFlowNode[] = []
 
+  const groupZ = groupZIndexByArea(
+    layout.clusters.map((c) => ({ id: c.id, width: c.width, height: c.height }))
+  )
+
   // Clusters primero, ordenados por profundidad (ancestros antes).
   const sortedClusters = [...layout.clusters].sort((a, b) => depthOf(a.id) - depthOf(b.id))
   for (const c of sortedClusters) {
@@ -115,8 +134,9 @@ export function toReactFlow(layout: LayoutResult): {
       width: c.width,
       height: c.height,
       ...(c.parentClusterId ? { parentId: c.parentClusterId } : {}),
-      // Los grupos van detrás de los services y se arrastran por su borde.
-      zIndex: 0
+      // Detrás de los services (que se arrastran por su borde); entre grupos, el
+      // más pequeño encima (ver groupZ arriba).
+      zIndex: groupZ.get(c.id) ?? -1
     })
   }
 

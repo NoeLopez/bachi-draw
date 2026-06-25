@@ -31,6 +31,7 @@ import {
   type ShapeNode as ShapeFlowNode,
   type GroupNode as GroupFlowNode,
   edgeVisuals,
+  groupZIndexByArea,
   toReactFlow
 } from '../../../core/layout/kinds/cloud/toReactFlow'
 import type {
@@ -417,7 +418,17 @@ function CloudCanvasInner({
             height,
             zIndex: 0
           }
-          const next = [...nds, newNode]
+          // Reasignamos el z de TODOS los grupos por área (el más pequeño encima),
+          // para que el nuevo no tape a uno menor ni quede tapado por uno mayor.
+          const withNew = [...nds, newNode]
+          const z = groupZIndexByArea(
+            withNew
+              .filter((n) => n.type === 'group')
+              .map((n) => ({ id: n.id, width: n.width ?? 0, height: n.height ?? 0 }))
+          )
+          const next = withNew.map((n) =>
+            n.type === 'group' ? { ...n, zIndex: z.get(n.id) ?? -1 } : n
+          )
           syncToStore(next, edges)
           return next
         })
@@ -563,8 +574,18 @@ function CloudCanvasInner({
       const resizeEnded = changes.some((c) => c.type === 'dimensions' && c.resizing === false)
       if (hasRemoveOrReplace || resizeEnded) {
         setNodes((nds) => {
-          syncToStore(nds, edges)
-          return nds
+          // Al cambiar el tamaño de un grupo cambia su área: reordenamos el z de
+          // los grupos (el más pequeño encima) para no tapar a uno menor.
+          const z = groupZIndexByArea(
+            nds
+              .filter((n) => n.type === 'group')
+              .map((n) => ({ id: n.id, width: n.width ?? 0, height: n.height ?? 0 }))
+          )
+          const next = nds.map((n) =>
+            n.type === 'group' ? { ...n, zIndex: z.get(n.id) ?? -1 } : n
+          )
+          syncToStore(next, edges)
+          return next
         })
         if (resizeEnded) markDirty()
       }
